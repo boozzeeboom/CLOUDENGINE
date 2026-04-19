@@ -2,9 +2,35 @@
 ## CLOUDENGINE — From Noise Mesh to Volumetric
 
 **Duration:** 2-3 weeks  
-**Previous:** Iteration 1 (Bare Engine)  
+**Previous:** Iteration 1 (Bare Engine) ✅ COMPLETED  
 **Goal:** Render procedural clouds with Ghibli aesthetic  
 **Deliverable:** Sky with animated volumetric clouds
+
+---
+
+## 0. Implementation Status
+
+### Progress Tracking
+
+| Component | Status | Priority |
+|-----------|--------|----------|
+| Shader System | ✅ Implemented | Required |
+| Camera System | ✅ Implemented | Required |
+| Noise System (2D FBM) | ✅ Implemented | Required |
+| Wind System | ✅ Implemented | Required |
+| Cloud Generator | ✅ Implemented | Required |
+| Cloud Shader (Basic) | ✅ Implemented | Required |
+| Full-Screen Quad | ✅ Implemented | Required |
+| **Cloud LOD System** | 🔄 In Progress | High |
+| **Ghibli-Style Shader** | 🔄 In Progress | High |
+| **Dynamic Lighting** | 🔄 In Progress | High |
+| **Performance Optimizations** | 📋 Planned | Medium |
+| **Multi-layer Raymarching** | 📋 Planned | Medium |
+
+### Phase 1 Complete (v2.1)
+Basic cloud rendering with 2D raymarching on fullscreen quad. Moving to Phase 2 enhancements.
+
+---
 
 ---
 
@@ -1126,6 +1152,598 @@ On mid-range GPU (GTX 1060):
 
 ---
 
-**Status:** Ready for implementation  
+## 16. Cloud LOD System (Phase 2)
+
+### Overview
+
+Cloud Level of Detail (LOD) system for performance optimization based on distance.
+
+### Cloud LOD Levels
+
+| Level | Distance | Noise Octaves | Steps | Quality |
+|-------|----------|---------------|-------|---------|
+| 0 | 0-5000m | 6 | 64 | Ultra |
+| 1 | 5-15km | 4 | 32 | High |
+| 2 | 15-30km | 3 | 16 | Medium |
+| 3 | 30km+ | 2 | 8 | Low |
+
+### src/clouds/cloud_lod.h
+
+```cpp
+#pragma once
+#include <glm/glm.hpp>
+
+namespace Clouds {
+
+struct CloudLODConfig {
+    float distanceNear;      // Start distance for this LOD
+    float distanceFar;       // End distance for this LOD
+    int noiseOctaves;        // FBM octaves
+    int raymarchSteps;       // Raymarching steps
+    float noiseScale;        // Base noise frequency
+    float detailScale;       // Detail noise frequency
+};
+
+class CloudLOD {
+public:
+    static CloudLODConfig getConfig(float distance);
+    static float getStepSize(const CloudLODConfig& config, float layerThickness);
+    
+private:
+    static const CloudLODConfig _configs[4];
+};
+
+} // namespace Clouds
+```
+
+### src/clouds/cloud_lod.cpp
+
+```cpp
+#include "cloud_lod.h"
+
+namespace Clouds {
+
+const CloudLODConfig CloudLOD::_configs[4] = {
+    // Ultra (close)
+    { 0.0f, 5000.0f, 6, 64, 0.0003f, 0.002f },
+    // High (medium)
+    { 5000.0f, 15000.0f, 4, 32, 0.0005f, 0.003f },
+    // Medium (far)
+    { 15000.0f, 30000.0f, 3, 16, 0.0008f, 0.005f },
+    // Low (very far)
+    { 30000.0f, 100000.0f, 2, 8, 0.001f, 0.01f }
+};
+
+CloudLODConfig CloudLOD::getConfig(float distance) {
+    for (int i = 0; i < 4; i++) {
+        if (distance >= _configs[i].distanceNear && 
+            distance < _configs[i].distanceFar) {
+            return _configs[i];
+        }
+    }
+    return _configs[3]; // Return lowest quality for far distance
+}
+
+float CloudLOD::getStepSize(const CloudLODConfig& config, float layerThickness) {
+    return layerThickness / float(config.raymarchSteps);
+}
+
+} // namespace Clouds
+```
+
+---
+
+## 17. Ghibli-Style Shader Enhancements (Phase 2)
+
+### Improved Color Palette
+
+Ghibli aesthetic: soft, dreamy, low contrast, warm pastels with distinctive rim lighting.
+
+### shaders/cloud_ghibli.frag
+
+```glsl
+#version 460
+
+in vec2 vUV;
+in vec3 vWorldPos;
+in vec3 vNormal;
+
+out vec4 fragColor;
+
+uniform vec3 uCameraPos;
+uniform float uTime;
+uniform vec3 uSunDir;
+uniform vec3 uAmbientColor;    // Sky ambient (changes with time)
+uniform float uDayFactor;     // 0=nite, 1=day
+uniform vec3 uCloudBaseColor;
+uniform vec3 uCloudShadowColor;
+uniform vec3 uRimColor;
+
+// === Ghibli Color Constants ===
+// Soft, warm palette inspired by Studio Ghibli films
+const vec3 GhibliCloudWhite = vec3(1.0, 0.98, 0.95);
+const vec3 GhibliCloudPink = vec3(1.0, 0.9, 0.85);
+const vec3 GhibliCloudGold = vec3(1.0, 0.95, 0.8);
+const vec3 GhibliShadowBlue = vec3(0.7, 0.78, 0.92);
+const vec3 GhibliShadowPurple = vec3(0.75, 0.7, 0.85);
+
+// === Cel-Shading Functions ===
+
+float celShade(float value, float steps) {
+    return floor(value * steps) / steps;
+}
+
+// Soft shadow sampling (Ghibli uses soft, not hard shadows)
+float softShadow(vec3 pos, vec3 lightDir) {
+    float shadow = 0.0;
+    float step = 50.0;
+    
+    for (int i = 0; i < 4; i++) {
+        pos += lightDir * step;
+        shadow += cloudDensity(pos) * 0.25;
+    }
+    
+    return 1.0 - shadow * 0.5;
+}
+
+// Rim lighting (Ghibli signature effect)
+vec3 ghibliRim(vec3 viewDir, vec3 normal, vec3 rimColor) {
+    float rim = 1.0 - max(dot(viewDir, normal), 0.0);
+    rim = pow(rim, 3.0);
+    
+    // Soft edge with gradient
+    rim = smoothstep(0.4, 1.0, rim);
+    
+    return rimColor * rim;
+}
+
+// === Cloud Density with LOD support ===
+float cloudDensity(vec3 pos, int octaves) {
+    vec2 windPos = pos.xz + uTime * 0.01;
+    
+    float shape = fbm(windPos * 0.0005, octaves);
+    float detail = fbm(windPos * 0.002, max(octaves - 2, 2)) * 0.3;
+    
+    float h = 1.0 - abs(pos.y - 3000.0) / 1000.0;
+    h = max(0.0, smoothstep(0.0, 0.3, h));
+    
+    return (shape + detail) * h;
+}
+
+void main() {
+    vec3 viewDir = normalize(uCameraPos - vWorldPos);
+    vec3 normal = normalize(vNormal);
+    
+    // === Lighting Calculation ===
+    
+    // Diffuse (cel-shaded for Ghibli style)
+    float NdotL = max(dot(normal, uSunDir), 0.0);
+    float diffuse = celShade(NdotL, 3.0);
+    
+    // Soft shadow
+    float shadow = softShadow(vWorldPos, uSunDir);
+    
+    // === Color Blending ===
+    
+    // Mix between day/night colors
+    vec3 cloudColor = mix(uCloudShadowColor, uCloudBaseColor, diffuse);
+    
+    // Add pink/gold tint based on sun position
+    float sunHeight = uSunDir.y;
+    vec3 sunsetTint = mix(GhibliCloudPink, GhibliCloudGold, sunHeight);
+    cloudColor = mix(cloudColor, sunsetTint, max(sunHeight - 0.3, 0.0) * 0.5);
+    
+    // Apply shadow with blue tint (Ghibli uses cool shadows)
+    vec3 shadowedColor = cloudColor * shadow;
+    shadowedColor = mix(shadowedColor, GhibliShadowBlue, (1.0 - shadow) * 0.3);
+    
+    // === Rim Lighting (Signature Ghibli Effect) ===
+    
+    vec3 rim = ghibliRim(viewDir, normal, uRimColor);
+    shadowedColor += rim * (0.3 + uDayFactor * 0.4);
+    
+    // === Ambient ===
+    shadowedColor += uAmbientColor * 0.15 * uDayFactor;
+    
+    // === Alpha with soft edges ===
+    float density = cloudDensity(vWorldPos, 4);
+    float alpha = smoothstep(0.2, 0.6, density);
+    alpha *= 0.85;
+    
+    // Ghibli clouds are soft, never fully opaque
+    alpha = min(alpha, 0.9);
+    
+    fragColor = vec4(shadowedColor, alpha);
+}
+```
+
+---
+
+## 18. Dynamic Cloud Lighting System (Phase 2)
+
+### Overview
+
+Dynamic time-of-day lighting affecting cloud colors, shadows, and atmosphere.
+
+### src/clouds/lighting_system.h
+
+```cpp
+#pragma once
+#include <glm/glm.hpp>
+
+namespace Clouds {
+
+enum class TimeOfDay {
+    Dawn,
+    Morning,
+    Noon,
+    Afternoon,
+    Sunset,
+    Dusk,
+    Night,
+    LateNight
+};
+
+struct LightingState {
+    TimeOfDay timeOfDay;
+    float dayFactor;           // 0 = night, 1 = day
+    float sunHeight;            // -1 to 1
+    glm::vec3 sunDir;
+    glm::vec3 ambientColor;
+    glm::vec3 cloudBaseColor;
+    glm::vec3 cloudShadowColor;
+    glm::vec3 rimColor;
+    float rimIntensity;
+};
+
+class LightingSystem {
+public:
+    static LightingState getState(float timeOfDayHours); // 0-24
+    
+private:
+    static TimeOfDay getTimeOfDay(float hours);
+    static glm::vec3 lerpColor(const glm::vec3& a, const glm::vec3& b, float t);
+    static glm::vec3 calculateSunDir(float hours);
+};
+
+} // namespace Clouds
+```
+
+### src/clouds/lighting_system.cpp
+
+```cpp
+#include "lighting_system.h"
+#include <glm/gtc/constants.hpp>
+#include <cmath>
+
+namespace Clouds {
+
+// Color palettes for different times
+const glm::vec3 DawnAmbient = glm::vec3(0.4f, 0.5f, 0.7f);
+const glm::vec3 NoonAmbient = glm::vec3(0.5f, 0.65f, 0.85f);
+const glm::vec3 SunsetAmbient = glm::vec3(0.6f, 0.4f, 0.5f);
+const glm::vec3 NightAmbient = glm::vec3(0.1f, 0.12f, 0.2f);
+
+const glm::vec3 DawnCloudBase = glm::vec3(1.0f, 0.85f, 0.75f);
+const glm::vec3 NoonCloudBase = glm::vec3(1.0f, 0.98f, 0.95f);
+const glm::vec3 SunsetCloudBase = glm::vec3(1.0f, 0.7f, 0.5f);
+const glm::vec3 NightCloudBase = glm::vec3(0.3f, 0.35f, 0.45f);
+
+const glm::vec3 SunsetRim = glm::vec3(1.0f, 0.5f, 0.3f);
+const glm::vec3 DawnRim = glm::vec3(1.0f, 0.8f, 0.6f);
+const glm::vec3 DayRim = glm::vec3(1.0f, 0.95f, 0.9f);
+
+TimeOfDay LightingSystem::getTimeOfDay(float hours) {
+    if (hours < 5.0f) return TimeOfDay::LateNight;
+    if (hours < 6.5f) return TimeOfDay::Dawn;
+    if (hours < 9.0f) return TimeOfDay::Morning;
+    if (hours < 12.0f) return TimeOfDay::Noon;
+    if (hours < 17.0f) return TimeOfDay::Afternoon;
+    if (hours < 19.5f) return TimeOfDay::Sunset;
+    if (hours < 21.0f) return TimeOfDay::Dusk;
+    return TimeOfDay::Night;
+}
+
+glm::vec3 LightingSystem::lerpColor(const glm::vec3& a, const glm::vec3& b, float t) {
+    return a + (b - a) * t;
+}
+
+glm::vec3 LightingSystem::calculateSunDir(float hours) {
+    // Sun arc: peaks at noon (12h)
+    float angle = (hours - 12.0f) / 12.0f * glm::pi<float>();
+    float height = glm::cos(angle);
+    
+    // Horizontal position
+    float x = glm::sin(angle);
+    float z = glm::cos(angle) * 0.5f; // Offset for world orientation
+    
+    return glm::normalize(glm::vec3(x, height, z));
+}
+
+LightingState LightingSystem::getState(float timeOfDayHours) {
+    LightingState state;
+    state.timeOfDay = getTimeOfDay(timeOfDayHours);
+    state.sunDir = calculateSunDir(timeOfDayHours);
+    state.sunHeight = state.sunDir.y;
+    
+    // Calculate day factor (smooth transition)
+    float nightFactor = glm::smoothstep(5.0f, 7.0f, timeOfDayHours);
+    nightFactor *= 1.0f - glm::smoothstep(18.0f, 20.0f, timeOfDayHours);
+    state.dayFactor = nightFactor;
+    
+    // Interpolate colors based on time
+    float t;
+    
+    // Ambient color
+    if (state.sunHeight > 0) {
+        t = state.sunHeight;
+        state.ambientColor = lerpColor(DawnAmbient, NoonAmbient, t);
+    } else {
+        t = 1.0f + state.sunHeight;
+        state.ambientColor = lerpColor(NightAmbient, SunsetAmbient, t * 0.5f);
+    }
+    
+    // Cloud base color
+    if (state.sunHeight > 0.5f) {
+        state.cloudBaseColor = NoonCloudBase;
+    } else if (state.sunHeight > 0) {
+        t = state.sunHeight * 2.0f;
+        state.cloudBaseColor = lerpColor(DawnCloudBase, NoonCloudBase, t);
+    } else {
+        t = 1.0f + state.sunHeight;
+        state.cloudBaseColor = lerpColor(NightCloudBase, SunsetCloudBase, t * 0.5f);
+    }
+    
+    // Cloud shadow color
+    state.cloudShadowColor = state.cloudBaseColor * 0.7f;
+    state.cloudShadowColor.b += 0.1f; // Add blue tint
+    
+    // Rim color
+    if (state.sunHeight > 0.3f) {
+        state.rimColor = DayRim;
+        state.rimIntensity = 0.3f;
+    } else if (state.sunHeight > 0) {
+        t = state.sunHeight / 0.3f;
+        state.rimColor = lerpColor(DawnRim, DayRim, t);
+        state.rimIntensity = 0.4f + t * 0.2f;
+    } else {
+        state.rimColor = SunsetRim;
+        state.rimIntensity = 0.6f;
+    }
+    
+    return state;
+}
+
+} // namespace Clouds
+```
+
+---
+
+## 19. Performance Optimizations (Phase 2)
+
+### Budget System
+
+```cpp
+// Frame budget management for cloud rendering
+namespace Clouds {
+
+class CloudBudget {
+public:
+    static void beginFrame();
+    static bool canRender(int estimatedSteps);
+    static void recordRenderTime(float ms);
+    static float getRemainingBudget();
+    
+private:
+    static float _frameBudgetMs;
+    static float _usedBudgetMs;
+};
+
+} // namespace Clouds
+```
+
+### Adaptive Quality
+
+Based on frame time, automatically adjust quality:
+
+| Frame Time | Action |
+|------------|--------|
+| < 10ms | Increase quality +10% |
+| 10-16ms | Maintain |
+| 16-20ms | Reduce steps by 1 |
+| > 20ms | Skip every 2nd frame |
+
+---
+
+## 20. Updated Shader Pipeline
+
+### shaders/cloud_advanced.frag (Combined LOD + Ghibli)
+
+```glsl
+#version 460
+
+in vec2 vUV;
+in vec3 vWorldPos;
+
+out vec4 fragColor;
+
+uniform vec2 uResolution;
+uniform vec3 uCameraPos;
+uniform vec3 uCameraDir;
+uniform vec3 uCameraUp;
+uniform vec3 uCameraRight;
+uniform float uTime;
+
+// Lighting uniforms
+uniform vec3 uSunDir;
+uniform float uDayFactor;
+uniform vec3 uAmbientColor;
+uniform vec3 uCloudBaseColor;
+uniform vec3 uCloudShadowColor;
+uniform vec3 uRimColor;
+
+// LOD uniforms
+uniform int uLODLevel;         // 0=ultra, 1=high, 2=medium, 3=low
+uniform int uRaymarchSteps;    // Adaptive step count
+
+// Constants
+const float CLOUD_BOTTOM = 2000.0;
+const float CLOUD_TOP = 4000.0;
+const float LAYER_THICKNESS = 2000.0;
+
+// Noise with LOD-aware octaves
+float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    
+    float a = hash(i);
+    float b = hash(i + vec2(1.0, 0.0));
+    float c = hash(i + vec2(0.0, 1.0));
+    float d = hash(i + vec2(1.0, 1.0));
+    
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+float fbm(vec2 p, int octaves) {
+    float value = 0.0;
+    float amp = 0.5;
+    
+    for (int i = 0; i < octaves; i++) {
+        value += amp * noise(p);
+        p *= 2.0;
+        amp *= 0.5;
+    }
+    return value;
+}
+
+float cloudDensity(vec3 pos) {
+    // Adjust octaves based on LOD
+    int baseOctaves = 6 - uLODLevel;
+    int detailOctaves = max(baseOctaves - 2, 2);
+    
+    // Scale noise based on LOD (lower LOD = larger features)
+    float baseScale = 0.0003 + uLODLevel * 0.0002;
+    float detailScale = baseScale * 4.0;
+    
+    vec2 windPos = pos.xz + uTime * 0.01;
+    
+    float shape = fbm(windPos * baseScale, baseOctaves);
+    float detail = fbm(windPos * detailScale, detailOctaves) * 0.3;
+    
+    float h = 1.0 - abs(pos.y - 3000.0) / 1000.0;
+    h = max(0.0, smoothstep(0.0, 0.3, h));
+    
+    return (shape + detail) * h;
+}
+
+// Ghibli-style cel shading
+float celShade(float value, float steps) {
+    return floor(value * steps) / steps;
+}
+
+void main() {
+    vec2 uv = vUV * 2.0 - 1.0;
+    uv.x *= uResolution.x / uResolution.y;
+    
+    // Ray setup
+    vec3 rayDir = normalize(uCameraDir + uv.x * uCameraRight + uv.y * uCameraUp);
+    
+    if (abs(rayDir.y) < 0.001) {
+        fragColor = vec4(0.0);
+        return;
+    }
+    
+    // Cloud layer intersection
+    float tMin = (CLOUD_BOTTOM - uCameraPos.y) / rayDir.y;
+    float tMax = (CLOUD_TOP - uCameraPos.y) / rayDir.y;
+    
+    if (tMin > tMax) {
+        float tmp = tMin; tMin = tMax; tMax = tmp;
+    }
+    
+    if (tMax < 0.0) {
+        fragColor = vec4(0.0);
+        return;
+    }
+    
+    tMin = max(tMin, 0.0);
+    
+    // Adaptive step size
+    float stepSize = (tMax - tMin) / float(uRaymarchSteps);
+    
+    vec4 color = vec4(0.0);
+    vec3 viewDir = -rayDir;
+    
+    for (int i = 0; i < uRaymarchSteps && color.a < 0.99; i++) {
+        float t = tMin + (float(i) + 0.5) * stepSize;
+        vec3 pos = uCameraPos + rayDir * t;
+        
+        float density = cloudDensity(pos);
+        
+        if (density > 0.01) {
+            // Calculate normal from density gradient
+            vec3 normal = normalize(vec3(
+                cloudDensity(pos + vec3(10.0, 0.0, 0.0)) - density,
+                cloudDensity(pos + vec3(0.0, 10.0, 0.0)) - density,
+                cloudDensity(pos + vec3(0.0, 0.0, 10.0)) - density
+            ));
+            
+            // Cel-shaded diffuse
+            float NdotL = max(dot(normal, uSunDir), 0.0);
+            float diffuse = celShade(NdotL, 3.0);
+            
+            // Ghibli color blend
+            vec3 cloudColor = mix(uCloudShadowColor, uCloudBaseColor, diffuse);
+            
+            // Rim lighting
+            float rim = 1.0 - max(dot(viewDir, normal), 0.0);
+            rim = pow(rim, 3.0);
+            rim = smoothstep(0.4, 1.0, rim);
+            cloudColor += uRimColor * rim * 0.5 * uDayFactor;
+            
+            // Ambient
+            cloudColor += uAmbientColor * 0.15 * uDayFactor;
+            
+            // Accumulate
+            float absorption = density * 0.05;
+            color.rgb += cloudColor * color.a * absorption * stepSize;
+            color.a += absorption * stepSize * 0.5;
+        }
+    }
+    
+    fragColor = color;
+}
+```
+
+---
+
+## 21. Implementation Roadmap
+
+### Phase 1 (Complete) - Basic Clouds
+- [x] Shader system
+- [x] Camera system  
+- [x] Noise functions
+- [x] Wind system
+- [x] Cloud generator
+- [x] Basic raymarching shader
+- [x] Fullscreen quad
+
+### Phase 2 (Current) - Quality Enhancement
+- [ ] Cloud LOD system
+- [ ] Ghibli-style shader
+- [ ] Dynamic lighting
+- [ ] Performance monitoring
+- [ ] Adaptive quality
+
+### Phase 3 (Future) - Advanced Features
+- [ ] Multi-layer raymarching
+- [ ] Volumetric shadows
+- [ ] Cloud-ground interaction
+- [ ] Weather system integration
+
+---
+
+**Status:** Phase 2 Implementation in Progress  
 **Next:** Iteration 3 - Circular World + Chunks  
-**Last Updated:** 2026-04-19
+**Last Updated:** 2026-04-20
