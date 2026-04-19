@@ -28,25 +28,51 @@
 
 ---
 
+## Iteration 1 Implementation (2026-04-19 23:56)
+
+| Action | Result |
+|--------|--------|
+| Created CMakeLists.txt | Build configuration with GLFW, flecs, spdlog, GLM |
+| Created src/core/logging.h | spdlog-based logging with LOG_INFO/WARN/ERROR/DEBUG macros |
+| Created src/core/engine.h/cpp | Main game loop with init/run/shutdown |
+| Created src/platform/window.h/cpp | GLFW window wrapper (1280x720, ESC to close) |
+| Created src/ecs/world.h/cpp | flecs ECS with Position/Velocity components |
+| Created src/rendering/renderer.h/cpp | OpenGL 4.6 renderer with depth test |
+| Created src/main.cpp | Entry point with proper init sequence |
+
+**Fixes applied:**
+- Added `getCurrentTimeMs()` chrono implementation in engine.cpp
+- Added `glfwSwapBuffers()` in renderer endFrame
+- Added `Window::getGLFWwindow()` accessor for buffer swap
+
+---
+
 ## Key Files Created/Modified
 
-### New Files:
-- `docs/CLOUDENGINE/Iterations/ITERATION_01_BARE_ENGINE.md` — Bare engine foundation (GLFW, flecs, logging)
-- `docs/CLOUDENGINE/Iterations/ITERATION_02_CLOUD_RENDERING.md` — Cloud rendering (shaders, noise, wind)
-- `docs/CLOUDENGINE/Iterations/ITERATION_03_CIRCULAR_WORLD.md` — Circular world (coordinates, chunks)
-- `docs/CLOUDENGINE/Iterations/ITERATION_04_BASIC_NETWORK.md` — Basic networking (ENet, host-client)
+### Iteration 1 Source Files (NEW):
+- `CMakeLists.txt` — CMake build config
+- `src/core/logging.h` — Logger with spdlog
+- `src/core/engine.h/cpp` — Engine class
+- `src/platform/window.h/cpp` — GLFW wrapper
+- `src/ecs/world.h/cpp` — flecs world
+- `src/rendering/renderer.h/cpp` — OpenGL renderer
+- `src/main.cpp` — Entry point
+
+### Iteration Docs (from prev session):
+- `docs/CLOUDENGINE/Iterations/ITERATION_01_BARE_ENGINE.md`
+- `docs/CLOUDENGINE/Iterations/ITERATION_02_CLOUD_RENDERING.md`
+- `docs/CLOUDENGINE/Iterations/ITERATION_03_CIRCULAR_WORLD.md`
+- `docs/CLOUDENGINE/Iterations/ITERATION_04_BASIC_NETWORK.md`
 
 ### Key Variables/Classes:
 | Name | Type | Purpose |
 |------|------|---------|
-| CircularWorld | class | Cylindrical coordinates, wrap-position, distance calc |
-| ChunkId | struct | Angular + radial index for chunk identification |
-| ChunkManager | class | Load/unload chunks based on player position |
-| CloudGenerator | class | Multi-layer FBM noise for cloud density |
-| GlobalWind | struct | Wind direction/speed for cloud animation |
-| Shader | class | OpenGL shader compilation and uniform management |
-| NetworkManager | class | ENet wrapper with packet handling |
-| Server/Client | class | Host-client architecture |
+| Engine | class | Main loop, init/shutdown, update/render |
+| Window | class | GLFW wrapper, static methods |
+| World | class | flecs ECS container |
+| Renderer | class | OpenGL state management |
+| Logger | class | spdlog singleton wrapper |
+| Position/Velocity | struct | Example ECS components |
 
 ---
 
@@ -130,13 +156,13 @@ cmake --build . --config Release
 ## Next Steps (Recommended)
 
 ### Immediate (Iteration 1):
-- [ ] User downloads libraries
-- [ ] User creates source files from documentation
-- [ ] User runs first build
+- [x] ~~User creates source files from documentation~~ (DONE - source files created)
+- [ ] User downloads libraries to `libs/` (GLFW, GLM, flecs, spdlog)
+- [ ] User runs CMake configure + build
 - [ ] User reports any errors
 
 ### Follow-up Iterations:
-- [ ] Iteration 2: Cloud rendering (after Iteration 1 works)
+- [ ] Iteration 2: Cloud rendering (after Iteration 1 builds)
 - [ ] Iteration 3: Circular world (after Iteration 2 works)
 - [ ] Iteration 4: Networking (after Iteration 3 works)
 
@@ -150,11 +176,12 @@ cmake --build . --config Release
 
 ## Issues Encountered
 
-None — this was a planning/documentation session.
+- VS Code shows include errors for libs (expected - libs not yet downloaded)
+- CMakeLists.txt needs GLFW subdirectory setup after GLFW is placed in libs/
 
 ---
 
-**Session Duration:** ~30 minutes  
-**Documentation Created:** 4 iteration documents  
-**Status:** Planning phase complete  
-**Next Action:** User testing Iteration 1
+**Session Duration:** ~30 min planning + ~15 min implementation  
+**Files Created:** 7 source files + CMakeLists.txt  
+**Status:** Iteration 1 source code complete  
+**Next Action:** User downloads libs + builds project
