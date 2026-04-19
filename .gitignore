@@ -1,0 +1,92 @@
+# CLOUDENGINE .gitignore
+# Custom game engine for Project C: The Clouds
+
+# ===========================================
+# Build Artifacts
+# ===========================================
+*.exe
+*.dll
+*.pdb
+*.so
+*.a
+*.lib
+*.o
+*.obj
+
+# Build output directories
+Build/
+build/
+Builds/
+bin/
+Bin/
+out/
+Output/
+
+# ===========================================
+# IDE/Editor Files
+# ===========================================
+.idea/
+.vs/
+.vscode/
+*.suo
+*.user
+*.userprefs
+*.sln.docstates
+*.sln
+*.csproj
+*.vcxproj
+
+# ===========================================
+# OS Files
+# ===========================================
+.DS_Store
+Thumbs.db
+desktop.ini
+~$
+*.swp
+*~
+
+# ===========================================
+# Temporary/Debug Files
+# ===========================================
+*.tmp
+*.temp
+*.log
+*.bak
+*.bak2
+*_Debug.*
+*_Release.*
+*_Test.*
+*_Stub.*
+
+# ===========================================
+# Compiled/Generated
+# ===========================================
+*.il
+*.bytecode
+*.compile
+generated/
+
+# ===========================================
+# Logs
+# ===========================================
+Logs/
+logs/
+*.log
+
+# ===========================================
+# CLOUDENGINE Specific
+# ===========================================
+# Editor cache
+.cache/
+.editor/
+
+# ===========================================
+# Unity Migration (source reference only)
+# ===========================================
+# This directory contains reference code from Unity project
+# Keep only essential files, most are auto-generated
+unity_migration/*.meta
+unity_migration/Library/
+unity_migration/Temp/
+unity_migration/obj/
