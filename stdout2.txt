@@ -1,0 +1,6 @@
+[2026-04-20 16:54:23.395] [console] [info] main() - START
+[2026-04-20 16:54:23.396] [console] [info] main() - glfwInit()
+[2026-04-20 16:54:23.410] [console] [info] main() - glfwInit SUCCESS
+[2026-04-20 16:54:23.410] [console] [info] main() - creating window
+[2026-04-20 16:54:23.737] [console] [info] main() - window created SUCCESS
+[2026-04-20 16:54:23.757] [console] [info] main() - DONE, frames: 100

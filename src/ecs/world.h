@@ -1,27 +1,19 @@
 #pragma once
 #include <flecs.h>
-#include <glm/vec3.hpp>
 
 namespace Core { namespace ECS {
 
-// ECS Components
-struct Position {
-    glm::vec3 value;
-};
+/// @brief Initialize ECS world with components and pipeline
+void init();
 
-struct Velocity {
-    glm::vec3 value;
-};
+/// @brief Shutdown ECS world
+void shutdown();
 
-class World {
-public:
-    static void init();
-    static void shutdown();
-    static void update(float dt);
-    static flecs::world& get() { return _world; }
-    
-private:
-    static flecs::world _world;
-};
+/// @brief Update ECS world (advances time and runs systems)
+/// @param deltaTime Time since last frame in seconds
+void update(float deltaTime);
+
+/// @brief Get reference to the ECS world
+flecs::world& getWorld();
 
 }} // namespace Core::ECS

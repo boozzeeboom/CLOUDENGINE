@@ -1,36 +1,43 @@
 #include "rendering/renderer.h"
+#include <platform/window.h>
+#include <core/logger.h>
+
+// GLAD must be included BEFORE GLFW
+#define __gl_h_
+#include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include <core/logging.h>
 
 namespace Core { namespace Rendering {
 
 bool Renderer::_initialized = false;
 
 bool Renderer::init() {
-    // Basic OpenGL 1.1 functions are always available after glfwMakeContextCurrent
-    glClearColor(0.4f, 0.6f, 0.9f, 1.0f); // Sky blue
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    RENDER_LOG_INFO("Renderer::init() - START");
+    RENDER_LOG_INFO("Renderer::init() - making GLFW context current");
+    glfwMakeContextCurrent(Platform::Window::getGLFWwindow());
     
+    RENDER_LOG_INFO("Renderer::init() - calling gladLoadGLLoader()");
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+        RENDER_LOG_ERROR("Renderer::init() - FAILED: gladLoadGLLoader() returned false");
+        return false;
+    }
+    RENDER_LOG_INFO("Renderer::init() - gladLoadGLLoader() SUCCESS");
+    
+    RENDER_LOG_INFO("Renderer::init() - COMPLETE");
     _initialized = true;
-    LOG_INFO("OpenGL renderer initialized (OpenGL 1.1)");
     return true;
 }
 
 void Renderer::shutdown() {
     _initialized = false;
-    LOG_INFO("Renderer shutdown");
 }
 
 void Renderer::beginFrame() {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glfwMakeContextCurrent(Platform::Window::getGLFWwindow());
 }
 
 void Renderer::endFrame() {
-    // Swap buffers to display the rendered frame
-    glfwSwapBuffers(glfwGetCurrentContext());
+    glfwSwapBuffers(Platform::Window::getGLFWwindow());
 }
 
 void Renderer::clear(float r, float g, float b, float a) {

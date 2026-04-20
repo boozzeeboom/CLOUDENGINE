@@ -1,5 +1,6 @@
 #include "engine.h"
-#include "logging.h"
+#include <core/logger.h>
+#include <core/config.h>
 #include <platform/window.h>
 #include <ecs/world.h>
 #include <rendering/renderer.h>
@@ -17,39 +18,39 @@ Engine::Engine() {}
 Engine::~Engine() {}
 
 bool Engine::init() {
-    LOG_INFO("Initializing Engine...");
+    CE_LOG_INFO("Initializing Engine...");
     
     if (!Platform::Window::init(1280, 720, "Project C: The Clouds")) {
-        LOG_ERROR("Failed to initialize window");
+        CE_LOG_ERROR("Failed to initialize window");
         return false;
     }
-    LOG_INFO("Window initialized");
+    CE_LOG_INFO("Window initialized");
     
     if (!Rendering::Renderer::init()) {
-        LOG_ERROR("Failed to initialize renderer");
+        CE_LOG_ERROR("Failed to initialize renderer");
         return false;
     }
-    LOG_INFO("Renderer initialized");
+    CE_LOG_INFO("Renderer initialized");
     
-    ECS::World::init();
-    LOG_INFO("ECS initialized");
+    ECS::init();
+    CE_LOG_INFO("ECS initialized");
     
     _running = true;
-    LOG_INFO("Engine initialized successfully");
+    CE_LOG_INFO("Engine initialized successfully");
     return true;
 }
 
 void Engine::shutdown() {
-    LOG_INFO("Shutting down Engine...");
-    ECS::World::shutdown();
+    CE_LOG_INFO("Shutting down Engine...");
+    ECS::shutdown();
     Rendering::Renderer::shutdown();
     Platform::Window::shutdown();
-    Logger::shutdown();
-    LOG_INFO("Engine shutdown complete");
+    Logger::Shutdown();
+    CE_LOG_INFO("Engine shutdown complete");
 }
 
 void Engine::run() {
-    LOG_INFO("Engine running...");
+    CE_LOG_INFO("Engine running...");
     _lastTime = getCurrentTimeMs();
     
     while (_running && !Platform::Window::shouldClose()) {
@@ -70,11 +71,31 @@ void Engine::update(float dt) {
     _time += dt;
     _deltaTime = dt;
     
-    ECS::World::update(dt);
+    // Update TimeData singleton before ECS update
+    auto& world = ECS::getWorld();
+    auto* td = world.get_mut<TimeData>();
+    if (td) {
+        td->deltaTime = dt;
+        td->time = _time;
+    }
+    
+    // Run ECS systems
+    ECS::update(dt);
     
     // Exit on Escape
     if (Platform::Window::isKeyPressed(GLFW_KEY_ESCAPE)) {
+        CE_LOG_INFO("ESC pressed, setting _running = false");
         _running = false;
+    }
+    
+    // Update FPS logging every ~0.5 seconds
+    static float lastTitleUpdate = 0.0f;
+    if (_time - lastTitleUpdate > 0.5f) {
+        float fps = (dt > 0.001f) ? (1.0f / dt) : 60.0f;
+        uint64_t frameCount = td ? td->frameCount : 0;
+        CE_LOG_INFO("Update #{}: FPS={:.0f}, dt={:.3f}s, total_time={:.1f}s", 
+                   frameCount, fps, dt, _time);
+        lastTitleUpdate = _time;
     }
 }
 

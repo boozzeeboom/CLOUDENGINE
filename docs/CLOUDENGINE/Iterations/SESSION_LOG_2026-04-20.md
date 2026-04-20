@@ -1,5 +1,21 @@
 # Session Log — 2026-04-20
 
+## Iteration 2 — Cloud Rendering Phase 2
+
+### Implemented
+- Phase 1 rendering: Shader, Camera, Quad
+- Phase 1 clouds: Noise, WindSystem, CloudGenerator
+- Phase 2: CloudLOD (4 LOD levels), LightingSystem (8 TOD states), CloudBudget (adaptive quality)
+- Shaders: fullscreen.vert, cloud_raymarch.frag, cloud_advanced.frag (Ghibli style)
+- Updated renderer.cpp (GLAD init), main.cpp, CMakeLists.txt
+- GLAD 4.6 generated via pip
+- BUILD SUCCESSFUL — CloudEngine.exe (1.1 MB) at `build/Release/CloudEngine.exe`
+
+### Issues Resolved
+- glad.c stub → generated real GLAD 4.6 via pip
+- `_configs` private access → use getConfig() public method
+- spdlog + const GLubyte* formatting → cast to (const char*)
+
 ## Tasks Completed
 
 ### Iteration 2 Cloud Rendering — Phase 2 Enhancements

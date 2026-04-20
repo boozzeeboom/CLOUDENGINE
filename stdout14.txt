@@ -1,0 +1,8 @@
+[17:05:29.470] [Engine] [info] ========================================
+[17:05:29.471] [Engine] [info] CLOUDENGINE v0.2.0 starting...
+[17:05:29.471] [Engine] [info] Log file: logs/cloudengine.log
+[17:05:29.472] [Engine] [info] ========================================
+[17:05:29.472] [Engine] [info] Logger::Init() - complete
+[17:05:29.472] [Engine] [info] main() - START
+[17:05:29.472] [Engine] [info] Test 7: + clouds/cloud_generator.h
+[17:05:29.473] [Engine] [info] CLOUDENGINE shutting down

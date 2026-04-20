@@ -1,31 +1,42 @@
 #include "world.h"
-#include "../core/logging.h"
+#include "components.h"
+#include "pipeline.h"
+#include "systems.h"
+#include "../core/logger.h"
 
 namespace Core { namespace ECS {
 
-flecs::world World::_world;
+static flecs::world s_world;
 
-void World::init() {
-    _world = flecs::world();
-    _world.set_target_fps(60);
+void init() {
+    s_world = flecs::world();
     
-    // Example system: Position + Velocity
-    _world.system<Position, Velocity>("Movement")
-        .kind(flecs::OnUpdate)
-        .each([](Position& p, Velocity& v) {
-            p.value += v.value * 0.016f;
-        });
+    // Register pipeline phases FIRST (order matters!)
+    registerPipeline(s_world);
     
-    LOG_INFO("ECS World created");
+    // Register all components
+    registerComponents(s_world);
+    
+    // Register all singletons
+    registerSingletons(s_world);
+    
+    // Register time system (runs in PreUpdate phase)
+    registerTimeSystem(s_world);
+    
+    CE_LOG_INFO("ECS World initialized with pipeline phases");
 }
 
-void World::shutdown() {
-    _world = flecs::world();
-    LOG_INFO("ECS World destroyed");
+void shutdown() {
+    s_world = flecs::world();
+    CE_LOG_INFO("ECS World shutdown");
 }
 
-void World::update(float dt) {
-    _world.progress(dt);
+void update(float deltaTime) {
+    s_world.progress(deltaTime);
+}
+
+flecs::world& getWorld() {
+    return s_world;
 }
 
 }} // namespace Core::ECS
