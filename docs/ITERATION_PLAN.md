@@ -140,7 +140,31 @@ CloudEngine.exe --client  # Client (localhost:12345)
 
 ---
 
-## ITERATION 5 — Airship Physics (3–4 недели)
+## ITERATION 5 — Network Sync (Priority)
+
+**Цель:** Улучшить сетевую синхронизацию для комфортного мультиплеера
+
+### 5.1 Position Interpolation
+- [ ] Буфер позиций с timestamp
+- [ ] Линейная интерполяция между кадрами
+- [ ] Сглаживание рывков
+
+### 5.2 Full Transform Sync
+- [ ] Передача yaw/pitch через onPositionReceived
+- [ ] Квитернион rotation для remote игроков
+
+### 5.3 Player Visualization
+- [ ] Простой mesh для remote игроков (куб/сфера)
+- [ ] Рендер через ECS RenderSystem
+- [ ] Billboard для distant players
+
+### 5.4 World Seed Sync
+- [ ] Server отправляет seed при подключении
+- [ ] Клиент синхронизирует мир
+
+---
+
+## ITERATION 6 — Airship Physics (3–4 недели)
 
 **Цель**: Базовые физика и управление воздушными судами.
 
