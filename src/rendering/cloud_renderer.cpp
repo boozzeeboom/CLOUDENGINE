@@ -29,7 +29,7 @@ bool CloudRenderer::init() {
     
     s_Instance = this;
     
-    // Get shader from shader manager
+    // Get shader from shader manager (loaded by ShaderSystem)
     _shader = GetShaderManager().get("cloud_advanced");
     
     if (!_shader) {

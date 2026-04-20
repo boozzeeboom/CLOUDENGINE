@@ -108,6 +108,9 @@
 - [x] Кэширование шейдеров по имени и ID
 - [x] `ShaderSystem` — ECS-совместимая система
 - [x] `CloudRenderer` — рендеринг облаков через шейдер
+- [x] **Путь к шейдерам**: `../../shaders/` (от `build/Debug/` → `CLOUDENGINE/shaders/`)
+
+> 📝 **Session Log**: `docs/SESSION_2026-04-20_SHADER_PATH_FIX.md`
 
 ### 2.2 Frame UBO
 - [ ] Создать `FrameUBO` struct (view, projection, cameraPos, time, deltaTime)  
