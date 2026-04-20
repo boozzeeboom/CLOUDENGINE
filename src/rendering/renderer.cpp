@@ -2,7 +2,7 @@
 #include <platform/window.h>
 #include <core/logger.h>
 #include <ecs/world.h>
-#include "shader_system.h"
+#include "shader_manager.h"
 #include "cloud_renderer.h"
 
 // GLAD must be included BEFORE GLFW
@@ -13,6 +13,7 @@
 namespace Core { namespace Rendering {
 
 bool Renderer::_initialized = false;
+bool Renderer::_shadersLoaded = false;
 
 bool Renderer::init() {
     RENDER_LOG_INFO("Renderer::init() - START");
@@ -44,14 +45,19 @@ bool Renderer::init() {
     RENDER_LOG_INFO("Renderer::init() - OpenGL debug output ENABLED");
 #endif
     
-    // Initialize shader system (loads cloud shader)
-    RENDER_LOG_INFO("Renderer::init() - initializing ShaderSystem");
-    GetShaderSystem().init(ECS::getWorld());
+    // Initialize shader manager (simple, no hot-reload)
+    RENDER_LOG_INFO("Renderer::init() - initializing ShaderManager");
+    GetShaderManager().init();
+    GetShaderManager().setBasePath("shaders/");
     
-    if (!GetShaderSystem().isReady()) {
-        RENDER_LOG_ERROR("Renderer::init() - FAILED: ShaderSystem not ready");
+    // Load cloud shader
+    ShaderID cloudShaderID = GetShaderManager().load("cloud_advanced", "fullscreen.vert", "cloud_advanced.frag");
+    if (cloudShaderID == 0) {
+        RENDER_LOG_ERROR("Renderer::init() - FAILED: Could not load cloud shader");
         return false;
     }
+    _shadersLoaded = true;
+    RENDER_LOG_INFO("Renderer::init() - Cloud shader loaded (ID={})", cloudShaderID);
     
     // Initialize cloud renderer
     RENDER_LOG_INFO("Renderer::init() - initializing CloudRenderer");
@@ -77,7 +83,8 @@ void Renderer::shutdown() {
     RENDER_LOG_INFO("Renderer::shutdown() - START");
     
     GetCloudRenderer().shutdown();
-    GetShaderSystem().shutdown();
+    GetShaderManager().shutdown();
+    _shadersLoaded = false;
     
     _initialized = false;
     RENDER_LOG_INFO("Renderer::shutdown() - COMPLETE");
@@ -99,9 +106,6 @@ void Renderer::clear(float r, float g, float b, float a) {
 void Renderer::renderClouds(float time, float deltaTime) {
     if (!_initialized) return;
     
-    // Check for F5 hot-reload
-    GetShaderSystem().checkHotReload();
-    
     // Render clouds
     GetCloudRenderer().render(time, deltaTime);
 }
@@ -112,7 +116,7 @@ void Renderer::setCamera(const glm::vec3& pos, float yaw, float pitch) {
 }
 
 bool Renderer::isReady() {
-    return _initialized && GetShaderSystem().isReady();
+    return _initialized && _shadersLoaded && GetCloudRenderer().isReady();
 }
 
 }} // namespace Core::Rendering

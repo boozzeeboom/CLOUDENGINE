@@ -23,6 +23,7 @@ public:
     
 private:
     static bool _initialized;
+    static bool _shadersLoaded;
 };
 
 }} // namespace Core::Rendering

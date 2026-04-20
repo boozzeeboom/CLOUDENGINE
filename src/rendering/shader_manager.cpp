@@ -1,7 +1,6 @@
 #include "rendering/shader_manager.h"
 #include <core/logger.h>
 #include <platform/window.h>
-#include <algorithm>
 
 #define __gl_h_
 #include <glad/glad.h>
@@ -26,7 +25,6 @@ void ShaderManager::init() {
     s_Instance = this;
     _shaders.clear();
     _idToName.clear();
-    _loadedNames.clear();
     _nextID = 1;
     
     RENDER_LOG_INFO("ShaderManager::init() - COMPLETE");
@@ -42,7 +40,6 @@ void ShaderManager::shutdown() {
     
     _shaders.clear();
     _idToName.clear();
-    _loadedNames.clear();
     s_Instance = nullptr;
     
     RENDER_LOG_INFO("ShaderManager::shutdown() - COMPLETE");
@@ -54,7 +51,7 @@ ShaderID ShaderManager::load(const char* name, const char* vertPath, const char*
     // Check if already loaded
     auto it = _shaders.find(name);
     if (it != _shaders.end()) {
-        RENDER_LOG_WARN("Shader '{}' already loaded, use reload() to update", name);
+        RENDER_LOG_WARN("Shader '{}' already loaded", name);
         return it->second.id;
     }
     
@@ -83,53 +80,10 @@ ShaderID ShaderManager::load(const char* name, const char* vertPath, const char*
     // Store in maps
     _shaders[name] = std::move(entry);
     _idToName[_shaders[name].id] = name;
-    _loadedNames.push_back(name);
     
     RENDER_LOG_INFO("ShaderManager::load() - SUCCESS '{}' (ID={})", name, _shaders[name].id);
     
     return _shaders[name].id;
-}
-
-bool ShaderManager::reload(const char* name) {
-    RENDER_LOG_INFO("ShaderManager::reload() - Hot-reloading shader '{}'", name);
-    
-    auto it = _shaders.find(name);
-    if (it == _shaders.end()) {
-        RENDER_LOG_ERROR("ShaderManager::reload() - Shader '{}' not found", name);
-        return false;
-    }
-    
-    ShaderEntry& entry = it->second;
-    
-    // Destroy old shader
-    entry.shader.destroy();
-    
-    // Reload from files
-    if (!entry.shader.load(entry.vertPath.c_str(), entry.fragPath.c_str())) {
-        RENDER_LOG_ERROR("ShaderManager::reload() - FAILED to reload shader '{}'", name);
-        // Shader is now invalid - program may be 0
-        return false;
-    }
-    
-    RENDER_LOG_INFO("ShaderManager::reload() - SUCCESS '{}'", name);
-    return true;
-}
-
-void ShaderManager::reloadAll() {
-    RENDER_LOG_INFO("ShaderManager::reloadAll() - Hot-reloading {} shaders", _shaders.size());
-    
-    int success = 0;
-    int failed = 0;
-    
-    for (const auto& name : _loadedNames) {
-        if (reload(name.c_str())) {
-            success++;
-        } else {
-            failed++;
-        }
-    }
-    
-    RENDER_LOG_INFO("ShaderManager::reloadAll() - Complete: {} success, {} failed", success, failed);
 }
 
 Shader* ShaderManager::get(const char* name) {
@@ -150,10 +104,6 @@ Shader* ShaderManager::get(ShaderID id) {
 
 bool ShaderManager::exists(const char* name) const {
     return _shaders.find(name) != _shaders.end();
-}
-
-const std::vector<std::string>& ShaderManager::getLoadedNames() const {
-    return _loadedNames;
 }
 
 void ShaderManager::setBasePath(const char* path) {

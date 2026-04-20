@@ -246,7 +246,66 @@
 > ❌ **Убрано:** Floating Origin, shift systems, origin tracking  
 > ❌ **Убрано:** Terrain placeholder, Grid mesh
 
+### 4.5 Unity-isms Cleanup 🔴
+> **Документация:** `docs/UNITY_ISMS_ANALYSIS.md`
+
+- [ ] **Убрать Shader hot-reload** — просто `Shader::load()` при ините, без reload
+- [ ] **Убрать ShaderSystem ECS wrapper** — модуль сам по себе, не нужен wrapper
+- [ ] **Упростить Chunk loading** — объединить `loadChunksAround` + `unloadDistantChunks` → `updateStreaming()`
+
+> Полная сводка: `docs/UNITY_ISMS_ANALYSIS.md`
+
 ---
+
+## ITERATION 4.5 — Simplify Shader System (1 день) 🔴 ✅ COMPLETE
+
+> **Цель:** Убрать Unity-измы из рендеринга  
+> **Документация:** `docs/UNITY_ISMS_ANALYSIS.md` (секция Rendering)
+> **Дата завершения:** 2026-04-20
+
+### 4.5.1 Убрать Hot-Reload ✅
+- [x] Удалить `ShaderManager::reload()`, `reloadAll()`, `checkHotReload()`
+- [x] Удалить `_reloadCooldown = 0.5f`
+- [x] Оставить простой `Shader::load(const char* vertex, const char* fragment)`
+- [x] Шейдеры загружаются при ините, не меняются в runtime
+
+### 4.5.2 Убрать ShaderSystem ECS Wrapper ✅
+- [x] Удалить `ShaderSystem` struct из `src/rendering/`
+- [x] `ShaderManager` используется напрямую как модуль
+- [x] Не оборачивать в ECS system — шейдеры не entity data
+
+### Критерий готовности ✅
+- ✅ ShaderManager — простой класс без reload логики
+- ✅ Никаких ECS wrapper для шейдеров
+- ✅ Build проходит, облака рендерятся как раньше
+- ✅ FPS ~59-67, стабильная работа
+
+---
+
+## ITERATION 4.6 — Network RPC Cleanup (1 день) 🟡
+
+> **Цель:** Убрать NGO naming conventions  
+> **Документация:** `docs/UNITY_ISMS_ANALYSIS.md` (секция Networking)
+
+### 4.6.1 RPC Naming Convention
+- [ ] Заменить `*ServerRpc` / `*ClientRpc` на события/запросы
+- [ ] Пример: `ShootServerRpc()` → `handleShootRequest(playerId, target)`
+- [ ] `OnShootClientRpc()` → `broadcastShootEvent(playerId, target, position)`
+- [ ] Без суффиксов — просто понятные имена
+
+### 4.6.2 Frame UBO (решить)
+- [ ] ❓ **ВОПРОС:** Нужен ли Frame UBO?
+- [ ] Альтернатива: передавать camera matrix напрямую в шейдер
+- [ ] Решить перед реализацией
+
+### Критерий готовности
+- ✅ Нет `ServerRpc` / `ClientRpc` суффиксов
+- ✅ Простые события/запросы
+
+> ❓ **Нерешённый вопрос:** Нужен ли Frame UBO или можем обойтись direct matrix passing?
+
+---
+
 
 ## ITERATION 5 — Airship Physics (3–4 недели)
 
