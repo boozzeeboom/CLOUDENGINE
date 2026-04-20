@@ -149,18 +149,19 @@ CloudEngine.exe --client  # Client (localhost:12345)
 - [ ] Линейная интерполяция между кадрами
 - [ ] Сглаживание рывков
 
-### 5.2 Full Transform Sync
-- [ ] Передача yaw/pitch через onPositionReceived
-- [ ] Квитернион rotation для remote игроков
+### 5.2 Full Transform Sync ✅
+- [x] Передача yaw/pitch через onPositionReceived
+- [x] Квитернион rotation для remote игроков
 
-### 5.3 Player Visualization
-- [ ] Простой mesh для remote игроков (куб/сфера)
-- [ ] Рендер через ECS RenderSystem
-- [ ] Billboard для distant players
+### 5.3 Player Visualization ✅ (partial)
+- [x] ECS компоненты: RenderMesh, PlayerColor
+- [x] createRenderableRemotePlayer() функция
+- [ ] Рендер через ECS RenderSystem (pending)
+- [ ] Billboard для distant players (pending)
 
-### 5.4 World Seed Sync
-- [ ] Server отправляет seed при подключении
-- [ ] Клиент синхронизирует мир
+### 5.4 World Seed Sync ✅
+- [x] Server отправляет seed при подключении
+- [x] Клиент получает worldSeed в ConnectionAccept
 
 ---
 

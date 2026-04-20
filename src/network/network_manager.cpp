@@ -160,7 +160,7 @@ void NetworkManager::handlePacket(ENetPacket* packet, ENetPeer* peer) {
                 it->second.pitch    = upd->pitch;
 
                 if (!it->second.isLocal && onPositionReceived) {
-                    onPositionReceived(upd->playerId, upd->position);
+                    onPositionReceived(upd->playerId, upd->position, upd->yaw, upd->pitch);
                 }
             }
 

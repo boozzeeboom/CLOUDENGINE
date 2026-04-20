@@ -39,9 +39,9 @@ public:
     // ------------------------------------------------------------------
     // Callbacks (set by caller before start/connect)
     // ------------------------------------------------------------------
-    std::function<void(uint32_t playerId)>                      onPlayerConnected;
-    std::function<void(uint32_t playerId)>                      onPlayerDisconnected;
-    std::function<void(uint32_t playerId, const glm::vec3&)>    onPositionReceived;
+    std::function<void(uint32_t playerId)>                              onPlayerConnected;
+    std::function<void(uint32_t playerId)>                              onPlayerDisconnected;
+    std::function<void(uint32_t playerId, const glm::vec3&, float, float)> onPositionReceived;  // pos, yaw, pitch
 
     // ------------------------------------------------------------------
     // Send helpers (used by both server and client)

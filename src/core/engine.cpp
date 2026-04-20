@@ -4,6 +4,7 @@
 #include <platform/window.h>
 #include <ecs/world.h>
 #include <ecs/modules/network_module.h>
+#include <ecs/components/mesh_components.h>
 #include <rendering/renderer.h>
 #include <world/chunk_manager.h>
 #include <world/world_components.h>
@@ -82,9 +83,9 @@ bool Engine::init() {
             // Setup server callbacks for ECS integration
             _server->onPlayerConnected = [this](uint32_t playerId) {
                 auto& world = ECS::getWorld();
-                // Create RemotePlayer entity for new client
-                ECS::createRemotePlayer(world, playerId, glm::vec3(0.0f, 3000.0f, 0.0f));
-                CE_LOG_INFO("Server: Player {} connected, created RemotePlayer entity", playerId);
+                // Create RemotePlayer entity with rendering for new client
+                ECS::createRenderableRemotePlayer(world, playerId, glm::vec3(0.0f, 3000.0f, 0.0f));
+                CE_LOG_INFO("Server: Player {} connected, created RenderableRemotePlayer entity", playerId);
             };
             _server->onPlayerDisconnected = [this](uint32_t playerId) {
                 auto& world = ECS::getWorld();
@@ -117,12 +118,10 @@ bool Engine::init() {
                 ECS::removeRemotePlayer(world, playerId);
                 CE_LOG_INFO("Client: Player {} disconnected", playerId);
             };
-            _client->onPositionReceived = [this](uint32_t playerId, const glm::vec3& position) {
+            _client->onPositionReceived = [this](uint32_t playerId, const glm::vec3& position, float yaw, float pitch) {
                 // Position received for remote player - update their NetworkTransform
                 auto& world = ECS::getWorld();
-                // Note: yaw/pitch not available in this callback for MVP
-                // Using last known values (0,0) for now
-                ECS::updateNetworkTransform(world, playerId, position, 0.0f, 0.0f);
+                ECS::updateNetworkTransform(world, playerId, position, yaw, pitch);
             };
             break;
         }

@@ -17,13 +17,13 @@ echo.
 cd /d "%~dp0"
 
 echo [TEST] Starting Host...
-start "CloudEngine_Host" build\Release\CloudEngine.exe --host
+start "CloudEngine_Host" build\Debug\CloudEngine.exe --host
 
 echo [TEST] Waiting 3 seconds for host to initialize...
 timeout /t 3 /nobreak >nul
 
 echo [TEST] Starting Client...
-start "CloudEngine_Client" build\Release\CloudEngine.exe --client
+start "CloudEngine_Client" build\Debug\CloudEngine.exe --client
 
 echo.
 echo ======================================
