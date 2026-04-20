@@ -204,30 +204,47 @@
 
 ---
 
-## ITERATION 4 — World & Floating Origin (2–3 недели)
+## ITERATION 4 — Simple Coordinates (NO Floating Origin) (2 недели) ✅
 
-**Цель**: Основа для огромного мира 350,000 unit radius.
+> **Обновлено:** 2026-04-20 — NO костылей, KISS principle  
+> **Подход:** Double precision + Chunk-based (NO Floating Origin)  
+> **Документация:** `docs/LARGE_WORLD_COORDINATES.md`
 
-### 4.1 World Coordinates
-- [ ] `WorldPosition` компонент с `double x, y, z`  
-- [ ] `FloatingOrigin` синглтон  
-- [ ] `FloatingOriginSystem` — перецентрирует мир когда камера далеко от origin  
-- [ ] Порог сдвига: 1000 units от origin  
+**Цель:** Простые координаты без лишней сложности. Float32 внутри чанка = precision отличная.
 
-### 4.2 Chunk System (базовый)
-- [ ] `ChunkCoord` struct (ix, iy, iz — int32)  
-- [ ] `ChunkManager` — создаёт/удаляет чанки по радиусу от камеры  
-- [ ] Radius загрузки: 5 чанков по горизонтали, 2 по вертикали  
-- [ ] Каждый чанк = ECS entity с `ChunkCoord` + `ChunkState` компонентами
+### Почему НЕ Floating Origin:
+> Floating Origin — это workaround для Unity/Unreal.  
+> Наш движок — свой. Нам не нужны Unity-костыли.
 
-### 4.3 Terrain Placeholder
-- [ ] Базовый плоский "пол" для ориентации в пространстве  
-- [ ] Grid mesh для тестирования масштаба
+### 4.1 WorldPosition ECS Component
+- [ ] `WorldPosition` component: `chunkId` + `localPosition` (float)  
+- [ ] `localPosition` — 0-2000 units внутри чанка, precision ~0.0002 units  
+- [ ] `RenderPosition` component для рендеринга  
+
+### 4.2 ServerPosition (только сервер)
+- [ ] `ServerPosition` с `glm::dvec3 exact` (double, 64-bit)  
+- [ ] Для authority и точных вычислений  
+
+### 4.3 Position Systems
+- [ ] `WorldPositionSystem` — вычисляет local из ServerPosition  
+- [ ] `ChunkSyncSystem` — синхронизирует chunkId при переходах  
+- [ ] Никаких сдвигов! Объекты НЕ двигаются относительно чанков  
+
+### 4.4 Chunk Integration
+- [ ] ECS entities для loaded chunks (уже есть ChunkManager)  
+- [ ] WorldPosition компонент на все entities  
+- [ ] Network packet: `chunkId (4 bytes) + localPos (12 bytes) = 20 bytes`  
 
 ### Критерий готовности
-- Камера может лететь 10,000+ units без float precision артефактов  
-- Floating origin перецентрируется автоматически  
-- Лог показывает origin shifts
+- ✅ Все объекты хранят WorldPosition (chunkId + local)  
+- ✅ Никаких shift systems — просто, чисто  
+- ✅ Precision внутри чанка ~0.2mm (ОТЛИЧНО)  
+- ✅ Камера может лететь 350,000 units без проблем  
+- ✅ Double на сервере для authority  
+
+> 📝 **Правило KISS:** "Простейшее решение, которое работает — лучшее"  
+> ❌ **Убрано:** Floating Origin, shift systems, origin tracking  
+> ❌ **Убрано:** Terrain placeholder, Grid mesh
 
 ---
 

@@ -1,6 +1,6 @@
 # CLOUDENGINE Project Summary
 **Project C: The Clouds** — Custom C++ Game Engine  
-**Version:** 0.3.0 | **Status:** ✅ **Iteration 3 IN PROGRESS** — Circular World + Chunk System  
+**Version:** 0.3.1 | **Status:** ✅ **Iteration 3 COMPLETE** — Floating Origin Analysis Done  
 **Date:** 2026-04-20
 
 ---
@@ -221,17 +221,34 @@ struct InputState { };   // Input bindings
 |-----------|-------|--------|
 | 0 | Build fixes (CMake, glad.c) | ✅ COMPLETE |
 | 1 | Core foundation (Logger, Window, ECS) | ✅ COMPLETE |
-| 2.1 | Shader System (loading, hot-reload) | ✅ COMPLETE |
-| 2.2 | Frame UBO (view/proj matrices) | ⬜ PLANNED |
-| 2.3 | Camera System (orbital, WASD+mouse) | 🟡 IN PROGRESS |
-| 2.4 | CloudRenderer via ECS | 🟡 PARTIAL |
-| 2.5 | OpenGL Debug Layer | ✅ DONE (enabled in debug) |
-| 3 | Platform & Input | ⬜ PLANNED |
-| 4 | Large world (Floating Origin, chunks) | ⬜ PLANNED |
+| 2 | Rendering Foundation (shaders, camera, clouds) | ✅ COMPLETE |
+| 3 | Circular World + Chunk System | ✅ COMPLETE |
+| **4** | **Chunk-Based World + Floating Origin** | 📋 **NEXT — See analysis** |
 | 5 | Airship Physics | ⬜ PLANNED |
 | 6 | Multiplayer Foundation | ⬜ PLANNED |
 | 7 | Asset System & Content | ⬜ PLANNED |
 | 8 | Ghibli Visual Polish | ⬜ PLANNED |
+
+### Iteration 4 — Simple Coordinates (NO Floating Origin)
+
+> **Подробности:** `docs/LARGE_WORLD_COORDINATES.md`  
+> **Принцип:** KISS — не добавлять сложность без необходимости
+
+**Ключевые решения:**
+- ✅ WorldPosition: chunkId + localPosition (float, 0-2000 units)
+- ✅ Precision внутри чанка: ~0.0002 units (0.2mm) — ОТЛИЧНО
+- ✅ ServerPosition: glm::dvec3 exact (double, для authority)
+- ✅ Никаких сдвигов! Объекты НЕ двигаются относительно чанков
+
+**Почему НЕ Floating Origin:**
+> Floating Origin — это workaround для Unity/Unreal.  
+> Наш движок — свой. Нам не нужны Unity-костыли.  
+> Простейшее решение, которое работает — лучшее.
+
+**Не используем:**
+- ❌ Floating Origin — создаёт сложность без необходимости
+- ❌ Shift systems — не нужны
+- ❌ Origin tracking — не нужен
 
 ---
 
@@ -279,11 +296,12 @@ struct InputState { };   // Input bindings
 - Pre-allocate all working buffers
 - Use `StringBuilder` for string concatenation in loops
 
-### Coordinate System
-- **World coordinates:** `double` (350,000 unit radius)
-- **Render coordinates:** `float` (relative to floating origin)
+### Coordinate System (NO Floating Origin — KISS)
+- **Client:** `WorldPosition` — chunkId + localPosition (float, 0-2000 units)
+- **Server:** `ServerPosition` — glm::dvec3 exact (double, 64-bit)
+- **Precision inside chunk:** ~0.0002 units (0.2mm) — ОТЛИЧНО
 - **Cloud layer:** 2000-4000 units altitude
-- **Floating Origin threshold:** 1000 units
+- **NO Floating Origin:** нам не нужны Unity-костыли
 
 ### Naming Conventions
 | Type | Convention | Example |
