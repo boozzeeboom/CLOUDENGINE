@@ -101,11 +101,13 @@
 
 **Цель**: Чистая render pipeline, работающая через ECS. Облака рендерятся через систему.
 
-### 2.1 Shader System
-- [ ] `src/rendering/shader.h/.cpp` — ShaderProgram класс (уже есть, рефакторинг)  
-- [ ] Загрузка шейдеров из файлов с error reporting  
-- [ ] Горячая перезагрузка шейдеров (F5)  
-- [ ] Uniform Cache (кэш locations)
+### 2.1 Shader System ✅
+- [x] `src/rendering/shader_manager.h/.cpp` — централизованное управление шейдерами  
+- [x] Загрузка шейдеров из файлов с error reporting (spdlog)  
+- [x] Горячая перезагрузка шейдеров (F5, CE_DEBUG)  
+- [x] Кэширование шейдеров по имени и ID
+- [x] `ShaderSystem` — ECS-совместимая система
+- [x] `CloudRenderer` — рендеринг облаков через шейдер
 
 ### 2.2 Frame UBO
 - [ ] Создать `FrameUBO` struct (view, projection, cameraPos, time, deltaTime)  

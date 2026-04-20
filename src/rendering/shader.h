@@ -14,6 +14,9 @@ public:
     bool load(const char* vertPath, const char* fragPath);
     void use();
     void destroy();
+    
+    /// @brief Get OpenGL program ID
+    unsigned int getID() const { return _id; }
 
     void setInt(const char* name, int value);
     void setFloat(const char* name, float value);

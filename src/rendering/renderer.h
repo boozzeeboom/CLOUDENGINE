@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <glm/glm.hpp>
 
 namespace Core { namespace Rendering {
 
@@ -10,6 +11,15 @@ public:
     static void beginFrame();
     static void endFrame();
     static void clear(float r, float g, float b, float a);
+    
+    /// @brief Render clouds using loaded shader
+    static void renderClouds(float time, float deltaTime);
+    
+    /// @brief Set camera for cloud shader
+    static void setCamera(const glm::vec3& pos, float yaw, float pitch);
+    
+    /// @brief Is renderer ready with shaders
+    static bool isReady();
     
 private:
     static bool _initialized;

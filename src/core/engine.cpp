@@ -101,7 +101,19 @@ void Engine::update(float dt) {
 
 void Engine::render() {
     Rendering::Renderer::beginFrame();
-    Rendering::Renderer::clear(0.4f, 0.6f, 0.9f, 1.0f); // Sky blue
+    
+    // Set camera ABOVE clouds looking DOWN
+    // CLOUD_BOTTOM=2000, CLOUD_TOP=4000, so camera at 5000 looking down
+    Rendering::Renderer::setCamera(
+        glm::vec3(0.0f, 5000.0f, 0.0f),  // Camera above clouds
+        180.0f,  // Yaw (facing north)
+        -45.0f   // Pitch (looking down at 45 degrees)
+    );
+    
+    // Render clouds with shader
+    Rendering::Renderer::clear(0.53f, 0.81f, 0.92f, 1.0f);  // Sky blue background
+    Rendering::Renderer::renderClouds(_time, _deltaTime);
+    
     Rendering::Renderer::endFrame();
 }
 

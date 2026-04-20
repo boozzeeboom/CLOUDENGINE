@@ -78,9 +78,14 @@ unsigned int Shader::compile(const char* source, unsigned int type) {
         char info[1024];
         glGetShaderInfoLog(shader, 1024, nullptr, info);
         RENDER_LOG_ERROR("Shader compile error: {}", info);
+        RENDER_LOG_ERROR("Shader type: {}", 
+            type == GL_VERTEX_SHADER ? "VERTEX" : 
+            type == GL_FRAGMENT_SHADER ? "FRAGMENT" : "UNKNOWN");
         glDeleteShader(shader);
         return 0;
     }
+    
+    RENDER_LOG_DEBUG("Shader compiled successfully, type={}", type == GL_VERTEX_SHADER ? "VERTEX" : "FRAGMENT");
     return shader;
 }
 
