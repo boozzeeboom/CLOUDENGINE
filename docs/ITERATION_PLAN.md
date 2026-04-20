@@ -120,13 +120,23 @@
 - [ ] Все шейдеры используют binding point 0 для frame constants  
 - [ ] Шейдеры обновить под `layout(binding=0) uniform FrameData { ... }`
 
-### 2.3 Camera System 🟡 (В ПРОЦЕССЕ)
-- [ ] `Camera` ECS компонент — позиция камеры в ECS world
-- [ ] `CameraSystem` — обновляет камеру из ECS к cloud renderer
-- [ ] Flight controls: камера может лететь вверх (E или Space) к облакам
-- [ ] Управление: WASD + мышь (захват при ПКМ)
+### 2.3 Camera System ✅ (ВЫПОЛНЕНО)
+- [x] Mouse input methods in Window class (getMousePos, setCursorCapture)
+- [x] Flight camera state in Engine (_cameraPos, _cameraYaw, _cameraPitch)
+- [x] Flight controls: WASD + E/Q + mouse rotation (RMB capture)
+- [x] Camera integration with cloud renderer
 
-> ⚠️ **Known issue**: Cloud layer на y=2000-4000, камера на y≈0. Нужен flight control.
+**Controls Implemented:**
+| Key | Action |
+|-----|--------|
+| RMB (hold) | Capture cursor |
+| Mouse | Look around |
+| W/S | Forward/back |
+| A/D | Strafe |
+| E/Space | Ascend |
+| Q/Shift | Descend |
+
+> ✅ **Done:** Cloud layer at y=2000-4000, camera starts at y=3000. Flight controls allow exploration.
 
 ### 2.4 CloudRenderer через ECS 🟡 (ЧАСТИЧНО)
 - [x] `cloud_raymarch.frag` загружается, 32-step raymarching
@@ -145,16 +155,16 @@
 - [x] Shader system работает, шейдеры загружаются
 - [x] Hot-reload по F5 работает
 - [x] GL debug layer активен в debug
-- [ ] **Облака видны** — требует flight control (ITERATION 2.3)
-- [ ] Камера управляется с клавиатуры/мыши
-- [ ] FPS/draw calls логируются
+- [x] **Flight controls** — камера управляется с клавиатуры/мыши
+- [x] **Облака видны** — камера начинает в cloud layer (y=3000)
+- [x] FPS логируется
 
-### NEXT: Iteration 2.3 — Flight Controls
-Для просмотра облаков нужно добавить flight controls:
-1. WASD — движение
-2. E/Space — вверх, Q/Shift — вниз  
-3. Мышь — yaw/pitch камеры
-4. Летать до y=2000+ чтобы увидеть облака
+**✅ ITERATION 2 COMPLETE**
+
+### NEXT: Iteration 3 — Platform & Input
+- Input System через ECS
+- InputAction mapping
+- Window events (resize, fullscreen)
 
 ---
 

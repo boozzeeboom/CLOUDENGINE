@@ -5,6 +5,7 @@
 #include <ecs/world.h>
 #include <rendering/renderer.h>
 #include <chrono>
+#include <GLFW/glfw3.h>
 
 namespace Core {
 
@@ -82,6 +83,9 @@ void Engine::update(float dt) {
     // Run ECS systems
     ECS::update(dt);
     
+    // Update flight controls
+    updateFlightControls(dt);
+    
     // Exit on Escape
     if (Platform::Window::isKeyPressed(GLFW_KEY_ESCAPE)) {
         CE_LOG_INFO("ESC pressed, setting _running = false");
@@ -93,22 +97,98 @@ void Engine::update(float dt) {
     if (_time - lastTitleUpdate > 0.5f) {
         float fps = (dt > 0.001f) ? (1.0f / dt) : 60.0f;
         uint64_t frameCount = td ? td->frameCount : 0;
-        CE_LOG_INFO("Update #{}: FPS={:.0f}, dt={:.3f}s, total_time={:.1f}s", 
-                   frameCount, fps, dt, _time);
+        CE_LOG_INFO("Update #{}: FPS={:.0f}, dt={:.3f}s, camera=({:.0f},{:.0f},{:.0f})", 
+                   frameCount, fps, dt, _cameraPos.x, _cameraPos.y, _cameraPos.z);
         lastTitleUpdate = _time;
+    }
+}
+
+void Engine::updateFlightControls(float dt) {
+    // Toggle cursor capture on right mouse button
+    if (Platform::Window::isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT)) {
+        if (!_cursorCaptured) {
+            _cursorCaptured = true;
+            Platform::Window::setCursorCapture(true);
+            CE_LOG_INFO("Flight controls: CURSOR CAPTURED (RMB)");
+        }
+    } else if (_cursorCaptured && !Platform::Window::isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT)) {
+        _cursorCaptured = false;
+        Platform::Window::setCursorCapture(false);
+        CE_LOG_INFO("Flight controls: CURSOR RELEASED");
+        return; // Skip movement this frame to prevent jump
+    }
+    
+    if (!_cursorCaptured) {
+        return; // Only fly when cursor is captured
+    }
+    
+    // Mouse look (yaw/pitch)
+    double mouseX, mouseY;
+    Platform::Window::getMousePos(mouseX, mouseY);
+    
+    double dx = mouseX - _lastMouseX;
+    double dy = mouseY - _lastMouseY;
+    
+    // Sensitivity
+    const float mouseSensitivity = 0.002f;
+    _cameraYaw -= static_cast<float>(dx) * mouseSensitivity;
+    _cameraPitch -= static_cast<float>(dy) * mouseSensitivity;
+    
+    // Clamp pitch to avoid flipping
+    _cameraPitch = glm::clamp(_cameraPitch, -1.5f, 1.5f);
+    
+    _lastMouseX = mouseX;
+    _lastMouseY = mouseY;
+    
+    // Calculate forward/right vectors from yaw/pitch
+    glm::vec3 forward;
+    forward.x = sin(_cameraYaw) * cos(_cameraPitch);
+    forward.y = sin(_cameraPitch);
+    forward.z = cos(_cameraYaw) * cos(_cameraPitch);
+    forward = glm::normalize(forward);
+    
+    glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
+    glm::vec3 right = glm::normalize(glm::cross(forward, worldUp));
+    
+    // Movement speed
+    const float moveSpeed = 500.0f; // units per second
+    
+    // WASD movement
+    if (Platform::Window::isKeyPressed(GLFW_KEY_W)) {
+        _cameraPos += forward * moveSpeed * dt;
+    }
+    if (Platform::Window::isKeyPressed(GLFW_KEY_S)) {
+        _cameraPos -= forward * moveSpeed * dt;
+    }
+    if (Platform::Window::isKeyPressed(GLFW_KEY_A)) {
+        _cameraPos -= right * moveSpeed * dt;
+    }
+    if (Platform::Window::isKeyPressed(GLFW_KEY_D)) {
+        _cameraPos += right * moveSpeed * dt;
+    }
+    
+    // Vertical movement (E=up, Q=down)
+    if (Platform::Window::isKeyPressed(GLFW_KEY_E) || Platform::Window::isKeyPressed(GLFW_KEY_SPACE)) {
+        _cameraPos.y += moveSpeed * dt;
+    }
+    if (Platform::Window::isKeyPressed(GLFW_KEY_Q) || Platform::Window::isKeyPressed(GLFW_KEY_LEFT_SHIFT)) {
+        _cameraPos.y -= moveSpeed * dt;
+    }
+    
+    // Shift for speed boost
+    if (Platform::Window::isKeyPressed(GLFW_KEY_LEFT_CONTROL)) {
+        _cameraPos += forward * moveSpeed * 2.0f * dt;
     }
 }
 
 void Engine::render() {
     Rendering::Renderer::beginFrame();
     
-    // Set camera INSIDE the cloud layer looking OUT
-    // CLOUD_BOTTOM=2000, CLOUD_TOP=4000, camera at y=3200
-    // Pitch=+15° looking UP at clouds above
+    // Set camera from flight controls (convert radians to degrees for renderer)
     Rendering::Renderer::setCamera(
-        glm::vec3(0.0f, 3000.0f, 0.0f),  // Camera at cloud center level
-        0.0f,      // Yaw (facing north/+Z)
-        15.0f      // Pitch (looking UP at clouds - WAS +15°)
+        _cameraPos,
+        glm::degrees(_cameraYaw),    // Yaw in degrees
+        glm::degrees(_cameraPitch)   // Pitch in degrees
     );
     
     // Render clouds with shader

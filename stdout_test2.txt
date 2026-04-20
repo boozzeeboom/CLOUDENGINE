@@ -1,0 +1,45 @@
+[19:38:08.590] [Engine] [info] ========================================
+[19:38:08.591] [Engine] [info] CLOUDENGINE v0.2.0 starting...
+[19:38:08.592] [Engine] [info] Log file: logs/cloudengine.log
+[19:38:08.592] [Engine] [info] ========================================
+[19:38:08.592] [Engine] [info] Logger::Init() - complete
+[19:38:08.593] [Engine] [info] ========================================
+[19:38:08.593] [Engine] [info] CLOUDENGINE v0.2.0 - Full Engine Test
+[19:38:08.593] [Engine] [info] ========================================
+[19:38:08.594] [Engine] [info] main() - Creating Core::Engine
+[19:38:08.594] [Engine] [info] main() - Calling engine.init()
+[19:38:08.594] [Engine] [info] Initializing Engine...
+[19:38:08.594] [Engine] [info] Window::init() - START (1280x720, title=Project C: The Clouds)
+[19:38:08.594] [Engine] [info] Window::init() - calling glfwInit()
+[19:38:08.608] [Engine] [info] Window::init() - glfwInit() SUCCESS
+[19:38:08.609] [Engine] [info] Window::init() - setting window hints (GL 4.5 Core)
+[19:38:08.609] [Engine] [info] Window::init() - calling glfwCreateWindow()
+[19:38:08.842] [Engine] [info] Window::init() - glfwCreateWindow() SUCCESS
+[19:38:08.842] [Engine] [info] Window::init() - calling glfwMakeContextCurrent()
+[19:38:08.843] [Engine] [info] Window::init() - COMPLETE
+[19:38:08.843] [Engine] [info] Window initialized
+[19:38:08.843] [Render] [info] Renderer::init() - START
+[19:38:08.843] [Render] [info] Renderer::init() - making GLFW context current
+[19:38:08.844] [Render] [info] Renderer::init() - calling gladLoadGLLoader()
+[19:38:08.851] [Render] [info] Renderer::init() - gladLoadGLLoader() SUCCESS
+[19:38:08.851] [Render] [info] Renderer::init() - initializing ShaderSystem
+[19:38:08.852] [Render] [info] ShaderSystem::init() - START
+[19:38:08.852] [Render] [info] ShaderManager::init() - START
+[19:38:08.852] [Render] [info] ShaderManager::init() - COMPLETE
+[19:38:08.852] [Render] [debug] ShaderManager - base path set to: ../../shaders/
+[19:38:08.852] [Render] [info] ShaderManager::load() - Loading shader 'cloud_advanced'
+[19:38:08.852] [Render] [debug] ShaderManager - vertex path: ../../shaders/fullscreen.vert
+[19:38:08.852] [Render] [debug] ShaderManager - fragment path: ../../shaders/cloud_advanced.frag
+[19:38:08.852] [Render] [error] Failed to open vertex shader: ../../shaders/fullscreen.vert
+[19:38:08.852] [Render] [error] ShaderManager::load() - FAILED to load shader 'cloud_advanced'
+[19:38:08.853] [Render] [error] ShaderSystem::init() - FAILED to load cloud shader
+[19:38:08.853] [Render] [info] ShaderSystem::init() - COMPLETE
+[19:38:08.853] [Render] [info] Renderer::init() - initializing CloudRenderer
+[19:38:08.853] [Render] [info] CloudRenderer::init() - START
+[19:38:08.853] [Render] [error] CloudRenderer::init() - FAILED: Cloud shader not loaded!
+[19:38:08.853] [Render] [error] Renderer::init() - FAILED: CloudRenderer init failed
+[19:38:08.853] [Engine] [error] Failed to initialize renderer
+[19:38:08.853] [Engine] [error] main() - engine.init() FAILED!
+[19:38:08.853] [Engine] [info] CLOUDENGINE shutting down
+[19:38:08.853] [Render] [info] ShaderManager::shutdown() - Cleaning up 0 shaders
+[19:38:08.854] [Render] [info] ShaderManager::shutdown() - COMPLETE

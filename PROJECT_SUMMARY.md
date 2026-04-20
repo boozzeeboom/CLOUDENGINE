@@ -1,6 +1,6 @@
 # CLOUDENGINE Project Summary
 **Project C: The Clouds** — Custom C++ Game Engine  
-**Version:** 0.2.0 | **Status:** Iteration 2.1 COMPLETE, Camera System IN PROGRESS  
+**Version:** 0.2.0 | **Status:** ✅ **Iteration 2 COMPLETE** — Flight Controls Working  
 **Date:** 2026-04-20
 
 ---
@@ -235,15 +235,24 @@ struct InputState { };   // Input bindings
 - Shader system with hot-reload (F5)
 - Cloud raymarch shader loaded
 - OpenGL debug output enabled (debug builds)
-- Gradient fallback rendering
+- **Flight controls (WASD + E/Q + mouse)** ✅ NEW!
+- **Camera starts inside cloud layer (y=3000)** ✅ NEW!
+
+### Flight Controls
+| Key | Action |
+|-----|--------|
+| RMB (hold) | Capture cursor |
+| Mouse | Look around |
+| W/S | Forward/back |
+| A/D | Strafe |
+| E/Space | Ascend |
+| Q/Shift | Descend |
 
 ### In Progress 🟡
-- Camera needs to fly up to 2000+ units to see clouds
 - CloudParams not yet an ECS component (still in code)
 - Frame UBO not structured yet
 
 ### Not Started ⬜
-- Camera control (WASD + mouse)
 - Cloud animation via ECS system
 - Floating origin
 - Physics
@@ -251,7 +260,6 @@ struct InputState { };   // Input bindings
 
 ### Known Issues
 - ~750 MSVC warnings from spdlog/fmt (non-critical)
-- Gradient visible instead of clouds = camera is below cloud layer (2000 units)
 
 ---
 

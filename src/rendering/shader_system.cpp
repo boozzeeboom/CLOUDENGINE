@@ -31,8 +31,8 @@ void ShaderSystem::init(flecs::world& world) {
     auto& shaderMgr = GetShaderManager();
     shaderMgr.init();
     
-    // Set base path for shaders (from build/Debug/ -> ../../shaders/)
-    shaderMgr.setBasePath("../../shaders/");
+    // Set base path for shaders (relative to CWD)
+    shaderMgr.setBasePath("shaders/");
     
     // Load cloud shader - advanced Ghibli-style clouds
     _cloudShaderID = shaderMgr.load("cloud_advanced", "fullscreen.vert", "cloud_advanced.frag");

@@ -69,4 +69,14 @@ void Window::setTitle(const char* title) {
     }
 }
 
+void Window::setCursorCapture(bool capture) {
+    if (_window) {
+        glfwSetInputMode(_window, GLFW_CURSOR, capture ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+    }
+}
+
+bool Window::isMouseButtonPressed(int button) {
+    return glfwGetMouseButton(_window, button) == GLFW_PRESS;
+}
+
 }} // namespace Core::Platform
