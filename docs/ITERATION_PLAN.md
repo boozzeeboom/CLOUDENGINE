@@ -1,8 +1,8 @@
 # CLOUDENGINE — Iteration Plan
 
-> **Версия плана**: 3.1 (обновлён 2026-04-20 вечером)  
-> **Статус проекта**: ✅ **Iteration 0 ЗАВЕРШЁН** — первый рабочий exe получен 20.04.2026  
-> **Следующий шаг**: Iteration 2.1 — Shader System
+> **Версия плана**: 3.2 (обновлён 2026-04-20 вечером)  
+> **Статус проекта**: ✅ **Iteration 0-1 ЗАВЕРШЁН**, Iteration 2.1 ЗАВЕРШЁН  
+> **Следующий шаг**: Iteration 2.3 — Camera System (Flight Controls)
 
 ---
 
@@ -109,6 +109,8 @@
 - [x] `ShaderSystem` — ECS-совместимая система
 - [x] `CloudRenderer` — рендеринг облаков через шейдер
 - [x] **Путь к шейдерам**: `../../shaders/` (от `build/Debug/` → `CLOUDENGINE/shaders/`)
+- [x] **Исправлен баг с голубым экраном**: pitch камеры 15° (вместо 0°), cloud_advanced.frag
+- [x] **Ghibli-style sky**: gradient + sun glow fallback для пустых пикселей
 
 > 📝 **Session Log**: `docs/SESSION_2026-04-20_SHADER_PATH_FIX.md`
 
@@ -118,28 +120,41 @@
 - [ ] Все шейдеры используют binding point 0 для frame constants  
 - [ ] Шейдеры обновить под `layout(binding=0) uniform FrameData { ... }`
 
-### 2.3 Camera System
-- [ ] `Camera` компонент (position, yaw, pitch, fov, near, far)  
-- [ ] `CameraSystem` — обновляет view/projection матрицы  
-- [ ] Orbital камера для просмотра облаков (без игрока)  
+### 2.3 Camera System 🟡 (В ПРОЦЕССЕ)
+- [ ] `Camera` ECS компонент — позиция камеры в ECS world
+- [ ] `CameraSystem` — обновляет камеру из ECS к cloud renderer
+- [ ] Flight controls: камера может лететь вверх (E или Space) к облакам
 - [ ] Управление: WASD + мышь (захват при ПКМ)
 
-### 2.4 CloudRenderer через ECS
-- [ ] `CloudParams` компонент — параметры шейдера  
-- [ ] `CloudRenderSystem` в фазе Render — связывает параметры с UBO  
-- [ ] Переход от ручного кода в main.cpp к ECS системе  
-- [ ] Тест: облака анимируются, зависят от time
+> ⚠️ **Known issue**: Cloud layer на y=2000-4000, камера на y≈0. Нужен flight control.
 
-### 2.5 OpenGL Debug Layer
-- [ ] Включить `GL_DEBUG_OUTPUT` для debug builds  
-- [ ] Коллбэк через spdlog  
-- [ ] Отфильтровать NOTIFICATION уровень
+### 2.4 CloudRenderer через ECS 🟡 (ЧАСТИЧНО)
+- [x] `cloud_raymarch.frag` загружается, 32-step raymarching
+- [x] FBM noise для cloud density (4 octaves base, 3 octaves detail)
+- [x] Cloud layers: CLOUD_BOTTOM=2000, CLOUD_TOP=4000
+- [x] Wind offset uniform (`uWindOffset`) для анимации
+- [ ] `CloudParams` ECS компонент — параметры шейдера  
+- [ ] `CloudRenderSystem` — связывает CloudParams с uniforms
+
+### 2.5 OpenGL Debug Layer ✅
+- [x] `GL_DEBUG_OUTPUT` включён в debug builds (renderer.cpp:31-44)
+- [x] Коллбэк через spdlog (`RENDER_LOG_ERROR`, `RENDER_LOG_WARN`)
+- [x] Отфильтрованы ERROR и DEPRECATED_BEHAVIOR
 
 ### Критерий готовности
-- Облака рендерятся через ECS систему  
-- Камера управляется с клавиатуры/мыши  
-- Шейдеры перезагружаются по F5 без перезапуска  
-- В лог выводится: FPS, draw calls, frame time
+- [x] Shader system работает, шейдеры загружаются
+- [x] Hot-reload по F5 работает
+- [x] GL debug layer активен в debug
+- [ ] **Облака видны** — требует flight control (ITERATION 2.3)
+- [ ] Камера управляется с клавиатуры/мыши
+- [ ] FPS/draw calls логируются
+
+### NEXT: Iteration 2.3 — Flight Controls
+Для просмотра облаков нужно добавить flight controls:
+1. WASD — движение
+2. E/Space — вверх, Q/Shift — вниз  
+3. Мышь — yaw/pitch камеры
+4. Летать до y=2000+ чтобы увидеть облака
 
 ---
 

@@ -2,6 +2,9 @@
 #include <string>
 #include <glm/glm.hpp>
 
+#define __gl_h_
+#include <glad/glad.h>
+
 namespace Core { namespace Rendering {
 
 /// GLSL shader program wrapper.
@@ -10,6 +13,23 @@ class Shader {
 public:
     Shader() = default;
     ~Shader();
+    
+    // Move semantics - CRITICAL for ShaderManager storage
+    Shader(Shader&& other) noexcept : _id(other._id) {
+        other._id = 0; // Prevent destructor from deleting
+    }
+    
+    Shader& operator=(Shader&& other) noexcept {
+        if (this != &other) {
+            if (_id) glDeleteProgram(_id);
+            _id = other._id;
+            other._id = 0;
+        }
+        return *this;
+    }
+    
+    Shader(const Shader&) = delete;
+    Shader& operator=(const Shader&) = delete;
 
     bool load(const char* vertPath, const char* fragPath);
     void use();

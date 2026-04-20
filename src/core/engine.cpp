@@ -102,12 +102,13 @@ void Engine::update(float dt) {
 void Engine::render() {
     Rendering::Renderer::beginFrame();
     
-    // Set camera ABOVE clouds looking DOWN
-    // CLOUD_BOTTOM=2000, CLOUD_TOP=4000, so camera at 5000 looking down
+    // Set camera INSIDE the cloud layer looking OUT
+    // CLOUD_BOTTOM=2000, CLOUD_TOP=4000, camera at y=3200
+    // Pitch=+15° looking UP at clouds above
     Rendering::Renderer::setCamera(
-        glm::vec3(0.0f, 5000.0f, 0.0f),  // Camera above clouds
-        180.0f,  // Yaw (facing north)
-        -45.0f   // Pitch (looking down at 45 degrees)
+        glm::vec3(0.0f, 3000.0f, 0.0f),  // Camera at cloud center level
+        0.0f,      // Yaw (facing north/+Z)
+        15.0f      // Pitch (looking UP at clouds - WAS +15°)
     );
     
     // Render clouds with shader

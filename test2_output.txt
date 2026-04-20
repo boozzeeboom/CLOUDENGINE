@@ -1,0 +1,731 @@
+[19:08:09.476] [Engine] [info] ========================================
+[19:08:09.477] [Engine] [info] CLOUDENGINE v0.2.0 starting...
+[19:08:09.478] [Engine] [info] Log file: logs/cloudengine.log
+[19:08:09.478] [Engine] [info] ========================================
+[19:08:09.479] [Engine] [info] Logger::Init() - complete
+[19:08:09.479] [Engine] [info] ========================================
+[19:08:09.479] [Engine] [info] CLOUDENGINE v0.2.0 - Full Engine Test
+[19:08:09.480] [Engine] [info] ========================================
+[19:08:09.480] [Engine] [info] main() - Creating Core::Engine
+[19:08:09.480] [Engine] [info] main() - Calling engine.init()
+[19:08:09.480] [Engine] [info] Initializing Engine...
+[19:08:09.480] [Engine] [info] Window::init() - START (1280x720, title=Project C: The Clouds)
+[19:08:09.480] [Engine] [info] Window::init() - calling glfwInit()
+[19:08:09.495] [Engine] [info] Window::init() - glfwInit() SUCCESS
+[19:08:09.496] [Engine] [info] Window::init() - setting window hints (GL 4.5 Core)
+[19:08:09.496] [Engine] [info] Window::init() - calling glfwCreateWindow()
+[19:08:09.775] [Engine] [info] Window::init() - glfwCreateWindow() SUCCESS
+[19:08:09.775] [Engine] [info] Window::init() - calling glfwMakeContextCurrent()
+[19:08:09.777] [Engine] [info] Window::init() - COMPLETE
+[19:08:09.777] [Engine] [info] Window initialized
+[19:08:09.777] [Render] [info] Renderer::init() - START
+[19:08:09.777] [Render] [info] Renderer::init() - making GLFW context current
+[19:08:09.778] [Render] [info] Renderer::init() - calling gladLoadGLLoader()
+[19:08:09.786] [Render] [info] Renderer::init() - gladLoadGLLoader() SUCCESS
+[19:08:09.786] [Render] [info] Renderer::init() - OpenGL debug output ENABLED
+[19:08:09.786] [Render] [info] Renderer::init() - initializing ShaderSystem
+[19:08:09.786] [Render] [info] ShaderSystem::init() - START
+[19:08:09.787] [Render] [info] ShaderManager::init() - START
+[19:08:09.787] [Render] [info] ShaderManager::init() - COMPLETE
+[19:08:09.787] [Render] [debug] ShaderManager - base path set to: ../../shaders/
+[19:08:09.787] [Render] [info] ShaderManager::load() - Loading shader 'cloud_advanced'
+[19:08:09.787] [Render] [debug] ShaderManager - vertex path: ../../shaders/fullscreen.vert
+[19:08:09.787] [Render] [debug] ShaderManager - fragment path: ../../shaders/cloud_advanced.frag
+[19:08:09.788] [Render] [debug] Shader compiled successfully, type=VERTEX
+[19:08:09.788] [Render] [debug] Shader compiled successfully, type=FRAGMENT
+[19:08:09.789] [Render] [info] ShaderManager::load() - SUCCESS 'cloud_advanced' (ID=1)
+[19:08:09.789] [Render] [info] ShaderSystem::init() - Cloud shader loaded successfully
+[19:08:09.789] [Render] [info] ShaderSystem::init() - COMPLETE
+[19:08:09.790] [Render] [info] Renderer::init() - initializing CloudRenderer
+[19:08:09.790] [Render] [info] CloudRenderer::init() - START
+[19:08:09.790] [Render] [info] CloudRenderer::init() - SUCCESS, shader ID=3
+[19:08:09.790] [Render] [info] Renderer::init() - COMPLETE
+[19:08:09.791] [Engine] [info] Renderer initialized
+[19:08:09.832] [ECS] [info] ECS pipeline phases registered
+[19:08:09.833] [ECS] [info] ECS components registered: Transform, Velocity, AngularVelocity, CloudParams, Camera, IsMainCamera, IsCloudRenderer
+[19:08:09.834] [ECS] [info] ECS singletons registered: EngineConfig, TimeData, InputState
+[19:08:09.834] [Engine] [info] TimeSystem: TimeData updated in Engine::update() before ECS::update()
+[19:08:09.834] [Engine] [info] TimeSystem registered in PreUpdate phase
+[19:08:09.835] [Engine] [info] ECS World initialized with pipeline phases
+[19:08:09.835] [Engine] [info] ECS initialized
+[19:08:09.835] [Engine] [info] Engine initialized successfully
+[19:08:09.835] [Engine] [info] main() - engine.init() SUCCESS, starting main loop
+[19:08:09.835] [Engine] [info] Press ESC in window to exit...
+[19:08:09.835] [Engine] [info] Engine running...
+[19:08:09.836] [Render] [debug] Shader::use() - _id=3
+[19:08:09.843] [Render] [debug] Shader::use() - _id=3
+[19:08:09.850] [Render] [debug] Shader::use() - _id=3
+[19:08:09.860] [Render] [debug] Shader::use() - _id=3
+[19:08:09.877] [Render] [debug] Shader::use() - _id=3
+[19:08:09.893] [Render] [debug] Shader::use() - _id=3
+[19:08:09.910] [Render] [debug] Shader::use() - _id=3
+[19:08:09.927] [Render] [debug] Shader::use() - _id=3
+[19:08:09.943] [Render] [debug] Shader::use() - _id=3
+[19:08:09.964] [Render] [debug] Shader::use() - _id=3
+[19:08:09.977] [Render] [debug] Shader::use() - _id=3
+[19:08:09.995] [Render] [debug] Shader::use() - _id=3
+[19:08:10.010] [Render] [debug] Shader::use() - _id=3
+[19:08:10.027] [Render] [debug] Shader::use() - _id=3
+[19:08:10.043] [Render] [debug] Shader::use() - _id=3
+[19:08:10.060] [Render] [debug] Shader::use() - _id=3
+[19:08:10.077] [Render] [debug] Shader::use() - _id=3
+[19:08:10.094] [Render] [debug] Shader::use() - _id=3
+[19:08:10.110] [Render] [debug] Shader::use() - _id=3
+[19:08:10.127] [Render] [debug] Shader::use() - _id=3
+[19:08:10.144] [Render] [debug] Shader::use() - _id=3
+[19:08:10.160] [Render] [debug] Shader::use() - _id=3
+[19:08:10.177] [Render] [debug] Shader::use() - _id=3
+[19:08:10.194] [Render] [debug] Shader::use() - _id=3
+[19:08:10.210] [Render] [debug] Shader::use() - _id=3
+[19:08:10.227] [Render] [debug] Shader::use() - _id=3
+[19:08:10.244] [Render] [debug] Shader::use() - _id=3
+[19:08:10.261] [Render] [debug] Shader::use() - _id=3
+[19:08:10.277] [Render] [debug] Shader::use() - _id=3
+[19:08:10.294] [Render] [debug] Shader::use() - _id=3
+[19:08:10.310] [Render] [debug] Shader::use() - _id=3
+[19:08:10.327] [Render] [debug] Shader::use() - _id=3
+[19:08:10.344] [Engine] [info] Update #0: FPS=59, dt=0.017s, total_time=0.5s
+[19:08:10.344] [Render] [debug] Shader::use() - _id=3
+[19:08:10.360] [Render] [debug] Shader::use() - _id=3
+[19:08:10.377] [Render] [debug] Shader::use() - _id=3
+[19:08:10.394] [Render] [debug] Shader::use() - _id=3
+[19:08:10.410] [Render] [debug] Shader::use() - _id=3
+[19:08:10.427] [Render] [debug] Shader::use() - _id=3
+[19:08:10.444] [Render] [debug] Shader::use() - _id=3
+[19:08:10.460] [Render] [debug] Shader::use() - _id=3
+[19:08:10.477] [Render] [debug] Shader::use() - _id=3
+[19:08:10.494] [Render] [debug] Shader::use() - _id=3
+[19:08:10.511] [Render] [debug] Shader::use() - _id=3
+[19:08:10.527] [Render] [debug] Shader::use() - _id=3
+[19:08:10.544] [Render] [debug] Shader::use() - _id=3
+[19:08:10.560] [Render] [debug] Shader::use() - _id=3
+[19:08:10.577] [Render] [debug] Shader::use() - _id=3
+[19:08:10.594] [Render] [debug] Shader::use() - _id=3
+[19:08:10.611] [Render] [debug] Shader::use() - _id=3
+[19:08:10.627] [Render] [debug] Shader::use() - _id=3
+[19:08:10.644] [Render] [debug] Shader::use() - _id=3
+[19:08:10.661] [Render] [debug] Shader::use() - _id=3
+[19:08:10.677] [Render] [debug] Shader::use() - _id=3
+[19:08:10.694] [Render] [debug] Shader::use() - _id=3
+[19:08:10.711] [Render] [debug] Shader::use() - _id=3
+[19:08:10.727] [Render] [debug] Shader::use() - _id=3
+[19:08:10.744] [Render] [debug] Shader::use() - _id=3
+[19:08:10.761] [Render] [debug] Shader::use() - _id=3
+[19:08:10.778] [Render] [debug] Shader::use() - _id=3
+[19:08:10.794] [Render] [debug] Shader::use() - _id=3
+[19:08:10.811] [Render] [debug] Shader::use() - _id=3
+[19:08:10.827] [Render] [debug] Shader::use() - _id=3
+[19:08:10.844] [Engine] [info] Update #0: FPS=62, dt=0.016s, total_time=1.0s
+[19:08:10.844] [Render] [debug] Shader::use() - _id=3
+[19:08:10.861] [Render] [debug] Shader::use() - _id=3
+[19:08:10.877] [Render] [debug] Shader::use() - _id=3
+[19:08:10.894] [Render] [debug] Shader::use() - _id=3
+[19:08:10.911] [Render] [debug] Shader::use() - _id=3
+[19:08:10.928] [Render] [debug] Shader::use() - _id=3
+[19:08:10.944] [Render] [debug] Shader::use() - _id=3
+[19:08:10.961] [Render] [debug] Shader::use() - _id=3
+[19:08:10.979] [Render] [debug] Shader::use() - _id=3
+[19:08:10.995] [Render] [debug] Shader::use() - _id=3
+[19:08:11.011] [Render] [debug] Shader::use() - _id=3
+[19:08:11.028] [Render] [debug] Shader::use() - _id=3
+[19:08:11.044] [Render] [debug] Shader::use() - _id=3
+[19:08:11.061] [Render] [debug] Shader::use() - _id=3
+[19:08:11.078] [Render] [debug] Shader::use() - _id=3
+[19:08:11.094] [Render] [debug] Shader::use() - _id=3
+[19:08:11.111] [Render] [debug] Shader::use() - _id=3
+[19:08:11.128] [Render] [debug] Shader::use() - _id=3
+[19:08:11.144] [Render] [debug] Shader::use() - _id=3
+[19:08:11.161] [Render] [debug] Shader::use() - _id=3
+[19:08:11.178] [Render] [debug] Shader::use() - _id=3
+[19:08:11.195] [Render] [debug] Shader::use() - _id=3
+[19:08:11.211] [Render] [debug] Shader::use() - _id=3
+[19:08:11.228] [Render] [debug] Shader::use() - _id=3
+[19:08:11.245] [Render] [debug] Shader::use() - _id=3
+[19:08:11.261] [Render] [debug] Shader::use() - _id=3
+[19:08:11.278] [Render] [debug] Shader::use() - _id=3
+[19:08:11.295] [Render] [debug] Shader::use() - _id=3
+[19:08:11.311] [Render] [debug] Shader::use() - _id=3
+[19:08:11.328] [Render] [debug] Shader::use() - _id=3
+[19:08:11.345] [Engine] [info] Update #0: FPS=59, dt=0.017s, total_time=1.5s
+[19:08:11.345] [Render] [debug] Shader::use() - _id=3
+[19:08:11.361] [Render] [debug] Shader::use() - _id=3
+[19:08:11.378] [Render] [debug] Shader::use() - _id=3
+[19:08:11.395] [Render] [debug] Shader::use() - _id=3
+[19:08:11.411] [Render] [debug] Shader::use() - _id=3
+[19:08:11.428] [Render] [debug] Shader::use() - _id=3
+[19:08:11.445] [Render] [debug] Shader::use() - _id=3
+[19:08:11.461] [Render] [debug] Shader::use() - _id=3
+[19:08:11.478] [Render] [debug] Shader::use() - _id=3
+[19:08:11.495] [Render] [debug] Shader::use() - _id=3
+[19:08:11.511] [Render] [debug] Shader::use() - _id=3
+[19:08:11.528] [Render] [debug] Shader::use() - _id=3
+[19:08:11.545] [Render] [debug] Shader::use() - _id=3
+[19:08:11.561] [Render] [debug] Shader::use() - _id=3
+[19:08:11.578] [Render] [debug] Shader::use() - _id=3
+[19:08:11.595] [Render] [debug] Shader::use() - _id=3
+[19:08:11.612] [Render] [debug] Shader::use() - _id=3
+[19:08:11.628] [Render] [debug] Shader::use() - _id=3
+[19:08:11.646] [Render] [debug] Shader::use() - _id=3
+[19:08:11.661] [Render] [debug] Shader::use() - _id=3
+[19:08:11.678] [Render] [debug] Shader::use() - _id=3
+[19:08:11.695] [Render] [debug] Shader::use() - _id=3
+[19:08:11.711] [Render] [debug] Shader::use() - _id=3
+[19:08:11.728] [Render] [debug] Shader::use() - _id=3
+[19:08:11.745] [Render] [debug] Shader::use() - _id=3
+[19:08:11.762] [Render] [debug] Shader::use() - _id=3
+[19:08:11.778] [Render] [debug] Shader::use() - _id=3
+[19:08:11.795] [Render] [debug] Shader::use() - _id=3
+[19:08:11.812] [Render] [debug] Shader::use() - _id=3
+[19:08:11.828] [Render] [debug] Shader::use() - _id=3
+[19:08:11.845] [Render] [debug] Shader::use() - _id=3
+[19:08:11.845] [Render] [debug] === CLOUD DEBUG ===
+[19:08:11.845] [Render] [debug] Camera: pos=(0,3000,0) yaw=0.0 pitch=15.0
+[19:08:11.845] [Render] [debug] Forward: (0.000,0.259,0.966)
+[19:08:11.846] [Render] [debug] SunDir: (0.875,0.484,0.026) dayFactor=0.55
+[19:08:11.846] [Render] [debug] Shader ID: 3
+[19:08:11.861] [Engine] [info] Update #0: FPS=59, dt=0.017s, total_time=2.0s
+[19:08:11.862] [Render] [debug] Shader::use() - _id=3
+[19:08:11.878] [Render] [debug] Shader::use() - _id=3
+[19:08:11.895] [Render] [debug] Shader::use() - _id=3
+[19:08:11.912] [Render] [debug] Shader::use() - _id=3
+[19:08:11.928] [Render] [debug] Shader::use() - _id=3
+[19:08:11.945] [Render] [debug] Shader::use() - _id=3
+[19:08:11.962] [Render] [debug] Shader::use() - _id=3
+[19:08:11.978] [Render] [debug] Shader::use() - _id=3
+[19:08:11.995] [Render] [debug] Shader::use() - _id=3
+[19:08:12.012] [Render] [debug] Shader::use() - _id=3
+[19:08:12.028] [Render] [debug] Shader::use() - _id=3
+[19:08:12.045] [Render] [debug] Shader::use() - _id=3
+[19:08:12.062] [Render] [debug] Shader::use() - _id=3
+[19:08:12.078] [Render] [debug] Shader::use() - _id=3
+[19:08:12.095] [Render] [debug] Shader::use() - _id=3
+[19:08:12.112] [Render] [debug] Shader::use() - _id=3
+[19:08:12.128] [Render] [debug] Shader::use() - _id=3
+[19:08:12.145] [Render] [debug] Shader::use() - _id=3
+[19:08:12.162] [Render] [debug] Shader::use() - _id=3
+[19:08:12.179] [Render] [debug] Shader::use() - _id=3
+[19:08:12.196] [Render] [debug] Shader::use() - _id=3
+[19:08:12.212] [Render] [debug] Shader::use() - _id=3
+[19:08:12.229] [Render] [debug] Shader::use() - _id=3
+[19:08:12.245] [Render] [debug] Shader::use() - _id=3
+[19:08:12.262] [Render] [debug] Shader::use() - _id=3
+[19:08:12.279] [Render] [debug] Shader::use() - _id=3
+[19:08:12.295] [Render] [debug] Shader::use() - _id=3
+[19:08:12.312] [Render] [debug] Shader::use() - _id=3
+[19:08:12.329] [Render] [debug] Shader::use() - _id=3
+[19:08:12.345] [Render] [debug] Shader::use() - _id=3
+[19:08:12.362] [Render] [debug] Shader::use() - _id=3
+[19:08:12.379] [Engine] [info] Update #0: FPS=59, dt=0.017s, total_time=2.5s
+[19:08:12.379] [Render] [debug] Shader::use() - _id=3
+[19:08:12.395] [Render] [debug] Shader::use() - _id=3
+[19:08:12.412] [Render] [debug] Shader::use() - _id=3
+[19:08:12.429] [Render] [debug] Shader::use() - _id=3
+[19:08:12.446] [Render] [debug] Shader::use() - _id=3
+[19:08:12.462] [Render] [debug] Shader::use() - _id=3
+[19:08:12.479] [Render] [debug] Shader::use() - _id=3
+[19:08:12.495] [Render] [debug] Shader::use() - _id=3
+[19:08:12.512] [Render] [debug] Shader::use() - _id=3
+[19:08:12.529] [Render] [debug] Shader::use() - _id=3
+[19:08:12.550] [Render] [debug] Shader::use() - _id=3
+[19:08:12.563] [Render] [debug] Shader::use() - _id=3
+[19:08:12.587] [Render] [debug] Shader::use() - _id=3
+[19:08:12.597] [Render] [debug] Shader::use() - _id=3
+[19:08:12.613] [Render] [debug] Shader::use() - _id=3
+[19:08:12.630] [Render] [debug] Shader::use() - _id=3
+[19:08:12.647] [Render] [debug] Shader::use() - _id=3
+[19:08:12.664] [Render] [debug] Shader::use() - _id=3
+[19:08:12.680] [Render] [debug] Shader::use() - _id=3
+[19:08:12.696] [Render] [debug] Shader::use() - _id=3
+[19:08:12.713] [Render] [debug] Shader::use() - _id=3
+[19:08:12.729] [Render] [debug] Shader::use() - _id=3
+[19:08:12.746] [Render] [debug] Shader::use() - _id=3
+[19:08:12.762] [Render] [debug] Shader::use() - _id=3
+[19:08:12.779] [Render] [debug] Shader::use() - _id=3
+[19:08:12.796] [Render] [debug] Shader::use() - _id=3
+[19:08:12.814] [Render] [debug] Shader::use() - _id=3
+[19:08:12.830] [Render] [debug] Shader::use() - _id=3
+[19:08:12.847] [Render] [debug] Shader::use() - _id=3
+[19:08:12.864] [Render] [debug] Shader::use() - _id=3
+[19:08:12.880] [Engine] [info] Update #0: FPS=62, dt=0.016s, total_time=3.0s
+[19:08:12.881] [Render] [debug] Shader::use() - _id=3
+[19:08:12.897] [Render] [debug] Shader::use() - _id=3
+[19:08:12.917] [Render] [debug] Shader::use() - _id=3
+[19:08:12.930] [Render] [debug] Shader::use() - _id=3
+[19:08:12.947] [Render] [debug] Shader::use() - _id=3
+[19:08:12.965] [Render] [debug] Shader::use() - _id=3
+[19:08:12.982] [Render] [debug] Shader::use() - _id=3
+[19:08:12.997] [Render] [debug] Shader::use() - _id=3
+[19:08:13.014] [Render] [debug] Shader::use() - _id=3
+[19:08:13.030] [Render] [debug] Shader::use() - _id=3
+[19:08:13.047] [Render] [debug] Shader::use() - _id=3
+[19:08:13.064] [Render] [debug] Shader::use() - _id=3
+[19:08:13.080] [Render] [debug] Shader::use() - _id=3
+[19:08:13.097] [Render] [debug] Shader::use() - _id=3
+[19:08:13.113] [Render] [debug] Shader::use() - _id=3
+[19:08:13.130] [Render] [debug] Shader::use() - _id=3
+[19:08:13.146] [Render] [debug] Shader::use() - _id=3
+[19:08:13.163] [Render] [debug] Shader::use() - _id=3
+[19:08:13.180] [Render] [debug] Shader::use() - _id=3
+[19:08:13.197] [Render] [debug] Shader::use() - _id=3
+[19:08:13.213] [Render] [debug] Shader::use() - _id=3
+[19:08:13.230] [Render] [debug] Shader::use() - _id=3
+[19:08:13.246] [Render] [debug] Shader::use() - _id=3
+[19:08:13.265] [Render] [debug] Shader::use() - _id=3
+[19:08:13.281] [Render] [debug] Shader::use() - _id=3
+[19:08:13.297] [Render] [debug] Shader::use() - _id=3
+[19:08:13.318] [Render] [debug] Shader::use() - _id=3
+[19:08:13.330] [Render] [debug] Shader::use() - _id=3
+[19:08:13.346] [Render] [debug] Shader::use() - _id=3
+[19:08:13.363] [Render] [debug] Shader::use() - _id=3
+[19:08:13.380] [Engine] [info] Update #0: FPS=56, dt=0.018s, total_time=3.5s
+[19:08:13.381] [Render] [debug] Shader::use() - _id=3
+[19:08:13.397] [Render] [debug] Shader::use() - _id=3
+[19:08:13.413] [Render] [debug] Shader::use() - _id=3
+[19:08:13.430] [Render] [debug] Shader::use() - _id=3
+[19:08:13.447] [Render] [debug] Shader::use() - _id=3
+[19:08:13.463] [Render] [debug] Shader::use() - _id=3
+[19:08:13.480] [Render] [debug] Shader::use() - _id=3
+[19:08:13.497] [Render] [debug] Shader::use() - _id=3
+[19:08:13.513] [Render] [debug] Shader::use() - _id=3
+[19:08:13.530] [Render] [debug] Shader::use() - _id=3
+[19:08:13.547] [Render] [debug] Shader::use() - _id=3
+[19:08:13.563] [Render] [debug] Shader::use() - _id=3
+[19:08:13.580] [Render] [debug] Shader::use() - _id=3
+[19:08:13.597] [Render] [debug] Shader::use() - _id=3
+[19:08:13.613] [Render] [debug] Shader::use() - _id=3
+[19:08:13.630] [Render] [debug] Shader::use() - _id=3
+[19:08:13.647] [Render] [debug] Shader::use() - _id=3
+[19:08:13.664] [Render] [debug] Shader::use() - _id=3
+[19:08:13.680] [Render] [debug] Shader::use() - _id=3
+[19:08:13.697] [Render] [debug] Shader::use() - _id=3
+[19:08:13.714] [Render] [debug] Shader::use() - _id=3
+[19:08:13.730] [Render] [debug] Shader::use() - _id=3
+[19:08:13.747] [Render] [debug] Shader::use() - _id=3
+[19:08:13.763] [Render] [debug] Shader::use() - _id=3
+[19:08:13.780] [Render] [debug] Shader::use() - _id=3
+[19:08:13.797] [Render] [debug] Shader::use() - _id=3
+[19:08:13.814] [Render] [debug] Shader::use() - _id=3
+[19:08:13.830] [Render] [debug] Shader::use() - _id=3
+[19:08:13.847] [Render] [debug] Shader::use() - _id=3
+[19:08:13.847] [Render] [debug] === CLOUD DEBUG ===
+[19:08:13.847] [Render] [debug] Camera: pos=(0,3000,0) yaw=0.0 pitch=15.0
+[19:08:13.847] [Render] [debug] Forward: (0.000,0.259,0.966)
+[19:08:13.847] [Render] [debug] SunDir: (0.852,0.521,0.052) dayFactor=0.60
+[19:08:13.848] [Render] [debug] Shader ID: 3
+[19:08:13.863] [Render] [debug] Shader::use() - _id=3
+[19:08:13.880] [Render] [debug] Shader::use() - _id=3
+[19:08:13.897] [Engine] [info] Update #0: FPS=59, dt=0.017s, total_time=4.1s
+[19:08:13.897] [Render] [debug] Shader::use() - _id=3
+[19:08:13.913] [Render] [debug] Shader::use() - _id=3
+[19:08:13.930] [Render] [debug] Shader::use() - _id=3
+[19:08:14.344] [Render] [debug] Shader::use() - _id=3
+[19:08:14.345] [Render] [debug] Shader::use() - _id=3
+[19:08:14.347] [Render] [debug] Shader::use() - _id=3
+[19:08:14.364] [Render] [debug] Shader::use() - _id=3
+[19:08:14.380] [Render] [debug] Shader::use() - _id=3
+[19:08:14.397] [Render] [debug] Shader::use() - _id=3
+[19:08:14.415] [Engine] [info] Update #0: FPS=56, dt=0.018s, total_time=4.6s
+[19:08:14.416] [Render] [debug] Shader::use() - _id=3
+[19:08:14.431] [Render] [debug] Shader::use() - _id=3
+[19:08:14.447] [Render] [debug] Shader::use() - _id=3
+[19:08:14.464] [Render] [debug] Shader::use() - _id=3
+[19:08:14.481] [Render] [debug] Shader::use() - _id=3
+[19:08:14.498] [Render] [debug] Shader::use() - _id=3
+[19:08:14.514] [Render] [debug] Shader::use() - _id=3
+[19:08:14.531] [Render] [debug] Shader::use() - _id=3
+[19:08:14.548] [Render] [debug] Shader::use() - _id=3
+[19:08:14.564] [Render] [debug] Shader::use() - _id=3
+[19:08:14.581] [Render] [debug] Shader::use() - _id=3
+[19:08:14.598] [Render] [debug] Shader::use() - _id=3
+[19:08:14.614] [Render] [debug] Shader::use() - _id=3
+[19:08:14.631] [Render] [debug] Shader::use() - _id=3
+[19:08:14.648] [Render] [debug] Shader::use() - _id=3
+[19:08:14.664] [Render] [debug] Shader::use() - _id=3
+[19:08:14.681] [Render] [debug] Shader::use() - _id=3
+[19:08:14.698] [Render] [debug] Shader::use() - _id=3
+[19:08:14.714] [Render] [debug] Shader::use() - _id=3
+[19:08:14.731] [Render] [debug] Shader::use() - _id=3
+[19:08:14.747] [Render] [debug] Shader::use() - _id=3
+[19:08:14.764] [Render] [debug] Shader::use() - _id=3
+[19:08:14.781] [Render] [debug] Shader::use() - _id=3
+[19:08:14.797] [Render] [debug] Shader::use() - _id=3
+[19:08:14.814] [Render] [debug] Shader::use() - _id=3
+[19:08:14.831] [Render] [debug] Shader::use() - _id=3
+[19:08:14.848] [Render] [debug] Shader::use() - _id=3
+[19:08:14.864] [Render] [debug] Shader::use() - _id=3
+[19:08:14.881] [Render] [debug] Shader::use() - _id=3
+[19:08:14.898] [Render] [debug] Shader::use() - _id=3
+[19:08:14.914] [Engine] [info] Update #0: FPS=59, dt=0.017s, total_time=5.1s
+[19:08:14.915] [Render] [debug] Shader::use() - _id=3
+[19:08:14.931] [Render] [debug] Shader::use() - _id=3
+[19:08:14.948] [Render] [debug] Shader::use() - _id=3
+[19:08:14.964] [Render] [debug] Shader::use() - _id=3
+[19:08:14.981] [Render] [debug] Shader::use() - _id=3
+[19:08:14.998] [Render] [debug] Shader::use() - _id=3
+[19:08:15.014] [Render] [debug] Shader::use() - _id=3
+[19:08:15.031] [Render] [debug] Shader::use() - _id=3
+[19:08:15.048] [Render] [debug] Shader::use() - _id=3
+[19:08:15.065] [Render] [debug] Shader::use() - _id=3
+[19:08:15.081] [Render] [debug] Shader::use() - _id=3
+[19:08:15.098] [Render] [debug] Shader::use() - _id=3
+[19:08:15.115] [Render] [debug] Shader::use() - _id=3
+[19:08:15.132] [Render] [debug] Shader::use() - _id=3
+[19:08:15.148] [Render] [debug] Shader::use() - _id=3
+[19:08:15.165] [Render] [debug] Shader::use() - _id=3
+[19:08:15.181] [Render] [debug] Shader::use() - _id=3
+[19:08:15.198] [Render] [debug] Shader::use() - _id=3
+[19:08:15.215] [Render] [debug] Shader::use() - _id=3
+[19:08:15.232] [Render] [debug] Shader::use() - _id=3
+[19:08:15.248] [Render] [debug] Shader::use() - _id=3
+[19:08:15.265] [Render] [debug] Shader::use() - _id=3
+[19:08:15.281] [Render] [debug] Shader::use() - _id=3
+[19:08:15.298] [Render] [debug] Shader::use() - _id=3
+[19:08:15.315] [Render] [debug] Shader::use() - _id=3
+[19:08:15.331] [Render] [debug] Shader::use() - _id=3
+[19:08:15.348] [Render] [debug] Shader::use() - _id=3
+[19:08:15.365] [Render] [debug] Shader::use() - _id=3
+[19:08:15.382] [Render] [debug] Shader::use() - _id=3
+[19:08:15.398] [Render] [debug] Shader::use() - _id=3
+[19:08:15.415] [Engine] [info] Update #0: FPS=59, dt=0.017s, total_time=5.6s
+[19:08:15.415] [Render] [debug] Shader::use() - _id=3
+[19:08:15.432] [Render] [debug] Shader::use() - _id=3
+[19:08:15.448] [Render] [debug] Shader::use() - _id=3
+[19:08:15.465] [Render] [debug] Shader::use() - _id=3
+[19:08:15.482] [Render] [debug] Shader::use() - _id=3
+[19:08:15.498] [Render] [debug] Shader::use() - _id=3
+[19:08:15.515] [Render] [debug] Shader::use() - _id=3
+[19:08:15.532] [Render] [debug] Shader::use() - _id=3
+[19:08:15.548] [Render] [debug] Shader::use() - _id=3
+[19:08:15.565] [Render] [debug] Shader::use() - _id=3
+[19:08:15.582] [Render] [debug] Shader::use() - _id=3
+[19:08:15.598] [Render] [debug] Shader::use() - _id=3
+[19:08:15.615] [Render] [debug] Shader::use() - _id=3
+[19:08:15.632] [Render] [debug] Shader::use() - _id=3
+[19:08:15.648] [Render] [debug] Shader::use() - _id=3
+[19:08:15.665] [Render] [debug] Shader::use() - _id=3
+[19:08:15.681] [Render] [debug] Shader::use() - _id=3
+[19:08:15.698] [Render] [debug] Shader::use() - _id=3
+[19:08:15.715] [Render] [debug] Shader::use() - _id=3
+[19:08:15.732] [Render] [debug] Shader::use() - _id=3
+[19:08:15.748] [Render] [debug] Shader::use() - _id=3
+[19:08:15.765] [Render] [debug] Shader::use() - _id=3
+[19:08:15.782] [Render] [debug] Shader::use() - _id=3
+[19:08:15.798] [Render] [debug] Shader::use() - _id=3
+[19:08:15.815] [Render] [debug] Shader::use() - _id=3
+[19:08:15.832] [Render] [debug] Shader::use() - _id=3
+[19:08:15.849] [Render] [debug] Shader::use() - _id=3
+[19:08:15.849] [Render] [debug] === CLOUD DEBUG ===
+[19:08:15.849] [Render] [debug] Camera: pos=(0,3000,0) yaw=0.0 pitch=15.0
+[19:08:15.849] [Render] [debug] Forward: (0.000,0.259,0.966)
+[19:08:15.849] [Render] [debug] SunDir: (0.825,0.560,0.077) dayFactor=0.65
+[19:08:15.849] [Render] [debug] Shader ID: 3
+[19:08:15.865] [Render] [debug] Shader::use() - _id=3
+[19:08:15.882] [Render] [debug] Shader::use() - _id=3
+[19:08:15.898] [Render] [debug] Shader::use() - _id=3
+[19:08:15.916] [Engine] [info] Update #0: FPS=59, dt=0.017s, total_time=6.1s
+[19:08:15.916] [Render] [debug] Shader::use() - _id=3
+[19:08:15.933] [Render] [debug] Shader::use() - _id=3
+[19:08:15.949] [Render] [debug] Shader::use() - _id=3
+[19:08:15.968] [Render] [debug] Shader::use() - _id=3
+[19:08:15.983] [Render] [debug] Shader::use() - _id=3
+[19:08:16.000] [Render] [debug] Shader::use() - _id=3
+[19:08:16.016] [Render] [debug] Shader::use() - _id=3
+[19:08:16.032] [Render] [debug] Shader::use() - _id=3
+[19:08:16.049] [Render] [debug] Shader::use() - _id=3
+[19:08:16.066] [Render] [debug] Shader::use() - _id=3
+[19:08:16.082] [Render] [debug] Shader::use() - _id=3
+[19:08:16.099] [Render] [debug] Shader::use() - _id=3
+[19:08:16.116] [Render] [debug] Shader::use() - _id=3
+[19:08:16.132] [Render] [debug] Shader::use() - _id=3
+[19:08:16.151] [Render] [debug] Shader::use() - _id=3
+[19:08:16.166] [Render] [debug] Shader::use() - _id=3
+[19:08:16.183] [Render] [debug] Shader::use() - _id=3
+[19:08:16.199] [Render] [debug] Shader::use() - _id=3
+[19:08:16.216] [Render] [debug] Shader::use() - _id=3
+[19:08:16.232] [Render] [debug] Shader::use() - _id=3
+[19:08:16.249] [Render] [debug] Shader::use() - _id=3
+[19:08:16.266] [Render] [debug] Shader::use() - _id=3
+[19:08:16.282] [Render] [debug] Shader::use() - _id=3
+[19:08:16.299] [Render] [debug] Shader::use() - _id=3
+[19:08:16.316] [Render] [debug] Shader::use() - _id=3
+[19:08:16.332] [Render] [debug] Shader::use() - _id=3
+[19:08:16.349] [Render] [debug] Shader::use() - _id=3
+[19:08:16.366] [Render] [debug] Shader::use() - _id=3
+[19:08:16.383] [Render] [debug] Shader::use() - _id=3
+[19:08:16.399] [Render] [debug] Shader::use() - _id=3
+[19:08:16.416] [Engine] [info] Update #0: FPS=62, dt=0.016s, total_time=6.6s
+[19:08:16.416] [Render] [debug] Shader::use() - _id=3
+[19:08:16.432] [Render] [debug] Shader::use() - _id=3
+[19:08:16.449] [Render] [debug] Shader::use() - _id=3
+[19:08:16.466] [Render] [debug] Shader::use() - _id=3
+[19:08:16.482] [Render] [debug] Shader::use() - _id=3
+[19:08:16.499] [Render] [debug] Shader::use() - _id=3
+[19:08:16.516] [Render] [debug] Shader::use() - _id=3
+[19:08:16.532] [Render] [debug] Shader::use() - _id=3
+[19:08:16.549] [Render] [debug] Shader::use() - _id=3
+[19:08:16.566] [Render] [debug] Shader::use() - _id=3
+[19:08:16.582] [Render] [debug] Shader::use() - _id=3
+[19:08:16.599] [Render] [debug] Shader::use() - _id=3
+[19:08:16.616] [Render] [debug] Shader::use() - _id=3
+[19:08:16.633] [Render] [debug] Shader::use() - _id=3
+[19:08:16.649] [Render] [debug] Shader::use() - _id=3
+[19:08:16.666] [Render] [debug] Shader::use() - _id=3
+[19:08:16.683] [Render] [debug] Shader::use() - _id=3
+[19:08:16.701] [Render] [debug] Shader::use() - _id=3
+[19:08:16.716] [Render] [debug] Shader::use() - _id=3
+[19:08:16.734] [Render] [debug] Shader::use() - _id=3
+[19:08:16.749] [Render] [debug] Shader::use() - _id=3
+[19:08:16.766] [Render] [debug] Shader::use() - _id=3
+[19:08:16.783] [Render] [debug] Shader::use() - _id=3
+[19:08:16.799] [Render] [debug] Shader::use() - _id=3
+[19:08:16.816] [Render] [debug] Shader::use() - _id=3
+[19:08:16.833] [Render] [debug] Shader::use() - _id=3
+[19:08:16.850] [Render] [debug] Shader::use() - _id=3
+[19:08:16.866] [Render] [debug] Shader::use() - _id=3
+[19:08:16.882] [Render] [debug] Shader::use() - _id=3
+[19:08:16.900] [Render] [debug] Shader::use() - _id=3
+[19:08:16.916] [Engine] [info] Update #0: FPS=62, dt=0.016s, total_time=7.1s
+[19:08:16.916] [Render] [debug] Shader::use() - _id=3
+[19:08:16.933] [Render] [debug] Shader::use() - _id=3
+[19:08:16.949] [Render] [debug] Shader::use() - _id=3
+[19:08:16.966] [Render] [debug] Shader::use() - _id=3
+[19:08:16.983] [Render] [debug] Shader::use() - _id=3
+[19:08:16.999] [Render] [debug] Shader::use() - _id=3
+[19:08:17.016] [Render] [debug] Shader::use() - _id=3
+[19:08:17.033] [Render] [debug] Shader::use() - _id=3
+[19:08:17.050] [Render] [debug] Shader::use() - _id=3
+[19:08:17.066] [Render] [debug] Shader::use() - _id=3
+[19:08:17.083] [Render] [debug] Shader::use() - _id=3
+[19:08:17.100] [Render] [debug] Shader::use() - _id=3
+[19:08:17.116] [Render] [debug] Shader::use() - _id=3
+[19:08:17.133] [Render] [debug] Shader::use() - _id=3
+[19:08:17.149] [Render] [debug] Shader::use() - _id=3
+[19:08:17.166] [Render] [debug] Shader::use() - _id=3
+[19:08:17.183] [Render] [debug] Shader::use() - _id=3
+[19:08:17.199] [Render] [debug] Shader::use() - _id=3
+[19:08:17.216] [Render] [debug] Shader::use() - _id=3
+[19:08:17.234] [Render] [debug] Shader::use() - _id=3
+[19:08:17.250] [Render] [debug] Shader::use() - _id=3
+[19:08:17.267] [Render] [debug] Shader::use() - _id=3
+[19:08:17.284] [Render] [debug] Shader::use() - _id=3
+[19:08:17.301] [Render] [debug] Shader::use() - _id=3
+[19:08:17.317] [Render] [debug] Shader::use() - _id=3
+[19:08:17.333] [Render] [debug] Shader::use() - _id=3
+[19:08:17.350] [Render] [debug] Shader::use() - _id=3
+[19:08:17.366] [Render] [debug] Shader::use() - _id=3
+[19:08:17.383] [Render] [debug] Shader::use() - _id=3
+[19:08:17.400] [Render] [debug] Shader::use() - _id=3
+[19:08:17.416] [Engine] [info] Update #0: FPS=59, dt=0.017s, total_time=7.6s
+[19:08:17.417] [Render] [debug] Shader::use() - _id=3
+[19:08:17.433] [Render] [debug] Shader::use() - _id=3
+[19:08:17.450] [Render] [debug] Shader::use() - _id=3
+[19:08:17.466] [Render] [debug] Shader::use() - _id=3
+[19:08:17.483] [Render] [debug] Shader::use() - _id=3
+[19:08:17.500] [Render] [debug] Shader::use() - _id=3
+[19:08:17.516] [Render] [debug] Shader::use() - _id=3
+[19:08:17.533] [Render] [debug] Shader::use() - _id=3
+[19:08:17.550] [Render] [debug] Shader::use() - _id=3
+[19:08:17.567] [Render] [debug] Shader::use() - _id=3
+[19:08:17.583] [Render] [debug] Shader::use() - _id=3
+[19:08:17.600] [Render] [debug] Shader::use() - _id=3
+[19:08:17.617] [Render] [debug] Shader::use() - _id=3
+[19:08:17.633] [Render] [debug] Shader::use() - _id=3
+[19:08:17.650] [Render] [debug] Shader::use() - _id=3
+[19:08:17.666] [Render] [debug] Shader::use() - _id=3
+[19:08:17.683] [Render] [debug] Shader::use() - _id=3
+[19:08:17.700] [Render] [debug] Shader::use() - _id=3
+[19:08:17.716] [Render] [debug] Shader::use() - _id=3
+[19:08:17.733] [Render] [debug] Shader::use() - _id=3
+[19:08:17.750] [Render] [debug] Shader::use() - _id=3
+[19:08:17.767] [Render] [debug] Shader::use() - _id=3
+[19:08:17.784] [Render] [debug] Shader::use() - _id=3
+[19:08:17.800] [Render] [debug] Shader::use() - _id=3
+[19:08:17.817] [Render] [debug] Shader::use() - _id=3
+[19:08:17.833] [Render] [debug] Shader::use() - _id=3
+[19:08:17.851] [Render] [debug] Shader::use() - _id=3
+[19:08:17.851] [Render] [debug] === CLOUD DEBUG ===
+[19:08:17.851] [Render] [debug] Camera: pos=(0,3000,0) yaw=0.0 pitch=15.0
+[19:08:17.851] [Render] [debug] Forward: (0.000,0.259,0.966)
+[19:08:17.851] [Render] [debug] SunDir: (0.794,0.599,0.101) dayFactor=0.70
+[19:08:17.851] [Render] [debug] Shader ID: 3
+[19:08:17.867] [Render] [debug] Shader::use() - _id=3
+[19:08:17.884] [Render] [debug] Shader::use() - _id=3
+[19:08:17.900] [Render] [debug] Shader::use() - _id=3
+[19:08:17.917] [Engine] [info] Update #0: FPS=62, dt=0.016s, total_time=8.1s
+[19:08:17.917] [Render] [debug] Shader::use() - _id=3
+[19:08:17.934] [Render] [debug] Shader::use() - _id=3
+[19:08:17.950] [Render] [debug] Shader::use() - _id=3
+[19:08:17.967] [Render] [debug] Shader::use() - _id=3
+[19:08:17.983] [Render] [debug] Shader::use() - _id=3
+[19:08:18.000] [Render] [debug] Shader::use() - _id=3
+[19:08:18.017] [Render] [debug] Shader::use() - _id=3
+[19:08:18.034] [Render] [debug] Shader::use() - _id=3
+[19:08:18.050] [Render] [debug] Shader::use() - _id=3
+[19:08:18.067] [Render] [debug] Shader::use() - _id=3
+[19:08:18.084] [Render] [debug] Shader::use() - _id=3
+[19:08:18.100] [Render] [debug] Shader::use() - _id=3
+[19:08:18.117] [Render] [debug] Shader::use() - _id=3
+[19:08:18.134] [Render] [debug] Shader::use() - _id=3
+[19:08:18.150] [Render] [debug] Shader::use() - _id=3
+[19:08:18.167] [Render] [debug] Shader::use() - _id=3
+[19:08:18.184] [Render] [debug] Shader::use() - _id=3
+[19:08:18.200] [Render] [debug] Shader::use() - _id=3
+[19:08:18.217] [Render] [debug] Shader::use() - _id=3
+[19:08:18.234] [Render] [debug] Shader::use() - _id=3
+[19:08:18.251] [Render] [debug] Shader::use() - _id=3
+[19:08:18.267] [Render] [debug] Shader::use() - _id=3
+[19:08:18.284] [Render] [debug] Shader::use() - _id=3
+[19:08:18.300] [Render] [debug] Shader::use() - _id=3
+[19:08:18.317] [Render] [debug] Shader::use() - _id=3
+[19:08:18.334] [Render] [debug] Shader::use() - _id=3
+[19:08:18.351] [Render] [debug] Shader::use() - _id=3
+[19:08:18.367] [Render] [debug] Shader::use() - _id=3
+[19:08:18.384] [Render] [debug] Shader::use() - _id=3
+[19:08:18.400] [Render] [debug] Shader::use() - _id=3
+[19:08:18.417] [Engine] [info] Update #0: FPS=62, dt=0.016s, total_time=8.6s
+[19:08:18.417] [Render] [debug] Shader::use() - _id=3
+[19:08:18.434] [Render] [debug] Shader::use() - _id=3
+[19:08:18.450] [Render] [debug] Shader::use() - _id=3
+[19:08:18.467] [Render] [debug] Shader::use() - _id=3
+[19:08:18.484] [Render] [debug] Shader::use() - _id=3
+[19:08:18.501] [Render] [debug] Shader::use() - _id=3
+[19:08:18.517] [Render] [debug] Shader::use() - _id=3
+[19:08:18.534] [Render] [debug] Shader::use() - _id=3
+[19:08:18.551] [Render] [debug] Shader::use() - _id=3
+[19:08:18.568] [Render] [debug] Shader::use() - _id=3
+[19:08:18.584] [Render] [debug] Shader::use() - _id=3
+[19:08:18.602] [Render] [debug] Shader::use() - _id=3
+[19:08:18.618] [Render] [debug] Shader::use() - _id=3
+[19:08:18.635] [Render] [debug] Shader::use() - _id=3
+[19:08:18.651] [Render] [debug] Shader::use() - _id=3
+[19:08:18.668] [Render] [debug] Shader::use() - _id=3
+[19:08:18.684] [Render] [debug] Shader::use() - _id=3
+[19:08:18.701] [Render] [debug] Shader::use() - _id=3
+[19:08:18.718] [Render] [debug] Shader::use() - _id=3
+[19:08:18.734] [Render] [debug] Shader::use() - _id=3
+[19:08:18.751] [Render] [debug] Shader::use() - _id=3
+[19:08:18.768] [Render] [debug] Shader::use() - _id=3
+[19:08:18.784] [Render] [debug] Shader::use() - _id=3
+[19:08:18.801] [Render] [debug] Shader::use() - _id=3
+[19:08:18.817] [Render] [debug] Shader::use() - _id=3
+[19:08:18.834] [Render] [debug] Shader::use() - _id=3
+[19:08:18.851] [Render] [debug] Shader::use() - _id=3
+[19:08:18.868] [Render] [debug] Shader::use() - _id=3
+[19:08:18.884] [Render] [debug] Shader::use() - _id=3
+[19:08:18.901] [Render] [debug] Shader::use() - _id=3
+[19:08:18.918] [Engine] [info] Update #0: FPS=59, dt=0.017s, total_time=9.1s
+[19:08:18.919] [Render] [debug] Shader::use() - _id=3
+[19:08:18.934] [Render] [debug] Shader::use() - _id=3
+[19:08:18.951] [Render] [debug] Shader::use() - _id=3
+[19:08:18.968] [Render] [debug] Shader::use() - _id=3
+[19:08:18.985] [Render] [debug] Shader::use() - _id=3
+[19:08:19.001] [Render] [debug] Shader::use() - _id=3
+[19:08:19.018] [Render] [debug] Shader::use() - _id=3
+[19:08:19.035] [Render] [debug] Shader::use() - _id=3
+[19:08:19.051] [Render] [debug] Shader::use() - _id=3
+[19:08:19.068] [Render] [debug] Shader::use() - _id=3
+[19:08:19.085] [Render] [debug] Shader::use() - _id=3
+[19:08:19.102] [Render] [debug] Shader::use() - _id=3
+[19:08:19.118] [Render] [debug] Shader::use() - _id=3
+[19:08:19.135] [Render] [debug] Shader::use() - _id=3
+[19:08:19.152] [Render] [debug] Shader::use() - _id=3
+[19:08:19.169] [Render] [debug] Shader::use() - _id=3
+[19:08:19.185] [Render] [debug] Shader::use() - _id=3
+[19:08:19.201] [Render] [debug] Shader::use() - _id=3
+[19:08:19.218] [Render] [debug] Shader::use() - _id=3
+[19:08:19.235] [Render] [debug] Shader::use() - _id=3
+[19:08:19.251] [Render] [debug] Shader::use() - _id=3
+[19:08:19.268] [Render] [debug] Shader::use() - _id=3
+[19:08:19.285] [Render] [debug] Shader::use() - _id=3
+[19:08:19.301] [Render] [debug] Shader::use() - _id=3
+[19:08:19.319] [Render] [debug] Shader::use() - _id=3
+[19:08:19.335] [Render] [debug] Shader::use() - _id=3
+[19:08:19.352] [Render] [debug] Shader::use() - _id=3
+[19:08:19.368] [Render] [debug] Shader::use() - _id=3
+[19:08:19.385] [Render] [debug] Shader::use() - _id=3
+[19:08:19.401] [Render] [debug] Shader::use() - _id=3
+[19:08:19.418] [Engine] [info] Update #0: FPS=62, dt=0.016s, total_time=9.6s
+[19:08:19.418] [Render] [debug] Shader::use() - _id=3
+[19:08:19.435] [Render] [debug] Shader::use() - _id=3
+[19:08:19.451] [Render] [debug] Shader::use() - _id=3
+[19:08:19.468] [Render] [debug] Shader::use() - _id=3
+[19:08:19.485] [Render] [debug] Shader::use() - _id=3
+[19:08:19.501] [Render] [debug] Shader::use() - _id=3
+[19:08:19.518] [Render] [debug] Shader::use() - _id=3
+[19:08:19.535] [Render] [debug] Shader::use() - _id=3
+[19:08:19.552] [Render] [debug] Shader::use() - _id=3
+[19:08:19.568] [Render] [debug] Shader::use() - _id=3
+[19:08:19.585] [Render] [debug] Shader::use() - _id=3
+[19:08:19.601] [Render] [debug] Shader::use() - _id=3
+[19:08:19.618] [Render] [debug] Shader::use() - _id=3
+[19:08:19.635] [Render] [debug] Shader::use() - _id=3
+[19:08:19.652] [Render] [debug] Shader::use() - _id=3
+[19:08:19.668] [Render] [debug] Shader::use() - _id=3
+[19:08:19.686] [Render] [debug] Shader::use() - _id=3
+[19:08:19.702] [Render] [debug] Shader::use() - _id=3
+[19:08:19.718] [Render] [debug] Shader::use() - _id=3
+[19:08:19.735] [Render] [debug] Shader::use() - _id=3
+[19:08:19.752] [Render] [debug] Shader::use() - _id=3
+[19:08:19.768] [Render] [debug] Shader::use() - _id=3
+[19:08:19.785] [Render] [debug] Shader::use() - _id=3
+[19:08:19.802] [Render] [debug] Shader::use() - _id=3
+[19:08:19.819] [Render] [debug] Shader::use() - _id=3
+[19:08:19.835] [Render] [debug] Shader::use() - _id=3
+[19:08:19.852] [Render] [debug] Shader::use() - _id=3
+[19:08:19.852] [Render] [debug] === CLOUD DEBUG ===
+[19:08:19.853] [Render] [debug] Camera: pos=(0,3000,0) yaw=0.0 pitch=15.0
+[19:08:19.853] [Render] [debug] Forward: (0.000,0.259,0.966)
+[19:08:19.854] [Render] [debug] SunDir: (0.758,0.640,0.125) dayFactor=0.74
+[19:08:19.854] [Render] [debug] Shader ID: 3
+[19:08:19.869] [Render] [debug] Shader::use() - _id=3
+[19:08:19.886] [Render] [debug] Shader::use() - _id=3
+[19:08:19.902] [Render] [debug] Shader::use() - _id=3
+[19:08:19.918] [Engine] [info] Update #0: FPS=59, dt=0.017s, total_time=10.1s
+[19:08:19.919] [Render] [debug] Shader::use() - _id=3
+[19:08:19.935] [Render] [debug] Shader::use() - _id=3
+[19:08:19.952] [Render] [debug] Shader::use() - _id=3
+[19:08:19.969] [Render] [debug] Shader::use() - _id=3
+[19:08:19.985] [Render] [debug] Shader::use() - _id=3
+[19:08:20.002] [Render] [debug] Shader::use() - _id=3
+[19:08:20.019] [Render] [debug] Shader::use() - _id=3
+[19:08:20.036] [Render] [debug] Shader::use() - _id=3
+[19:08:20.052] [Render] [debug] Shader::use() - _id=3
+[19:08:20.069] [Render] [debug] Shader::use() - _id=3
+[19:08:20.086] [Render] [debug] Shader::use() - _id=3
+[19:08:20.103] [Render] [debug] Shader::use() - _id=3
+[19:08:20.119] [Render] [debug] Shader::use() - _id=3
+[19:08:20.136] [Render] [debug] Shader::use() - _id=3
+[19:08:20.154] [Render] [debug] Shader::use() - _id=3
+[19:08:20.169] [Render] [debug] Shader::use() - _id=3
+[19:08:20.185] [Render] [debug] Shader::use() - _id=3
+[19:08:20.203] [Render] [debug] Shader::use() - _id=3
+[19:08:20.219] [Render] [debug] Shader::use() - _id=3
+[19:08:20.236] [Render] [debug] Shader::use() - _id=3
+[19:08:20.253] [Render] [debug] Shader::use() - _id=3
+[19:08:20.269] [Render] [debug] Shader::use() - _id=3
+[19:08:20.286] [Render] [debug] Shader::use() - _id=3
+[19:08:20.302] [Render] [debug] Shader::use() - _id=3
+[19:08:20.319] [Render] [debug] Shader::use() - _id=3
+[19:08:20.336] [Render] [debug] Shader::use() - _id=3
+[19:08:20.352] [Render] [debug] Shader::use() - _id=3
+[19:08:20.369] [Render] [debug] Shader::use() - _id=3
+[19:08:20.386] [Render] [debug] Shader::use() - _id=3
+[19:08:20.402] [Render] [debug] Shader::use() - _id=3
+[19:08:20.525] [Engine] [info] Shutting down Engine...
+[19:08:20.555] [Engine] [info] ECS World shutdown
+[19:08:20.555] [Render] [info] Renderer::shutdown() - START
+[19:08:20.556] [Render] [info] CloudRenderer::shutdown()
+[19:08:20.556] [Render] [info] ShaderSystem::shutdown() - START
+[19:08:20.556] [Render] [info] ShaderManager::shutdown() - Cleaning up 1 shaders
+[19:08:20.556] [Render] [debug] ShaderManager - destroying shader: cloud_advanced
+[19:08:20.556] [Render] [info] ShaderManager::shutdown() - COMPLETE
+[19:08:20.556] [Render] [info] ShaderSystem::shutdown() - COMPLETE
+[19:08:20.556] [Render] [info] Renderer::shutdown() - COMPLETE
+[19:08:20.556] [Engine] [info] Window::shutdown() - START
+[19:08:20.575] [Engine] [info] Window::shutdown() - COMPLETE
+[19:08:20.575] [Engine] [info] CLOUDENGINE shutting down
+[19:08:20.575] [Engine] [info] Engine shutdown complete
+[19:08:20.575] [Engine] [info] main() - engine.run() completed
+[19:08:20.575] [Engine] [info] CLOUDENGINE shutting down
+[19:08:20.576] [Render] [info] ShaderManager::shutdown() - Cleaning up 0 shaders
+[19:08:20.576] [Render] [info] ShaderManager::shutdown() - COMPLETE

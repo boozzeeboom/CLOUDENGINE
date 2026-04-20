@@ -121,13 +121,25 @@ void CloudRenderer::render(float time, float deltaTime) {
     _shader->setVec3("uCloudShadowColor", glm::vec3(0.5f, 0.55f, 0.65f));
     _shader->setVec3("uRimColor", glm::vec3(1.0f, 0.9f, 0.8f) * 0.4f);
     
-    // LOD settings (adaptive quality)
-    int lodLevel = 1; // Default: high quality
-    int raymarchSteps = 48;
+    // LOD settings - MAX quality for debugging
+    int lodLevel = 0; // Ultra quality
+    int raymarchSteps = 96; // Many steps
     
-    // Could be adjusted based on GPU/distance
     _shader->setInt("uLODLevel", lodLevel);
     _shader->setInt("uRaymarchSteps", raymarchSteps);
+    
+    // DEBUG: Log raymarching parameters every 2 seconds
+    static float lastDebugLog = 0.0f;
+    if (time - lastDebugLog > 2.0f) {
+        lastDebugLog = time;
+        RENDER_LOG_DEBUG("=== CLOUD DEBUG ===");
+        RENDER_LOG_DEBUG("Camera: pos=({:.0f},{:.0f},{:.0f}) yaw={:.1f} pitch={:.1f}", 
+            _cameraPos.x, _cameraPos.y, _cameraPos.z, _yaw, _pitch);
+        RENDER_LOG_DEBUG("Forward: ({:.3f},{:.3f},{:.3f})", forward.x, forward.y, forward.z);
+        RENDER_LOG_DEBUG("SunDir: ({:.3f},{:.3f},{:.3f}) dayFactor={:.2f}", 
+            sunDir.x, sunDir.y, sunDir.z, dayFactor);
+        RENDER_LOG_DEBUG("Shader ID: {}", _shader->getID());
+    }
     
     // Render full-screen quad
     _quad.render();

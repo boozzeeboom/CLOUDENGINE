@@ -57,6 +57,7 @@ bool Shader::load(const char* vertPath, const char* fragPath) {
 }
 
 void Shader::use() {
+    RENDER_LOG_DEBUG("Shader::use() - _id={}", _id);
     glUseProgram(_id);
 }
 

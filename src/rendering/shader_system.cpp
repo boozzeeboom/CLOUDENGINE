@@ -1,6 +1,7 @@
 #include "rendering/shader_system.h"
 #include <core/logger.h>
 #include <core/config.h>
+#include <ecs/world.h>
 #include <platform/window.h>
 
 #define __gl_h_
@@ -33,7 +34,7 @@ void ShaderSystem::init(flecs::world& world) {
     // Set base path for shaders (from build/Debug/ -> ../../shaders/)
     shaderMgr.setBasePath("../../shaders/");
     
-    // Load cloud shader
+    // Load cloud shader - advanced Ghibli-style clouds
     _cloudShaderID = shaderMgr.load("cloud_advanced", "fullscreen.vert", "cloud_advanced.frag");
     
     if (_cloudShaderID != 0) {
@@ -74,7 +75,7 @@ void ShaderSystem::checkHotReload() {
     }
     
     // Cooldown to prevent spam
-    auto* td = ECS::getWorld().get<TimeData>();
+    auto* td = Core::ECS::getWorld().get<TimeData>();
     if (!td) return;
     
     if (td->time - _lastReloadTime < _reloadCooldown) {

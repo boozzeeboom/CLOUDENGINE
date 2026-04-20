@@ -26,6 +26,24 @@ bool Renderer::init() {
     }
     RENDER_LOG_INFO("Renderer::init() - gladLoadGLLoader() SUCCESS");
     
+    // Enable OpenGL debug output (only in debug builds)
+#ifdef CE_DEBUG
+    glEnable(GL_DEBUG_OUTPUT);
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    glDebugMessageCallback([](GLenum source, GLenum type, GLuint id, GLenum severity,
+                              GLsizei length, const GLchar* message, const void* userParam) {
+        if (type == GL_DEBUG_TYPE_ERROR || type == GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR) {
+            RENDER_LOG_ERROR("GL [{}] {}: {}", 
+                type == GL_DEBUG_TYPE_ERROR ? "ERROR" : "DEPRECATED",
+                source == GL_DEBUG_SOURCE_SHADER_COMPILER ? "Shader" : "OpenGL",
+                message);
+        } else if (severity == GL_DEBUG_SEVERITY_HIGH) {
+            RENDER_LOG_WARN("GL HIGH: {}", message);
+        }
+    }, nullptr);
+    RENDER_LOG_INFO("Renderer::init() - OpenGL debug output ENABLED");
+#endif
+    
     // Initialize shader system (loads cloud shader)
     RENDER_LOG_INFO("Renderer::init() - initializing ShaderSystem");
     GetShaderSystem().init(ECS::getWorld());

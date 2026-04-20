@@ -4,6 +4,15 @@ project(CLOUDENGINE VERSION 0.2.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Debug/Release compile definitions
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
+    message(STATUS "Build type: Debug")
+    add_compile_definitions(CE_DEBUG SPDLOG_ACTIVE_LEVEL=0)
+else()
+    message(STATUS "Build type: Release")
+    add_compile_definitions(NDEBUG SPDLOG_ACTIVE_LEVEL=3)
+endif()
+
 # Source files — C++ sources via GLOB_RECURSE
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 list(APPEND SOURCES 

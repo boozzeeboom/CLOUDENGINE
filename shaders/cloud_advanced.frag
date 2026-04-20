@@ -145,5 +145,21 @@ void main() {
         }
     }
 
-    fragColor = color;
+    // If no clouds hit, use sky color as background
+    if (color.a < 0.01) {
+        // Ghibli-inspired sky gradient
+        float skyGradient = rayDir.y * 0.5 + 0.5;
+        vec3 skyColor = mix(
+            vec3(0.6, 0.7, 0.85),  // Horizon - soft blue
+            vec3(0.3, 0.4, 0.7),   // Zenith - deeper blue
+            skyGradient
+        );
+        // Sun glow
+        float sunGlow = max(dot(rayDir, uSunDir), 0.0);
+        sunGlow = pow(sunGlow, 32.0);
+        skyColor += vec3(1.0, 0.9, 0.7) * sunGlow * uDayFactor * 0.5;
+        fragColor = vec4(skyColor, 1.0);
+    } else {
+        fragColor = color;
+    }
 }
