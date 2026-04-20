@@ -1,6 +1,6 @@
 # CLOUDENGINE Project Summary
 **Project C: The Clouds** — Custom C++ Game Engine  
-**Version:** 0.2.0 | **Status:** ✅ **Iteration 2 COMPLETE** — Flight Controls Working  
+**Version:** 0.3.0 | **Status:** ✅ **Iteration 3 IN PROGRESS** — Circular World + Chunk System  
 **Date:** 2026-04-20
 
 ---
@@ -94,6 +94,15 @@ CLOUDENGINE/
 | File | Purpose |
 |------|---------|
 | `window.h/cpp` | GLFW window management |
+
+### 3.6 World System (`src/world/`) — NEW!
+
+| File | Purpose | Key Structures |
+|------|---------|----------------|
+| `world_components.h` | World constants | `WORLD_RADIUS`, `CHUNK_SIZE`, `ChunkId` |
+| `circular_world.h/cpp` | World wrap logic | `wrapPosition()`, `positionToChunk()`, `distance()` |
+| `chunk.h/cpp` | Chunk data | `ChunkData`, `Chunk` class |
+| `chunk_manager.h/cpp` | Chunk streaming | Loads/unloads chunks around player |
 
 ---
 

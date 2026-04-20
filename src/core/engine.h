@@ -2,6 +2,10 @@
 #include <cstdint>
 #include <glm/glm.hpp>
 
+namespace World {
+    class ChunkManager;
+}
+
 namespace Core {
 
 class Engine {
@@ -25,6 +29,7 @@ private:
     void update(float dt);
     void render();
     void updateFlightControls(float dt);
+    void updateWorldSystem(float dt);
     
     bool _running = false;
     float _deltaTime = 0.016f;
@@ -38,6 +43,9 @@ private:
     bool _cursorCaptured = false;
     double _lastMouseX = 0.0;
     double _lastMouseY = 0.0;
+    
+    // World system
+    World::ChunkManager* _chunkManager = nullptr;
 };
 
 } // namespace Core

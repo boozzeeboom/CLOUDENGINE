@@ -33,8 +33,9 @@ target_include_directories(CloudEngine PRIVATE
     ${CMAKE_SOURCE_DIR}/libs/spdlog/include
 )
 
-# Copy shaders to build directory
+# Copy shaders to build directory (works for both build/ and build/Debug/)
 file(COPY "${CMAKE_SOURCE_DIR}/shaders/" DESTINATION "${CMAKE_BINARY_DIR}/shaders/")
+file(COPY "${CMAKE_SOURCE_DIR}/shaders/" DESTINATION "${CMAKE_BINARY_DIR}/Debug/shaders/")
 
 # GLFW build (static library)
 add_subdirectory(libs/glfw)

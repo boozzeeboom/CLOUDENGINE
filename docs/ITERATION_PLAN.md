@@ -168,31 +168,39 @@
 
 ---
 
-## ITERATION 3 — Platform & Input (1–2 недели)
+## ITERATION 3 — Circular World + Chunk System (2–3 недели) ✅ IN PROGRESS
 
-**Цель**: Чистая платформенная абстракция, система ввода как ECS.
+**Цель**: Seamless circular world с чанковой системой для больших расстояний.
 
-### 3.1 Platform Abstraction
-- [ ] `src/platform/platform.h` — интерфейс платформы  
-- [ ] Windows реализация (уже есть `window.cpp`)  
-- [ ] Условная компиляция `#ifdef CE_PLATFORM_WINDOWS`  
-- [ ] File system abstraction (`ReadFile`, `WriteFile`, `FileExists`)
+### 3.1 Circular World Core ✅
+- [x] `src/world/world_components.h` — константы мира
+- [x] `src/world/circular_world.h/cpp` — обёртка позиций
+- [x] `wrapPosition()` — сворачивание позиций в мировое пространство
+- [x] `positionToChunk()` — конвертация в ID чанка
+- [x] `distance()` — кратчайший путь на сфере
 
-### 3.2 Input System через ECS
-- [ ] `InputState` синглтон — состояние всех клавиш/мыши  
-- [ ] `InputSystem` в фазе `InputPhase` — обновляет синглтон из GLFW  
-- [ ] `InputAction` mapping — абстракция (MoveForward → W/Arrow Up)  
-- [ ] Коллбэки GLFW → события в очередь → обработка в системе
+### 3.2 Chunk System ✅
+- [x] `src/world/chunk.h/cpp` — данные чанка
+- [x] `src/world/chunk_manager.h/cpp` — менеджер загрузки/выгрузки
+- [x] Загрузка 11x11 чанков вокруг игрока
+- [x] Динамическая выгрузка дальних чанков
 
-### 3.3 Window Events
-- [ ] Resize → обновить viewport + projection (через observer на EngineConfig)  
-- [ ] Focus lost → pause (опционально)  
-- [ ] Alt+Enter → fullscreen toggle
+### 3.3 World Integration ✅
+- [x] Интеграция в Engine
+- [x] `updateWorldSystem()` — обновление мира каждый кадр
+- [x] Wrapped позиция для рендера
+
+### 3.4 Circular World Constants
+- WORLD_RADIUS = 350,000 units
+- CHUNK_SIZE = 2,000 units
+- CHUNK_LOAD_RADIUS = 5 (11x11 = 121 chunks)
 
 ### Критерий готовности
-- WASD + мышь управляет камерой  
-- ESC закрывает окно  
-- Resize корректно обновляет viewport
+- [x] Circular world wrap работает
+- [x] Chunk loading/unloading логируется
+- [x] Build успешен
+
+**ДОКУМЕНТАЦИЯ:** `docs/CLOUDENGINE/Iterations/ITERATION_3/ITERATION_03_CIRCULAR_WORLD.md`
 
 ---
 

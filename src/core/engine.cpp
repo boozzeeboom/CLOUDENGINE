@@ -4,6 +4,8 @@
 #include <platform/window.h>
 #include <ecs/world.h>
 #include <rendering/renderer.h>
+#include <world/chunk_manager.h>
+#include <world/world_components.h>
 #include <chrono>
 #include <GLFW/glfw3.h>
 
@@ -36,6 +38,11 @@ bool Engine::init() {
     ECS::init();
     CE_LOG_INFO("ECS initialized");
     
+    // Initialize World system
+    _chunkManager = new World::ChunkManager();
+    CE_LOG_INFO("World system initialized (Circular World, {} chunks loaded)", 
+                _chunkManager->getLoadedCount());
+    
     _running = true;
     CE_LOG_INFO("Engine initialized successfully");
     return true;
@@ -43,6 +50,8 @@ bool Engine::init() {
 
 void Engine::shutdown() {
     CE_LOG_INFO("Shutting down Engine...");
+    delete _chunkManager;
+    _chunkManager = nullptr;
     ECS::shutdown();
     Rendering::Renderer::shutdown();
     Platform::Window::shutdown();
@@ -85,6 +94,9 @@ void Engine::update(float dt) {
     
     // Update flight controls
     updateFlightControls(dt);
+    
+    // Update circular world system (chunk streaming, position wrapping)
+    updateWorldSystem(dt);
     
     // Exit on Escape
     if (Platform::Window::isKeyPressed(GLFW_KEY_ESCAPE)) {
@@ -178,6 +190,28 @@ void Engine::updateFlightControls(float dt) {
     // Shift for speed boost
     if (Platform::Window::isKeyPressed(GLFW_KEY_LEFT_CONTROL)) {
         _cameraPos += forward * moveSpeed * 2.0f * dt;
+    }
+}
+
+void Engine::updateWorldSystem(float dt) {
+    if (!_chunkManager) return;
+    
+    // Wrap camera position for circular world
+    const glm::vec3& worldPos = _chunkManager->getWorld().wrapPosition(_cameraPos);
+    _cameraPos = worldPos;
+    
+    // Update chunk manager with current position
+    _chunkManager->update(_cameraPos);
+    
+    // Log chunk info periodically
+    static float lastChunkLog = 0.0f;
+    if (_time - lastChunkLog > 2.0f) {
+        World::ChunkId currentChunk = _chunkManager->getWorld().positionToChunk(_cameraPos);
+        CE_LOG_INFO("World: pos=({:.0f},{:.0f},{:.0f}) chunk=({},{}) loaded_chunks={}", 
+                   _cameraPos.x, _cameraPos.y, _cameraPos.z,
+                   currentChunk.thetaIndex, currentChunk.radiusIndex,
+                   _chunkManager->getLoadedCount());
+        lastChunkLog = _time;
     }
 }
 
