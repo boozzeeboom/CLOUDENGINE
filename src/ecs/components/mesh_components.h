@@ -1,11 +1,12 @@
 #pragma once
 #include <glm/glm.hpp>
 #include <flecs.h>
-#include "../../core/logger.h"  // For CE_LOG_INFO
+#include "../components.h"
+#include "../modules/network_module.h"
 
 namespace Core { namespace ECS {
 
-// Forward declarations from network_module.h
+// Forward declarations
 struct NetworkId;
 struct RemotePlayer;
 struct NetworkTransform;

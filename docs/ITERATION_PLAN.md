@@ -144,20 +144,21 @@ CloudEngine.exe --client  # Client (localhost:12345)
 
 **Цель:** Улучшить сетевую синхронизацию для комфортного мультиплеера
 
-### 5.1 Position Interpolation
-- [ ] Буфер позиций с timestamp
-- [ ] Линейная интерполяция между кадрами
-- [ ] Сглаживание рывков
+### 5.1 Position Interpolation ✅
+- [x] Буфер позиций с timestamp
+- [x] Линейная интерполяция между кадрами
+- [x] Сглаживание рывков
 
 ### 5.2 Full Transform Sync ✅
 - [x] Передача yaw/pitch через onPositionReceived
 - [x] Квитернион rotation для remote игроков
 
-### 5.3 Player Visualization ✅ (partial)
+### 5.3 Player Visualization ✅
 - [x] ECS компоненты: RenderMesh, PlayerColor
 - [x] createRenderableRemotePlayer() функция
-- [ ] Рендер через ECS RenderSystem (pending)
-- [ ] Billboard для distant players (pending)
+- [x] PrimitiveMesh renderer (сфера для remote игроков)
+- [x] RenderRemotePlayersSystem (ECS система рендера)
+- [x] Billboard для distant players (IsBillboard tag, порог 1000 units)
 
 ### 5.4 World Seed Sync ✅
 - [x] Server отправляет seed при подключении

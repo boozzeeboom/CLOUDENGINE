@@ -1,10 +1,11 @@
 #include "window.h"
 #include "../core/logger.h"
 #include <GLFW/glfw3.h>
+#include <glad/glad.h>
 
 namespace Core { namespace Platform {
 
-GLFWwindow* Window::_window = nullptr;
+ GLFWwindow* Window::_window = nullptr;
 int Window::_width = 0;
 int Window::_height = 0;
 
@@ -37,6 +38,14 @@ bool Window::init(int width, int height, const char* title) {
     
     CE_LOG_INFO("Window::init() - calling glfwMakeContextCurrent()");
     glfwMakeContextCurrent(_window);
+    
+    CE_LOG_INFO("Window::init() - loading OpenGL functions via gladLoadGLLoader()");
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+        CE_LOG_ERROR("Window::init() - FAILED: gladLoadGLLoader() returned false");
+        return false;
+    }
+    CE_LOG_INFO("Window::init() - gladLoadGLLoader() SUCCESS");
+    
     CE_LOG_INFO("Window::init() - COMPLETE");
     return true;
 }

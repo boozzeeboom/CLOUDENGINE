@@ -16,4 +16,8 @@ void update(float deltaTime);
 /// @brief Get reference to the ECS world
 flecs::world& getWorld();
 
+// Forward declarations for render module
+void registerRenderComponents(flecs::world& world);
+void registerRemotePlayerRenderSystem(flecs::world& world);
+
 }} // namespace Core::ECS

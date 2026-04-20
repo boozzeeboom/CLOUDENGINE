@@ -1,5 +1,6 @@
 #pragma once
 #include "../components.h"
+#include <deque>
 
 namespace Core { namespace ECS {
 
@@ -11,6 +12,15 @@ struct NetworkId {
 /// @brief Tag component — marks entity as a remote (networked) player
 struct RemotePlayer {};
 
+/// @brief Position sample with timestamp for interpolation buffer
+struct PositionSample {
+    glm::vec3 position{0.0f, 0.0f, 0.0f};
+    glm::vec3 velocity{0.0f, 0.0f, 0.0f};
+    float yaw = 0.0f;
+    float pitch = 0.0f;
+    double timestamp = 0.0;
+};
+
 /// @brief Network transform component — holds received network position/rotation
 /// @note This is a DATA component, not a tag. Used for interpolation buffer.
 struct NetworkTransform {
@@ -19,6 +29,11 @@ struct NetworkTransform {
     float yaw = 0.0f;
     float pitch = 0.0f;
     float interpolationTime = 0.0f;  // time accumulator for smooth interpolation
+    
+    // Position buffer for interpolation (5.1)
+    std::deque<PositionSample> positionBuffer;
+    static constexpr size_t MAX_BUFFER_SIZE = 10;
+    static constexpr double BUFFER_DURATION = 0.5;  // 500ms
 };
 
 /// @brief Local player tag — marks the entity controlled by this client
@@ -84,21 +99,43 @@ inline void removeRemotePlayer(flecs::world& world, uint32_t playerId) {
 }
 
 /// @brief Update network transform for a player (called from network callbacks)
+/// @details Adds sample to position buffer for interpolation
 /// @param world The ECS world
 /// @param playerId The player ID
 /// @param position New position
 /// @param yaw New yaw angle  
 /// @param pitch New pitch angle
+/// @param timestamp Current time (use glfwGetTime())
 inline void updateNetworkTransform(flecs::world& world, uint32_t playerId, 
-                                   const glm::vec3& position, float yaw, float pitch) {
+                                   const glm::vec3& position, float yaw, float pitch,
+                                   double timestamp = 0.0) {
     auto q = world.query_builder<RemotePlayer, NetworkTransform>().build();
     
-    q.each([position, yaw, pitch, playerId](flecs::entity e, RemotePlayer&, NetworkTransform& nt) {
+    q.each([position, yaw, pitch, playerId, timestamp](flecs::entity e, RemotePlayer&, NetworkTransform& nt) {
         const auto* nid = e.get<NetworkId>();
         if (nid && nid->id == playerId) {
-            nt.position = position;
-            nt.yaw = yaw;
-            nt.pitch = pitch;
+            // Add sample to buffer
+            PositionSample sample;
+            sample.position = position;
+            sample.velocity = glm::vec3(0.0f);  // Not used in MVP
+            sample.yaw = yaw;
+            sample.pitch = pitch;
+            sample.timestamp = timestamp;
+            
+            nt.positionBuffer.push_back(sample);
+            
+            // Trim buffer to max size
+            while (nt.positionBuffer.size() > NetworkTransform::MAX_BUFFER_SIZE) {
+                nt.positionBuffer.pop_front();
+            }
+            
+            // Remove old samples (> 500ms)
+            if (timestamp > 0.0) {
+                double cutoff = timestamp - NetworkTransform::BUFFER_DURATION;
+                while (!nt.positionBuffer.empty() && nt.positionBuffer.front().timestamp < cutoff) {
+                    nt.positionBuffer.pop_front();
+                }
+            }
         }
     });
 }

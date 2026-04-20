@@ -32,6 +32,12 @@ list(APPEND SOURCES
 # Executable
 add_executable(CloudEngine ${SOURCES})
 
+# GLAD: Only glad.c needs GLAD_GLAPI_EXPORT_BUILD for static linking
+# This makes glad.c export the function pointers, others just reference them
+set_source_files_properties("libs/glad/src/glad.c" PROPERTIES
+    COMPILE_DEFINITIONS "GLAD_GLAPI_EXPORT_BUILD"
+)
+
 # Include directories
 target_include_directories(CloudEngine PRIVATE
     ${CMAKE_SOURCE_DIR}/src

@@ -4,6 +4,7 @@
 #include <platform/window.h>
 #include <ecs/world.h>
 #include <ecs/modules/network_module.h>
+#include <ecs/modules/render_module.h>
 #include <ecs/components/mesh_components.h>
 #include <rendering/renderer.h>
 #include <world/chunk_manager.h>
@@ -119,9 +120,10 @@ bool Engine::init() {
                 CE_LOG_INFO("Client: Player {} disconnected", playerId);
             };
             _client->onPositionReceived = [this](uint32_t playerId, const glm::vec3& position, float yaw, float pitch) {
-                // Position received for remote player - update their NetworkTransform
+                // Position received for remote player - update their NetworkTransform with timestamp
                 auto& world = ECS::getWorld();
-                ECS::updateNetworkTransform(world, playerId, position, yaw, pitch);
+                double timestamp = glfwGetTime();
+                ECS::updateNetworkTransform(world, playerId, position, yaw, pitch, timestamp);
             };
             break;
         }
