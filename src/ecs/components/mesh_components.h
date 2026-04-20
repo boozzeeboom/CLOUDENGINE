@@ -2,11 +2,10 @@
 #include <glm/glm.hpp>
 #include <flecs.h>
 #include "../components.h"
-#include "../modules/network_module.h"
 
 namespace Core { namespace ECS {
 
-// Forward declarations
+// Forward declarations (from network_module.h)
 struct NetworkId;
 struct RemotePlayer;
 struct NetworkTransform;
@@ -68,28 +67,6 @@ inline void registerMeshComponents(flecs::world& world) {
     world.component<PlayerColor>("PlayerColor");
     
     CE_LOG_INFO("ECS Mesh components registered: RenderMesh, PlayerColor");
-}
-
-/// @brief Create a RemotePlayer entity with full rendering setup
-/// @param world The ECS world
-/// @param playerId The network player ID assigned by server
-/// @param initialPosition Initial spawn position
-/// @return The created entity (flecs::entity)
-inline flecs::entity createRenderableRemotePlayer(flecs::world& world, uint32_t playerId, const glm::vec3& initialPosition) {
-    PlayerColor playerColor = PlayerColor::fromId(playerId);
-    
-    flecs::entity e = world.entity()
-        .set<NetworkId>({playerId})
-        .add<RemotePlayer>()
-        .set<NetworkTransform>({initialPosition, glm::vec3(0.0f), 0.0f, 0.0f, 0.0f})
-        .set<Transform>({initialPosition, glm::quat_identity<float, glm::packed_highp>(), glm::vec3(1.0f)})
-        .set<RenderMesh>({MeshType::Sphere, 5.0f})
-        .set<PlayerColor>(playerColor);
-    
-    CE_LOG_INFO("Created RenderableRemotePlayer entity: id={}, pos=({},{},{}), color=({},{},{})", 
-                playerId, initialPosition.x, initialPosition.y, initialPosition.z,
-                playerColor.color.r, playerColor.color.g, playerColor.color.b);
-    return e;
 }
 
 }} // namespace Core::ECS

@@ -84,9 +84,13 @@ bool Engine::init() {
             // Setup server callbacks for ECS integration
             _server->onPlayerConnected = [this](uint32_t playerId) {
                 auto& world = ECS::getWorld();
-                // Create RemotePlayer entity with rendering for new client
-                ECS::createRenderableRemotePlayer(world, playerId, glm::vec3(0.0f, 3000.0f, 0.0f));
-                CE_LOG_INFO("Server: Player {} connected, created RenderableRemotePlayer entity", playerId);
+                // Create RemotePlayer entity with rendering components
+                flecs::entity e = ECS::createRemotePlayer(world, playerId, glm::vec3(0.0f, 3000.0f, 0.0f));
+                // Add rendering components
+                ECS::PlayerColor playerColor = ECS::PlayerColor::fromId(playerId);
+                e.set<ECS::RenderMesh>({ECS::MeshType::Sphere, 5.0f})
+                 .set<ECS::PlayerColor>(playerColor);
+                CE_LOG_INFO("Server: Player {} connected, created RemotePlayer entity with color", playerId);
             };
             _server->onPlayerDisconnected = [this](uint32_t playerId) {
                 auto& world = ECS::getWorld();

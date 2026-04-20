@@ -1,5 +1,6 @@
 #pragma once
 #include "../components.h"
+#include "../components/mesh_components.h"
 #include <deque>
 
 namespace Core { namespace ECS {
@@ -73,10 +74,14 @@ inline flecs::entity createRemotePlayer(flecs::world& world, uint32_t playerId, 
 /// @param initialPosition Initial spawn position
 /// @return The created entity
 inline flecs::entity createLocalPlayer(flecs::world& world, uint32_t playerId, const glm::vec3& initialPosition) {
-    flecs::entity e = world.entity()
+    PlayerColor playerColor = PlayerColor::fromId(playerId);
+    
+    flecs::entity e = world.entity("LocalPlayer")
         .set<NetworkId>({playerId})
         .add<IsLocalPlayer>()
-        .set<Transform>({initialPosition, glm::quat_identity<float, glm::packed_highp>(), glm::vec3(1.0f)});
+        .set<Transform>({initialPosition, glm::quat_identity<float, glm::packed_highp>(), glm::vec3(1.0f)})
+        .set<RenderMesh>({MeshType::Sphere, 5.0f})
+        .set<PlayerColor>(playerColor);
     
     CE_LOG_INFO("Created LocalPlayer entity: id={}, pos=({},{},{})", 
                 playerId, initialPosition.x, initialPosition.y, initialPosition.z);
