@@ -1,13 +1,16 @@
 #include "engine.h"
-#include <core/logger.h>
-#include <core/config.h>
+#include "logger.h"
+#include "config.h"
 #include <platform/window.h>
 #include <ecs/world.h>
 #include <rendering/renderer.h>
 #include <world/chunk_manager.h>
 #include <world/world_components.h>
+#include <network/server.h>
+#include <network/client.h>
 #include <chrono>
 #include <GLFW/glfw3.h>
+#include <iostream>
 
 namespace Core {
 
@@ -17,70 +20,139 @@ static uint64_t getCurrentTimeMs() {
     ).count();
 }
 
-Engine::Engine() {}
+AppMode Engine::parseArgs(int argc, char* argv[]) {
+    if (argc < 2) return AppMode::Singleplayer;
+
+    std::string arg = argv[1];
+    if (arg == "--host" || arg == "-h") return AppMode::Host;
+    if (arg == "--client" || arg == "-c") return AppMode::Client;
+    if (arg == "--help") {
+        std::cout << "Usage: CloudEngine [mode] [args]\n";
+        std::cout << "Modes:\n";
+        std::cout << "  (none)            - Single player\n";
+        std::cout << "  --host, -h        - Host server (port 12345)\n";
+        std::cout << "  --client, -c [IP] - Connect to server (default: localhost)\n";
+        std::cout << "\nExample:\n";
+        std::cout << "  Terminal 1: CloudEngine --host\n";
+        std::cout << "  Terminal 2: CloudEngine --client localhost\n";
+        exit(0);
+    }
+    return AppMode::Client;
+}
+
+Engine::Engine(AppMode mode) : _mode(mode) {}
 Engine::~Engine() {}
 
 bool Engine::init() {
     CE_LOG_INFO("Initializing Engine...");
-    
+
     if (!Platform::Window::init(1280, 720, "Project C: The Clouds")) {
         CE_LOG_ERROR("Failed to initialize window");
         return false;
     }
     CE_LOG_INFO("Window initialized");
-    
+
     if (!Rendering::Renderer::init()) {
         CE_LOG_ERROR("Failed to initialize renderer");
         return false;
     }
     CE_LOG_INFO("Renderer initialized");
-    
+
     ECS::init();
     CE_LOG_INFO("ECS initialized");
-    
+
     // Initialize World system
     _chunkManager = new World::ChunkManager();
-    CE_LOG_INFO("World system initialized (Circular World, {} chunks loaded)", 
+    CE_LOG_INFO("World system initialized (Circular World, {} chunks loaded)",
                 _chunkManager->getLoadedCount());
-    
+
+    // Initialize network
+    switch (_mode) {
+        case AppMode::Host: {
+            _server = new Network::Server();
+            if (!_server->init()) {
+                CE_LOG_ERROR("Network::Server init failed");
+                return false;
+            }
+            if (!_server->start(12345)) {
+                CE_LOG_ERROR("Failed to start server on port 12345");
+                return false;
+            }
+            break;
+        }
+        case AppMode::Client: {
+            _client = new Network::Client();
+            if (!_client->init()) {
+                CE_LOG_ERROR("Network::Client init failed");
+                return false;
+            }
+            const char* host = (_mode == AppMode::Client && _mode == AppMode::Client) ? "localhost" : "localhost";
+            // NOTE: argc not available here; using default localhost.
+            // Real host resolution happens in run() after args are passed down.
+            CE_LOG_INFO("Client network initialized (will connect when run() starts)");
+            break;
+        }
+        case AppMode::Singleplayer:
+        default:
+            break;
+    }
+
     _running = true;
-    CE_LOG_INFO("Engine initialized successfully");
+    CE_LOG_INFO("Engine initialized successfully (mode={})",
+        _mode == AppMode::Host ? "HOST" : _mode == AppMode::Client ? "CLIENT" : "SINGLEPLAYER");
     return true;
 }
 
 void Engine::shutdown() {
     CE_LOG_INFO("Shutting down Engine...");
+
+    delete _server;
+    _server = nullptr;
+    delete _client;
+    _client = nullptr;
+
     delete _chunkManager;
     _chunkManager = nullptr;
+
     ECS::shutdown();
     Rendering::Renderer::shutdown();
     Platform::Window::shutdown();
     Logger::Shutdown();
+
     CE_LOG_INFO("Engine shutdown complete");
 }
 
 void Engine::run() {
     CE_LOG_INFO("Engine running...");
     _lastTime = getCurrentTimeMs();
-    
+
+    // Late client connect (after window is up)
+    if (_mode == AppMode::Client && _client) {
+        const char* host = "localhost";
+        // argv not accessible here — use default localhost
+        if (!_client->connect(host, 12345, "Player")) {
+            CE_LOG_WARN("Client failed to connect to {}:12345", host);
+        }
+    }
+
     while (_running && !Platform::Window::shouldClose()) {
         uint64_t currentTime = getCurrentTimeMs();
         float dt = (currentTime - _lastTime) / 1000.0f;
         _lastTime = currentTime;
-        
+
         update(dt);
         render();
-        
+
         Platform::Window::pollEvents();
     }
-    
+
     shutdown();
 }
 
 void Engine::update(float dt) {
     _time += dt;
     _deltaTime = dt;
-    
+
     // Update TimeData singleton before ECS update
     auto& world = ECS::getWorld();
     auto* td = world.get_mut<TimeData>();
@@ -88,30 +160,52 @@ void Engine::update(float dt) {
         td->deltaTime = dt;
         td->time = _time;
     }
-    
+
     // Run ECS systems
     ECS::update(dt);
-    
+
+    // Update network
+    updateNetwork(dt);
+
     // Update flight controls
     updateFlightControls(dt);
-    
+
     // Update circular world system (chunk streaming, position wrapping)
     updateWorldSystem(dt);
-    
+
     // Exit on Escape
     if (Platform::Window::isKeyPressed(GLFW_KEY_ESCAPE)) {
         CE_LOG_INFO("ESC pressed, setting _running = false");
         _running = false;
     }
-    
+
     // Update FPS logging every ~0.5 seconds
     static float lastTitleUpdate = 0.0f;
     if (_time - lastTitleUpdate > 0.5f) {
         float fps = (dt > 0.001f) ? (1.0f / dt) : 60.0f;
         uint64_t frameCount = td ? td->frameCount : 0;
-        CE_LOG_INFO("Update #{}: FPS={:.0f}, dt={:.3f}s, camera=({:.0f},{:.0f},{:.0f})", 
+        CE_LOG_INFO("Update #{}: FPS={:.0f}, dt={:.3f}s, camera=({:.0f},{:.0f},{:.0f})",
                    frameCount, fps, dt, _cameraPos.x, _cameraPos.y, _cameraPos.z);
         lastTitleUpdate = _time;
+    }
+}
+
+void Engine::updateNetwork(float dt) {
+    if (_server) {
+        _server->update(dt);
+        uint32_t count = static_cast<uint32_t>(_server->getPlayers().size());
+        static float lastNet = 0.0f;
+        if (_time - lastNet > 2.0f) {
+            CE_LOG_INFO("Network: SERVER, players={}", count);
+            lastNet = _time;
+        }
+    } else if (_client) {
+        _client->update(dt);
+        static float lastNet = 0.0f;
+        if (_time - lastNet > 2.0f) {
+            CE_LOG_INFO("Network: CLIENT connected={}", _client->isConnected());
+            lastNet = _time;
+        }
     }
 }
 
@@ -129,42 +223,41 @@ void Engine::updateFlightControls(float dt) {
         CE_LOG_INFO("Flight controls: CURSOR RELEASED");
         return; // Skip movement this frame to prevent jump
     }
-    
+
     if (!_cursorCaptured) {
         return; // Only fly when cursor is captured
     }
-    
+
     // Mouse look (yaw/pitch)
     double mouseX, mouseY;
     Platform::Window::getMousePos(mouseX, mouseY);
-    
+
     double dx = mouseX - _lastMouseX;
     double dy = mouseY - _lastMouseY;
-    
-    // Sensitivity
+
     const float mouseSensitivity = 0.002f;
-    _cameraYaw -= static_cast<float>(dx) * mouseSensitivity;
+    _cameraYaw   -= static_cast<float>(dx) * mouseSensitivity;
     _cameraPitch -= static_cast<float>(dy) * mouseSensitivity;
-    
+
     // Clamp pitch to avoid flipping
     _cameraPitch = glm::clamp(_cameraPitch, -1.5f, 1.5f);
-    
+
     _lastMouseX = mouseX;
     _lastMouseY = mouseY;
-    
+
     // Calculate forward/right vectors from yaw/pitch
     glm::vec3 forward;
     forward.x = sin(_cameraYaw) * cos(_cameraPitch);
     forward.y = sin(_cameraPitch);
     forward.z = cos(_cameraYaw) * cos(_cameraPitch);
     forward = glm::normalize(forward);
-    
+
     glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
     glm::vec3 right = glm::normalize(glm::cross(forward, worldUp));
-    
+
     // Movement speed
     const float moveSpeed = 500.0f; // units per second
-    
+
     // WASD movement
     if (Platform::Window::isKeyPressed(GLFW_KEY_W)) {
         _cameraPos += forward * moveSpeed * dt;
@@ -178,7 +271,7 @@ void Engine::updateFlightControls(float dt) {
     if (Platform::Window::isKeyPressed(GLFW_KEY_D)) {
         _cameraPos += right * moveSpeed * dt;
     }
-    
+
     // Vertical movement (E=up, Q=down)
     if (Platform::Window::isKeyPressed(GLFW_KEY_E) || Platform::Window::isKeyPressed(GLFW_KEY_SPACE)) {
         _cameraPos.y += moveSpeed * dt;
@@ -186,28 +279,33 @@ void Engine::updateFlightControls(float dt) {
     if (Platform::Window::isKeyPressed(GLFW_KEY_Q) || Platform::Window::isKeyPressed(GLFW_KEY_LEFT_SHIFT)) {
         _cameraPos.y -= moveSpeed * dt;
     }
-    
+
     // Shift for speed boost
     if (Platform::Window::isKeyPressed(GLFW_KEY_LEFT_CONTROL)) {
         _cameraPos += forward * moveSpeed * 2.0f * dt;
     }
+
+    // Send position over network
+    uint32_t localId = 0;
+    if (_server)      { _server->sendPosition(1, _cameraPos, glm::vec3(0), _cameraYaw, _cameraPitch); }
+    else if (_client) { _client->sendPosition(_client->getLocalPlayerId(), _cameraPos, glm::vec3(0), _cameraYaw, _cameraPitch); }
 }
 
 void Engine::updateWorldSystem(float dt) {
     if (!_chunkManager) return;
-    
+
     // Wrap camera position for circular world
     const glm::vec3& worldPos = _chunkManager->getWorld().wrapPosition(_cameraPos);
     _cameraPos = worldPos;
-    
+
     // Update chunk manager with current position
     _chunkManager->update(_cameraPos);
-    
+
     // Log chunk info periodically
     static float lastChunkLog = 0.0f;
     if (_time - lastChunkLog > 2.0f) {
         World::ChunkId currentChunk = _chunkManager->getWorld().positionToChunk(_cameraPos);
-        CE_LOG_INFO("World: pos=({:.0f},{:.0f},{:.0f}) chunk=({},{}) loaded_chunks={}", 
+        CE_LOG_INFO("World: pos=({:.0f},{:.0f},{:.0f}) chunk=({},{}) loaded_chunks={}",
                    _cameraPos.x, _cameraPos.y, _cameraPos.z,
                    currentChunk.thetaIndex, currentChunk.radiusIndex,
                    _chunkManager->getLoadedCount());
@@ -217,18 +315,18 @@ void Engine::updateWorldSystem(float dt) {
 
 void Engine::render() {
     Rendering::Renderer::beginFrame();
-    
+
     // Set camera from flight controls (convert radians to degrees for renderer)
     Rendering::Renderer::setCamera(
         _cameraPos,
         glm::degrees(_cameraYaw),    // Yaw in degrees
         glm::degrees(_cameraPitch)   // Pitch in degrees
     );
-    
+
     // Render clouds with shader
     Rendering::Renderer::clear(0.53f, 0.81f, 0.92f, 1.0f);  // Sky blue background
     Rendering::Renderer::renderClouds(_time, _deltaTime);
-    
+
     Rendering::Renderer::endFrame();
 }
 

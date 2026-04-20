@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(CLOUDENGINE VERSION 0.2.0 LANGUAGES C CXX)
+project(CLOUDENGINE VERSION 0.4.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,6 +18,15 @@ file(GLOB_RECURSE SOURCES "src/*.cpp")
 list(APPEND SOURCES 
     "libs/glad/src/glad.c"
     "libs/flecs/flecs.c"
+    "libs/enet-1.3.18/callbacks.c"
+    "libs/enet-1.3.18/compress.c"
+    "libs/enet-1.3.18/host.c"
+    "libs/enet-1.3.18/list.c"
+    "libs/enet-1.3.18/packet.c"
+    "libs/enet-1.3.18/peer.c"
+    "libs/enet-1.3.18/protocol.c"
+    "libs/enet-1.3.18/unix.c"
+    "libs/enet-1.3.18/win32.c"
 )
 
 # Executable
@@ -31,6 +40,7 @@ target_include_directories(CloudEngine PRIVATE
     ${CMAKE_SOURCE_DIR}/libs/glfw/include
     ${CMAKE_SOURCE_DIR}/libs/glm-master
     ${CMAKE_SOURCE_DIR}/libs/spdlog/include
+    ${CMAKE_SOURCE_DIR}/libs/enet-1.3.18/include    # ENet headers
 )
 
 # Copy shaders to build directory (works for both build/ and build/Debug/)
@@ -44,4 +54,5 @@ add_subdirectory(libs/glfw)
 target_link_libraries(CloudEngine PRIVATE
     glfw
     ${OPENGL_gl_LIBRARY}
+    winmm.lib   # ENet time functions
 )

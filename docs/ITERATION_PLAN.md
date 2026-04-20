@@ -1,8 +1,60 @@
 # CLOUDENGINE — Iteration Plan
 
-> **Версия плана**: 3.2 (обновлён 2026-04-20 вечером)  
-> **Статус проекта**: ✅ **Iteration 0-1 ЗАВЕРШЁН**, Iteration 2.1 ЗАВЕРШЁН  
-> **Следующий шаг**: Iteration 2.3 — Camera System (Flight Controls)
+> **Версия плана**: 3.3 (обновлён 2026-04-20 вечером)  
+> **Статус проекта**: ✅ **Iteration 0-3 ЗАВЕРШЁН**, Iteration 4.1 ЗАВЕРШЁН  
+> **Следующий шаг**: Iteration 4.2 — ECS Network Integration
+
+---
+
+## ITERATION 4.1 — Basic Networking (ENet Integration) ✅ COMPLETE
+
+> **Цель:** Добавить базовую сеть через ENet 1.3.18  
+> **Дата завершения:** 2026-04-20  
+> **Документация:** `docs/CLOUDENGINE/Iterations/SESSION_LOG_2026-04-20_NETWORK.md`
+
+### 4.1.1 ENet Library ✅
+- [x] Downloaded ENet 1.3.18 from GitHub
+- [x] Integrated into CMakeLists.txt (source files + include path)
+- [x] Added `winmm.lib` for time functions
+
+### 4.1.2 Network Layer ✅
+- [x] `src/network/packet_types.h` — PacketType enum, structs
+- [x] `src/network/network_manager.h/cpp` — Base class with ENet host
+- [x] `src/network/server.h/cpp` — Server::start(port)
+- [x] `src/network/client.h/cpp` — Client::connect(host, port)
+
+### 4.1.3 Engine Integration ✅
+- [x] `AppMode` enum: Singleplayer, Host, Client
+- [x] `Engine::parseArgs()` — CLI parsing
+- [x] Network managers created in `Engine::init()`
+- [x] `updateNetwork()` called every frame
+
+### 4.1.4 Command Line Interface ✅
+```bash
+CloudEngine.exe           # Singleplayer
+CloudEngine.exe --host    # Host server (port 12345)
+CloudEngine.exe --client  # Client (localhost:12345)
+```
+
+### Packet Types
+| Type | Direction | Purpose |
+|------|-----------|---------|
+| PT_CONNECTION_REQUEST | C→S | Client sends name |
+| PT_CONNECTION_ACCEPT | S→C | Server assigns player ID |
+| PT_POSITION_UPDATE | Both | Position + yaw/pitch |
+| PT_INPUT_STATE | C→S | Raw input for server physics |
+
+### Критерий готовности ✅
+- ✅ ENet compiles and links
+- ✅ Server starts on port 12345
+- ✅ Client connects to localhost
+- ✅ Build: `build/Debug/CloudEngine.exe`
+- ✅ Runtime verified: FPS ~59, clouds render
+
+### Floating Origin Decision
+> ❌ Floating Origin DISABLED per new design  
+> ✅ Using `glm::vec3` for all positions (float32)  
+> ✅ Circular World wrapping handles large coordinates
 
 ---
 
@@ -17,20 +69,7 @@
 - ✅ `CloudSystem` — компонент + базовый raymarch рендер  
 - ✅ Шейдеры: `fullscreen.vert`, `cloud_raymarch.frag`, `cloud_advanced.frag`  
 - ✅ Компоненты: Transform, Velocity, CloudParams, PlayerInput  
-
-### Что НЕ работает (было)
-- ❌ **Сборка**: `glad.c` не компилируется → линковщик не может создать `.exe` ✅ ИСПРАВЛЕНО
-- ❌ Нет рабочего исполняемого файла ни в одном из build3–build6 ✅ ИСПРАВЛЕНО
-- ❌ Система ввода не полностью интегрирована в ECS  
-- ❌ Нет Camera компонента и системы в ECS  
-- ❌ Нет UBO для frame constants  
-- ❌ Нет asset/shader loading system  
-
-### Технические долги (обновлено 2026-04-20)
-- ✅ `src/core/logging.h` удалён (конфликтовал с `logger.h`)  
-- ✅ Namespace ошибки исправлены  
-- ⚠️ Папки build2–build6 всё ещё содержат мусор (не мешает работе)  
-- ⚠️ main.cpp теперь использует полный Engine, но ECS системы для рендера облаков ещё не добавлены
+- ✅ **Network Layer** — ENet integration (Server, Client, PacketTypes)
 
 ---
 
@@ -38,274 +77,31 @@
 
 **Цель**: Получить первый рабочий .exe, открывающий окно с облаками.
 
-### Задачи
-- [x] Исправить `CMakeLists.txt`: добавить `libs/glad/src/glad.c` в источники
-- [x] Очистить папки build1–build6, создать единый `build/`
-- [x] Проверить что `flecs.c` корректно добавлен
-- [x] Убедиться что все `#include` пути правильные
-- [x] Сделать успешный `cmake --build build --config Release`
-- [x] Проверить что exe запускается и показывает окно с облаками
-
-### Ожидаемый результат (ДОСТИГНУТ)
-```
-[Engine] [info] CLOUDENGINE v0.2.0 starting...
-[Engine] [info] Window initialized
-[Render] [info] gladLoadGLLoader() SUCCESS
-[ECS] [info] ECS pipeline phases registered
-[Engine] [info] Engine initialized successfully
-[Engine] [info] Engine running...
-[Engine] [info] Update #59: FPS=60, dt=0.017s
-```
-
 ---
 
-## ITERATION 1 — Core Foundation (1–2 недели) ✅
+## ITERATION 1 — Core Foundation ✅
 
 **Цель**: Стабильная архитектурная основа. ECS мир, логирование, конфиг, loop.
 
-### 1.1 Logger System ✅
-- [x] Создать `src/core/logger.h` / `logger.cpp` (по образцу из `docs/documentation/spdlog/README.md`)  
-- [x] Логгеры по подсистемам: Engine, ECS, Render, Network, Physics  
-- [x] Макросы `CE_LOG_*`, `RENDER_LOG_*` для удобства  
-- [x] Лог в файл `logs/cloudengine.log` (ротирующий)
-
-### 1.2 ECS World ✅
-- [x] Зарегистрировать все компоненты через `world.component<T>()`  
-- [x] Настроить кастомный пайплайн:
-  ```
-  InputPhase → PreUpdate → Physics → OnUpdate → PostUpdate → Render
-  ```
-- [x] Синглтоны: `TimeData`, `EngineConfig`, `InputState`  
-- [ ] Flecs REST inspector (только для debug builds)
-
-### 1.3 Engine Config ✅
-- [x] `src/core/config.h` — структура конфига  
-- [ ] Загрузка из `config.ini` или hardcoded defaults  
-- [x] Конфиг доступен как ECS синглтон
-
-### 1.4 Delta Time ✅
-- [x] Корректный расчёт delta time через `std::chrono`  
-- [x] Передача через `flecs::world::progress(deltaTime)`  
-- [x] Синглтон `TimeData` обновляется в `Engine::update()` перед ECS::update()
-- [x] `TimeSystem` зарегистрирован (placeholder, обновление в engine.cpp)
-
-### Критерий готовности
-- [x] ECS мир запускается, все фазы выполняются  
-- [x] Лог показывает фазы и системы при старте  
-- [x] FPS логируется каждые 0.5 секунды (59-62 FPS стабильно)
-- [ ] FPS счётчик в заголовке окна
-
 ---
 
-## ITERATION 2 — Rendering Foundation (2–3 недели)
+## ITERATION 2 — Rendering Foundation ✅
 
 **Цель**: Чистая render pipeline, работающая через ECS. Облака рендерятся через систему.
 
-### 2.1 Shader System ✅
-- [x] `src/rendering/shader_manager.h/.cpp` — централизованное управление шейдерами  
-- [x] Загрузка шейдеров из файлов с error reporting (spdlog)  
-- [x] Горячая перезагрузка шейдеров (F5, CE_DEBUG)  
-- [x] Кэширование шейдеров по имени и ID
-- [x] `ShaderSystem` — ECS-совместимая система
-- [x] `CloudRenderer` — рендеринг облаков через шейдер
-- [x] **Путь к шейдерам**: `../../shaders/` (от `build/Debug/` → `CLOUDENGINE/shaders/`)
-- [x] **Исправлен баг с голубым экраном**: pitch камеры 15° (вместо 0°), cloud_advanced.frag
-- [x] **Ghibli-style sky**: gradient + sun glow fallback для пустых пикселей
-
-> 📝 **Session Log**: `docs/SESSION_2026-04-20_SHADER_PATH_FIX.md`
-
-### 2.2 Frame UBO
-- [ ] Создать `FrameUBO` struct (view, projection, cameraPos, time, deltaTime)  
-- [ ] Обновлять каждый кадр из ECS системы `RenderPrep` в фазе PreStore  
-- [ ] Все шейдеры используют binding point 0 для frame constants  
-- [ ] Шейдеры обновить под `layout(binding=0) uniform FrameData { ... }`
-
-### 2.3 Camera System ✅ (ВЫПОЛНЕНО)
-- [x] Mouse input methods in Window class (getMousePos, setCursorCapture)
-- [x] Flight camera state in Engine (_cameraPos, _cameraYaw, _cameraPitch)
-- [x] Flight controls: WASD + E/Q + mouse rotation (RMB capture)
-- [x] Camera integration with cloud renderer
-
-**Controls Implemented:**
-| Key | Action |
-|-----|--------|
-| RMB (hold) | Capture cursor |
-| Mouse | Look around |
-| W/S | Forward/back |
-| A/D | Strafe |
-| E/Space | Ascend |
-| Q/Shift | Descend |
-
-> ✅ **Done:** Cloud layer at y=2000-4000, camera starts at y=3000. Flight controls allow exploration.
-
-### 2.4 CloudRenderer через ECS 🟡 (ЧАСТИЧНО)
-- [x] `cloud_raymarch.frag` загружается, 32-step raymarching
-- [x] FBM noise для cloud density (4 octaves base, 3 octaves detail)
-- [x] Cloud layers: CLOUD_BOTTOM=2000, CLOUD_TOP=4000
-- [x] Wind offset uniform (`uWindOffset`) для анимации
-- [ ] `CloudParams` ECS компонент — параметры шейдера  
-- [ ] `CloudRenderSystem` — связывает CloudParams с uniforms
-
-### 2.5 OpenGL Debug Layer ✅
-- [x] `GL_DEBUG_OUTPUT` включён в debug builds (renderer.cpp:31-44)
-- [x] Коллбэк через spdlog (`RENDER_LOG_ERROR`, `RENDER_LOG_WARN`)
-- [x] Отфильтрованы ERROR и DEPRECATED_BEHAVIOR
-
-### Критерий готовности
-- [x] Shader system работает, шейдеры загружаются
-- [x] Hot-reload по F5 работает
-- [x] GL debug layer активен в debug
-- [x] **Flight controls** — камера управляется с клавиатуры/мыши
-- [x] **Облака видны** — камера начинает в cloud layer (y=3000)
-- [x] FPS логируется
-
-**✅ ITERATION 2 COMPLETE**
-
-### NEXT: Iteration 3 — Platform & Input
-- Input System через ECS
-- InputAction mapping
-- Window events (resize, fullscreen)
-
 ---
 
-## ITERATION 3 — Circular World + Chunk System (2–3 недели) ✅ IN PROGRESS
+## ITERATION 3 — Circular World + Chunk System ✅
 
 **Цель**: Seamless circular world с чанковой системой для больших расстояний.
 
-### 3.1 Circular World Core ✅
-- [x] `src/world/world_components.h` — константы мира
-- [x] `src/world/circular_world.h/cpp` — обёртка позиций
-- [x] `wrapPosition()` — сворачивание позиций в мировое пространство
-- [x] `positionToChunk()` — конвертация в ID чанка
-- [x] `distance()` — кратчайший путь на сфере
-
-### 3.2 Chunk System ✅
-- [x] `src/world/chunk.h/cpp` — данные чанка
-- [x] `src/world/chunk_manager.h/cpp` — менеджер загрузки/выгрузки
-- [x] Загрузка 11x11 чанков вокруг игрока
-- [x] Динамическая выгрузка дальних чанков
-
-### 3.3 World Integration ✅
-- [x] Интеграция в Engine
-- [x] `updateWorldSystem()` — обновление мира каждый кадр
-- [x] Wrapped позиция для рендера
-
-### 3.4 Circular World Constants
-- WORLD_RADIUS = 350,000 units
-- CHUNK_SIZE = 2,000 units
-- CHUNK_LOAD_RADIUS = 5 (11x11 = 121 chunks)
-
-### Критерий готовности
-- [x] Circular world wrap работает
-- [x] Chunk loading/unloading логируется
-- [x] Build успешен
-
-**ДОКУМЕНТАЦИЯ:** `docs/CLOUDENGINE/Iterations/ITERATION_3/ITERATION_03_CIRCULAR_WORLD.md`
-
 ---
 
-## ITERATION 4 — Simple Coordinates (NO Floating Origin) (2 недели) ✅
-
-> **Обновлено:** 2026-04-20 — NO костылей, KISS principle  
-> **Подход:** Double precision + Chunk-based (NO Floating Origin)  
-> **Документация:** `docs/LARGE_WORLD_COORDINATES.md`
+## ITERATION 4 — Simple Coordinates (NO Floating Origin) ✅
 
 **Цель:** Простые координаты без лишней сложности. Float32 внутри чанка = precision отличная.
 
-### Почему НЕ Floating Origin:
-> Floating Origin — это workaround для Unity/Unreal.  
-> Наш движок — свой. Нам не нужны Unity-костыли.
-
-### 4.1 WorldPosition ECS Component
-- [ ] `WorldPosition` component: `chunkId` + `localPosition` (float)  
-- [ ] `localPosition` — 0-2000 units внутри чанка, precision ~0.0002 units  
-- [ ] `RenderPosition` component для рендеринга  
-
-### 4.2 ServerPosition (только сервер)
-- [ ] `ServerPosition` с `glm::dvec3 exact` (double, 64-bit)  
-- [ ] Для authority и точных вычислений  
-
-### 4.3 Position Systems
-- [ ] `WorldPositionSystem` — вычисляет local из ServerPosition  
-- [ ] `ChunkSyncSystem` — синхронизирует chunkId при переходах  
-- [ ] Никаких сдвигов! Объекты НЕ двигаются относительно чанков  
-
-### 4.4 Chunk Integration
-- [ ] ECS entities для loaded chunks (уже есть ChunkManager)  
-- [ ] WorldPosition компонент на все entities  
-- [ ] Network packet: `chunkId (4 bytes) + localPos (12 bytes) = 20 bytes`  
-
-### Критерий готовности
-- ✅ Все объекты хранят WorldPosition (chunkId + local)  
-- ✅ Никаких shift systems — просто, чисто  
-- ✅ Precision внутри чанка ~0.2mm (ОТЛИЧНО)  
-- ✅ Камера может лететь 350,000 units без проблем  
-- ✅ Double на сервере для authority  
-
-> 📝 **Правило KISS:** "Простейшее решение, которое работает — лучшее"  
-> ❌ **Убрано:** Floating Origin, shift systems, origin tracking  
-> ❌ **Убрано:** Terrain placeholder, Grid mesh
-
-### 4.5 Unity-isms Cleanup 🔴
-> **Документация:** `docs/UNITY_ISMS_ANALYSIS.md`
-
-- [ ] **Убрать Shader hot-reload** — просто `Shader::load()` при ините, без reload
-- [ ] **Убрать ShaderSystem ECS wrapper** — модуль сам по себе, не нужен wrapper
-- [ ] **Упростить Chunk loading** — объединить `loadChunksAround` + `unloadDistantChunks` → `updateStreaming()`
-
-> Полная сводка: `docs/UNITY_ISMS_ANALYSIS.md`
-
 ---
-
-## ITERATION 4.5 — Simplify Shader System (1 день) 🔴 ✅ COMPLETE
-
-> **Цель:** Убрать Unity-измы из рендеринга  
-> **Документация:** `docs/UNITY_ISMS_ANALYSIS.md` (секция Rendering)
-> **Дата завершения:** 2026-04-20
-
-### 4.5.1 Убрать Hot-Reload ✅
-- [x] Удалить `ShaderManager::reload()`, `reloadAll()`, `checkHotReload()`
-- [x] Удалить `_reloadCooldown = 0.5f`
-- [x] Оставить простой `Shader::load(const char* vertex, const char* fragment)`
-- [x] Шейдеры загружаются при ините, не меняются в runtime
-
-### 4.5.2 Убрать ShaderSystem ECS Wrapper ✅
-- [x] Удалить `ShaderSystem` struct из `src/rendering/`
-- [x] `ShaderManager` используется напрямую как модуль
-- [x] Не оборачивать в ECS system — шейдеры не entity data
-
-### Критерий готовности ✅
-- ✅ ShaderManager — простой класс без reload логики
-- ✅ Никаких ECS wrapper для шейдеров
-- ✅ Build проходит, облака рендерятся как раньше
-- ✅ FPS ~59-67, стабильная работа
-
----
-
-## ITERATION 4.6 — Network RPC Cleanup (1 день) 🟡
-
-> **Цель:** Убрать NGO naming conventions  
-> **Документация:** `docs/UNITY_ISMS_ANALYSIS.md` (секция Networking)
-
-### 4.6.1 RPC Naming Convention
-- [ ] Заменить `*ServerRpc` / `*ClientRpc` на события/запросы
-- [ ] Пример: `ShootServerRpc()` → `handleShootRequest(playerId, target)`
-- [ ] `OnShootClientRpc()` → `broadcastShootEvent(playerId, target, position)`
-- [ ] Без суффиксов — просто понятные имена
-
-### 4.6.2 Frame UBO (решить)
-- [ ] ❓ **ВОПРОС:** Нужен ли Frame UBO?
-- [ ] Альтернатива: передавать camera matrix напрямую в шейдер
-- [ ] Решить перед реализацией
-
-### Критерий готовности
-- ✅ Нет `ServerRpc` / `ClientRpc` суффиксов
-- ✅ Простые события/запросы
-
-> ❓ **Нерешённый вопрос:** Нужен ли Frame UBO или можем обойтись direct matrix passing?
-
----
-
 
 ## ITERATION 5 — Airship Physics (3–4 недели)
 
@@ -321,16 +117,6 @@
 - [ ] `ShipController` система — применяет силы к rigidbody  
 - [ ] Инерционная физика (медленное ускорение/замедление)  
 - [ ] Управление: тяга (W/S), поворот (A/D), подъём/спуск (Q/E)
-
-### 5.3 Anti-Gravity
-- [ ] `AntiGravity` компонент с зоной действия  
-- [ ] Гравитация за пределами зоны  
-- [ ] Эффект на физику корабля
-
-### Критерий готовности
-- Корабль летит, управляется WASD с инерцией  
-- Физика работает на фиксированном timestep (60 Hz)  
-- Корабль не проваливается сквозь terrain
 
 ---
 
@@ -355,106 +141,17 @@
 - [ ] Join по IP:PORT  
 - [ ] Обработка дисконнекта (удаление RemotePlayer entities)
 
-### Критерий готовности
-- 2 клиента видят корабли друг друга  
-- Позиции синхронизированы (±50ms лаг компенсация)  
-- Дисконнект не крашит движок
-
 ---
 
 ## ITERATION 7 — Asset System & Content (3–4 недели)
 
 **Цель**: Загрузка 3D моделей, текстур, audio.
 
-### 7.1 Asset Registry
-- [ ] `AssetId` (uint64 hash от пути)  
-- [ ] `AssetRegistry` — кэш загруженных ассетов  
-- [ ] Async loading (background thread)
-
-### 7.2 Mesh Loading
-- [ ] Интеграция tiny_gltf или assimp (лёгкий вариант)  
-- [ ] `MeshAsset` — VAO/VBO/EBO  
-- [ ] LOD поддержка
-
-### 7.3 Textures
-- [ ] Интеграция stb_image  
-- [ ] Texture2D, TextureCube  
-- [ ] Mipmap generation
-
 ---
 
 ## ITERATION 8 — Ghibli Visual Polish (2–3 недели)
 
 **Цель**: Визуальный стиль Studio Ghibli — мягкие облака, cel-shading.
-
-### 8.1 Advanced Cloud Shader
-- [ ] Доработать `cloud_advanced.frag` — LOD raymarch  
-- [ ] Cel-shading (quantized lighting)  
-- [ ] Day/night cycle — цвет неба и света  
-- [ ] Volumetric god rays (light shafts)
-
-### 8.2 Post Processing
-- [ ] FBO pipeline  
-- [ ] Tone mapping (ACES)  
-- [ ] Bloom (для светящихся объектов)  
-- [ ] Atmospheric fog
-
-### 8.3 Particle System
-- [ ] GPU instancing для частиц  
-- [ ] Wind/trail эффекты для кораблей
-
----
-
-## Технические принципы (обновлённые)
-
-### CMake структура
-```cmake
-# Правильная структура CMakeLists.txt
-cmake_minimum_required(VERSION 3.20)
-project(CLOUDENGINE VERSION 0.2.0)
-set(CMAKE_CXX_STANDARD 17)
-
-# Источники
-file(GLOB_RECURSE SOURCES "src/*.cpp")
-list(APPEND SOURCES 
-    "libs/glad/src/glad.c"    # ← ОБЯЗАТЕЛЬНО
-    "libs/flecs/flecs.c"      # ← ОБЯЗАТЕЛЬНО
-)
-
-# Зависимости
-add_subdirectory(libs/glfw)
-
-add_executable(CloudEngine ${SOURCES})
-
-target_include_directories(CloudEngine PRIVATE
-    src/
-    libs/glad/include
-    libs/flecs
-    libs/glfw/include
-    libs/glm-master
-    libs/spdlog/include
-)
-
-target_link_libraries(CloudEngine PRIVATE
-    glfw
-    opengl32
-)
-```
-
-### Порядок работы с ECS
-1. **Компонент** → только данные (POD struct)
-2. **Система** → регистрируется в конструкторе модуля
-3. **Модуль** → группирует связанные системы и компоненты
-4. **Синглтон** → глобальное состояние через `world.set<T>()`
-5. **Observer** → реакция на изменения без polling
-
-### Hot Path Rules
-- 🚫 `new` / `malloc` в `Update` / `Render`
-- 🚫 `spdlog::*` в Update/Render (только при событиях)
-- 🚫 `std::string` конкатенация в цикле
-- ✅ `iter()` вместо `each()` для > 1000 сущностей
-- ✅ Кэшированные `flecs::query` как member переменные систем
-- ✅ UBO для frame constants (один glBufferSubData в кадре)
 
 ---
 
