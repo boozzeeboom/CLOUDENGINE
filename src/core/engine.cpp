@@ -3,6 +3,7 @@
 #include "config.h"
 #include <platform/window.h>
 #include <ecs/world.h>
+#include <ecs/modules/network_module.h>
 #include <rendering/renderer.h>
 #include <world/chunk_manager.h>
 #include <world/world_components.h>
@@ -78,6 +79,18 @@ bool Engine::init() {
                 CE_LOG_ERROR("Failed to start server on port 12345");
                 return false;
             }
+            // Setup server callbacks for ECS integration
+            _server->onPlayerConnected = [this](uint32_t playerId) {
+                auto& world = ECS::getWorld();
+                // Create RemotePlayer entity for new client
+                ECS::createRemotePlayer(world, playerId, glm::vec3(0.0f, 3000.0f, 0.0f));
+                CE_LOG_INFO("Server: Player {} connected, created RemotePlayer entity", playerId);
+            };
+            _server->onPlayerDisconnected = [this](uint32_t playerId) {
+                auto& world = ECS::getWorld();
+                ECS::removeRemotePlayer(world, playerId);
+                CE_LOG_INFO("Server: Player {} disconnected, removed RemotePlayer entity", playerId);
+            };
             break;
         }
         case AppMode::Client: {
@@ -86,10 +99,31 @@ bool Engine::init() {
                 CE_LOG_ERROR("Network::Client init failed");
                 return false;
             }
-            const char* host = (_mode == AppMode::Client && _mode == AppMode::Client) ? "localhost" : "localhost";
-            // NOTE: argc not available here; using default localhost.
-            // Real host resolution happens in run() after args are passed down.
             CE_LOG_INFO("Client network initialized (will connect when run() starts)");
+            // Setup client callbacks for ECS integration
+            _client->onPlayerConnected = [this](uint32_t playerId) {
+                auto& world = ECS::getWorld();
+                // Create entity for connected player
+                if (playerId == _client->getLocalPlayerId()) {
+                    ECS::createLocalPlayer(world, playerId, glm::vec3(0.0f, 3000.0f, 0.0f));
+                    CE_LOG_INFO("Client: Created LocalPlayer entity for self (id={})", playerId);
+                } else {
+                    ECS::createRemotePlayer(world, playerId, glm::vec3(0.0f, 3000.0f, 0.0f));
+                    CE_LOG_INFO("Client: Created RemotePlayer entity for id={}", playerId);
+                }
+            };
+            _client->onPlayerDisconnected = [this](uint32_t playerId) {
+                auto& world = ECS::getWorld();
+                ECS::removeRemotePlayer(world, playerId);
+                CE_LOG_INFO("Client: Player {} disconnected", playerId);
+            };
+            _client->onPositionReceived = [this](uint32_t playerId, const glm::vec3& position) {
+                // Position received for remote player - update their NetworkTransform
+                auto& world = ECS::getWorld();
+                // Note: yaw/pitch not available in this callback for MVP
+                // Using last known values (0,0) for now
+                ECS::updateNetworkTransform(world, playerId, position, 0.0f, 0.0f);
+            };
             break;
         }
         case AppMode::Singleplayer:
@@ -129,9 +163,16 @@ void Engine::run() {
     // Late client connect (after window is up)
     if (_mode == AppMode::Client && _client) {
         const char* host = "localhost";
-        // argv not accessible here — use default localhost
         if (!_client->connect(host, 12345, "Player")) {
             CE_LOG_WARN("Client failed to connect to {}:12345", host);
+        } else {
+            // Create local player entity after successful connection
+            uint32_t localId = _client->getLocalPlayerId();
+            if (localId > 0) {
+                auto& world = ECS::getWorld();
+                ECS::createLocalPlayer(world, localId, _cameraPos);
+                CE_LOG_INFO("Client: Created LocalPlayer entity (id={})", localId);
+            }
         }
     }
 

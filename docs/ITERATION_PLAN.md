@@ -97,9 +97,52 @@ CloudEngine.exe --client  # Client (localhost:12345)
 
 ---
 
-## ITERATION 4 — Simple Coordinates (NO Floating Origin) ✅
+## ITERATION 4.2 — ECS Network Integration ✅
 
-**Цель:** Простые координаты без лишней сложности. Float32 внутри чанка = precision отличная.
+**Цель:** Привязать сетевой слой к ECS компонентам
+**Дата завершения:** 2026-04-20
+
+### 4.2.1 ECS Network Components ✅
+- [x] `NetworkId` component — player ID в ECS
+- [x] `RemotePlayer` tag — remote игроки
+- [x] `NetworkTransform` component — буфер для сетевых данных
+- [x] `IsLocalPlayer` tag — локальный игрок
+
+### 4.2.2 NetworkSyncSystem ✅
+- [x] Создание/удаление RemotePlayer entities
+- [x] Синхронизация NetworkTransform → Transform
+- [x] Интеграция с Engine callbacks
+
+### 4.2.3 Engine Integration ✅
+- [x] Host: onPlayerConnected → createRemotePlayer()
+- [x] Client: onPlayerDisconnected → removeRemotePlayer()
+- [x] Position sync через updateNetworkTransform()
+
+---
+
+## ITERATION 4.3 — Player Sync (ECS) ✅
+
+**Цель:** Синхронизация позиций игроков между клиентами
+
+### 4.3.1 Player Visualization ✅
+- [x] RemotePlayer entities создаются при подключении
+- [x] Transform обновляется через NetworkSyncSystem
+
+### 4.3.2 Disconnect Handling ✅
+- [x] Удаление RemotePlayer entity при дисконнекте
+
+### Критерий готовности ✅
+- ✅ NetworkId, RemotePlayer, NetworkTransform компоненты созданы
+- ✅ NetworkSyncSystem регистрируется в ECS
+- ✅ Host создаёт entities для подключённых клиентов
+- ✅ Client создаёт LocalPlayer entity при подключении
+- ✅ Дисконнекты обрабатываются (удаление entities)
+
+---
+
+## ITERATION 5 — Airship Physics (3–4 недели)
+
+**Цель**: Базовые физика и управление воздушными судами.
 
 ---
 

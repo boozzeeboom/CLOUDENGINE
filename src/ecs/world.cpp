@@ -2,6 +2,7 @@
 #include "components.h"
 #include "pipeline.h"
 #include "systems.h"
+#include "modules/network_module.h"
 #include "../core/logger.h"
 
 namespace Core { namespace ECS {
@@ -20,10 +21,14 @@ void init() {
     // Register all singletons
     registerSingletons(s_world);
     
+    // Register network components (for ECS + Network integration)
+    registerNetworkComponents(s_world);
+    registerNetworkSyncSystem(s_world);
+    
     // Register time system (runs in PreUpdate phase)
     registerTimeSystem(s_world);
     
-    CE_LOG_INFO("ECS World initialized with pipeline phases");
+    CE_LOG_INFO("ECS World initialized with pipeline phases and network module");
 }
 
 void shutdown() {
