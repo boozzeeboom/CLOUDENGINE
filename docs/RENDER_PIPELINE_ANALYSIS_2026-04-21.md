@@ -1,9 +1,50 @@
 # Render Pipeline Analysis - 2026-04-21
 
-## Status: ❌ FAILED
+## Status: ✅ FIXED (2026-04-21 19:51)
 
 ### Problem Statement
 Cloud quad (full-screen) overwrites opaque geometry (player sphere), making the player invisible.
+
+### Final Solution Applied
+
+**Changes Made:**
+1. Sphere size: 50 → 5 units (was covering entire screen)
+2. Render order: clouds first, then sphere with depth test
+
+**Current Render Pipeline:**
+```
+PASS 1: glClear → clouds (no depth test)
+PASS 2: sphere (depth test ON) → renders on TOP of clouds
+```
+
+### Player-Camera Distance Configuration
+
+**File:** `src/core/engine.cpp`
+**Function:** `Engine::syncCameraToLocalPlayer()`
+
+```cpp
+void Engine::syncCameraToLocalPlayer() {
+    q.each([this](ECS::Transform& transform, ECS::IsLocalPlayer&) {
+        glm::vec3 forward = ...;
+        glm::vec3 adjustedPos = _cameraPos + forward * 20.0f;  // ← DISTANCE HERE (20 units ahead)
+        adjustedPos.y = _cameraPos.y - 50.0f;  // ← VERTICAL OFFSET (50 units below camera)
+        transform.position = adjustedPos;
+    });
+}
+```
+
+**Parameters to Adjust:**
+| Parameter | Current Value | Description |
+|-----------|---------------|-------------|
+| Forward distance | `forward * 20.0f` | How far in front of camera the player spawns |
+| Vertical offset | `_cameraPos.y - 50.0f` | Height relative to camera (negative = below) |
+
+**Current Behavior:**
+- Camera at (0, 3000, 0) looking down
+- Player spawns at camera position
+- Player visible when looking DOWN (partially under player)
+
+**TODO:** Adjust values for third-person view (move camera back, player in front)
 
 ### Root Cause Analysis
 

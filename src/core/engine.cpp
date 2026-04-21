@@ -375,11 +375,13 @@ void Engine::syncCameraToLocalPlayer() {
         forward.z = cos(_cameraYaw) * cos(_cameraPitch);
         forward = glm::normalize(forward);
         
-            // Position player AT camera Y level (near ground, not at 3000 height!)
-            // Keep relative position but adjust Y to be near camera
-            glm::vec3 adjustedPos = _cameraPos + forward * 20.0f;
-            adjustedPos.y = _cameraPos.y - 50.0f;  // 50 units below camera
-            transform.position = adjustedPos;
+        // Calculate RIGHT vector for horizontal "behind" direction
+        glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
+        glm::vec3 right = glm::normalize(glm::cross(forward, worldUp));
+        
+        // Player is at camera position (tiny forward offset for visibility)
+        glm::vec3 adjustedPos = _cameraPos + forward * 1.0f;
+        transform.position = adjustedPos;
     });
 }
 
@@ -430,23 +432,32 @@ void Engine::updateWorldSystem(float dt) {
 }
 
 void Engine::render() {
-    // Sync camera state from flight controls
-    _camera.setPosition(_cameraPos);
-    _camera.setRotation(_cameraYaw, _cameraPitch);
-
-    // Set camera for cloud renderer
-    Rendering::Renderer::setCamera(
-        _cameraPos,
-        glm::degrees(_cameraYaw),
-        glm::degrees(_cameraPitch)
-    );
-
     // Get window size
     int width, height;
     glfwGetWindowSize(Platform::Window::getGLFWwindow(), &width, &height);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, width, height);
+    
+    // Calculate camera position (BEHIND the player for third-person view)
+    glm::vec3 camForward;
+    camForward.x = sin(_cameraYaw) * cos(_cameraPitch);
+    camForward.y = sin(_cameraPitch);
+    camForward.z = cos(_cameraYaw) * cos(_cameraPitch);
+    camForward = glm::normalize(camForward);
+    
+    // Camera is 1000 units behind player position (HACK: scale issues need investigation)
+    // TODO: Normalize scale - sphere size of 5 units should not need 1000+ distance
+    glm::vec3 cameraViewPos = _cameraPos - camForward * 1000.0f;
+    _camera.setPosition(cameraViewPos);
+    _camera.setRotation(_cameraYaw, _cameraPitch);
+    
+    // Set camera for cloud renderer (use adjusted camera position)
+    Rendering::Renderer::setCamera(
+        cameraViewPos,
+        glm::degrees(_cameraYaw),
+        glm::degrees(_cameraPitch)
+    );
     
     // ========================================================================
     // PASS 1: BACKGROUND - Clear and render clouds
@@ -471,10 +482,10 @@ void Engine::render() {
     // Disable blending for opaque geometry
     glDisable(GL_BLEND);
     
-    // Render sphere - will appear on TOP of clouds
+    // Render sphere at PLAYER position (not camera)
     auto& primitives = Rendering::GetPrimitiveMesh();
-    primitives.setCamera(&_camera);
-    renderPlayerEntities();
+    primitives.setCamera(&_camera);  // Camera at (_cameraPos - 10)
+    primitives.render(_cameraPos, 5.0f, glm::vec3(1.0f, 0.2f, 0.2f));  // Sphere at _cameraPos (10 units in front)
 
     Rendering::Renderer::endFrame();
 }
