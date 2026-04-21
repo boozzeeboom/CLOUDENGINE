@@ -1,98 +1,55 @@
-# CLOUDENGINE — Next Session Prompt
+# Next Session Prompt
 
-## 🎯 Приоритет задач
+## Previous Session (2026-04-21)
 
-### СЕЙЧАС (выполнить в этой сессии):
+See: `docs/SESSION_2026-04-21_PLAYER_RENDER_FIX.md`
 
-**Iteration 4.5 — Simplify Shader System** 🔴 HIGH PRIORITY
-```
-docs/ITERATION_PLAN.md → строка ~255-285
-docs/UNITY_ISMS_ANALYSIS.md → секция Rendering
-```
+### Summary
 
-**Делать:**
-1. Убрать Shader hot-reload — удалить `ShaderManager::reload()`, `reloadAll()`, `checkHotReload()`
-2. Удалить `_reloadCooldown = 0.5f`
-3. Оставить простой `Shader::load()` при ините
-4. Убрать ShaderSystem ECS wrapper — модуль сам по себе
+Attempted to fix player sphere visibility. Found and fixed multiple bugs but main issues remain:
+1. Player sphere still NOT visible
+2. Black sky background (should be blue)
+3. Cloud rendering order unclear
 
-**Проверить:** Build проходит, облака рендерятся
+### What Was Fixed
 
----
-
-### ПОСЛЕ (следующая сессия):
-
-**Iteration 4.6 — Network RPC Cleanup** 🟡 MEDIUM PRIORITY
-```
-docs/ITERATION_PLAN.md → строка ~287-310
-docs/UNITY_ISMS_ANALYSIS.md → секция Networking
-```
-
-**Делать:**
-1. Заменить `*ServerRpc` / `*ClientRpc` на события/запросы
-2. Пример: `ShootServerRpc()` → `handleShootRequest(playerId, target)`
-3. Без суффиксов — просто понятные имена
-
-**ВОПРОС ДЛЯ РЕШЕНИЯ:** Нужен ли Frame UBO? (см. секция 2.2 в плане)
+- shaderProgram=0 after cleanup() in primitive_mesh.cpp
+- Camera-inside-cloud-layer raymarching in cloud_advanced.frag
+- Horizontal ray black output in cloud_advanced.frag  
+- Sky alpha=0 in cloud_advanced.frag
+- Player positioning in engine.cpp
 
 ---
 
-## 📚 Контекст для Claude Code
+## Next Session Tasks
 
-### Текущий статус проекта:
-- **Версия:** 0.3.1
-- **Статус:** Iteration 3 COMPLETE
-- **Следующий:** Iteration 4.5 — Shader System Cleanup
+Read `docs/SESSION_NEXT_PROMPT_DETAILED.md` for full subagent task list.
 
-### Ключевые правила (из `.clinerules/`):
-1. **KISS** — не добавлять сложность без необходимости
-2. **NO Floating Origin** — используем double + chunk-based coordinates
-3. **ECS** — компоненты = данные, системы = логика
-4. **Unity-isms** — убираем унаследованные паттерны из Unity
+**Primary Goal:** Make player sphere visible in game
 
-### Важные файлы:
-- `docs/ITERATION_PLAN.md` — текущий план итераций
-- `docs/UNITY_ISMS_ANALYSIS.md` — сводка Unity-измов для уборки
-- `docs/LARGE_WORLD_COORDINATES.md` — почему НЕ Floating Origin
-- `.clinerules/` — правила проекта
-
-### Не трогать (пока):
-- Frame UBO — сначала решить нужен или нет
-- Client-side prediction — сложно, для MVP не критично
-- ECS singletons — приемлемо для конфига
+**Secondary Goals:**
+- Fix black sky background (should be blue)
+- Document correct render pipeline order
 
 ---
 
-## 🔄 Workflow для сессии
+## Files to Investigate
 
-1. **Прочитать** `docs/ITERATION_PLAN.md` — найти текущую задачу
-2. **Прочитать** релевантную секцию в `docs/UNITY_ISMS_ANALYSIS.md`
-3. **Спросить** перед изменениями — показать план
-4. **Изменить** код
-5. **Проверить** build
-6. **Обновить** документацию если нужно
-7. **Записать** session log
-
----
-
-## ⚠️ Что НЕ делать
-
-- ❌ Не добавлять новые Unity-паттерны
-- ❌ Не делать "на всякий случай" complexity
-- ❌ Не копировать NGO напрямую
-- ❌ Не делать hot-reload где не нужно
+| File | What to Check |
+|------|---------------|
+| `src/core/engine.cpp` | render order, player positioning |
+| `src/rendering/renderer.cpp` | clear() implementation, depth state |
+| `src/rendering/primitive_mesh.cpp` | sphere mesh validity |
+| `src/rendering/camera.cpp` | camera math, frustum |
+| `src/rendering/cloud_renderer.cpp` | cloud rendering |
+| `shaders/cloud_advanced.frag` | shader code paths |
+| `shaders/fullscreen.vert` | vertex shader |
 
 ---
 
-## 📝 Пример prompt для новой сессии:
+## Key Questions
 
-```
-Продолжаем CLOUDENGINE. 
-Прочитай docs/ITERATION_PLAN.md, найди "ITERATION 4.5".
-Следуй плану из секции 4.5, используй docs/UNITY_ISMS_ANALYSIS.md как референс.
-Правила: KISS, NO Unity-isms, NO Floating Origin.
-```
-
----
-
-*Создано: 2026-04-20 — для следующей сессии Claude Code*
+1. Is sphere visible from camera position?
+2. What does glClear() clear? (color, depth, both?)
+3. Does cloud fullscreen quad clear depth buffer?
+4. What is the blend operation between sphere and clouds?

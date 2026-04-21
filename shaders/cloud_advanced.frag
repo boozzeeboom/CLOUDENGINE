@@ -91,8 +91,12 @@ void main() {
 
     vec3 rayDir = normalize(uCameraDir + uv.x * uCameraRight + uv.y * uCameraUp);
 
+    // FIXED: Instead of returning black, render sky for horizontal rays
     if (abs(rayDir.y) < 0.001) {
-        fragColor = vec4(0.0);
+        // Horizontal ray - render sky gradient
+        float skyGradient = rayDir.z * 0.5 + 0.5;
+        vec3 skyColor = mix(vec3(0.6, 0.7, 0.85), vec3(0.3, 0.4, 0.7), skyGradient);
+        fragColor = vec4(skyColor, 1.0);
         return;
     }
 
@@ -100,6 +104,12 @@ void main() {
     float tMax = (CLOUD_TOP    - uCameraPos.y) / rayDir.y;
 
     if (tMin > tMax) { float tmp = tMin; tMin = tMax; tMax = tmp; }
+    // FIXED: Camera inside cloud layer (2000-4000) - tMax can be negative
+    // When inside, always render at least 0 distance
+    if (tMax < 0.0 && tMin < 0.0) { 
+        // Both negative - camera is below clouds, looking down at them
+        float tmp = tMin; tMin = 0.0; tMax = -tmp; 
+    }
     if (tMax < 0.0)  { fragColor = vec4(0.0); return; }
 
     tMin = max(tMin, 0.0);
@@ -158,10 +168,10 @@ void main() {
         float sunGlow = max(dot(rayDir, uSunDir), 0.0);
         sunGlow = pow(sunGlow, 32.0);
         skyColor += vec3(1.0, 0.9, 0.7) * sunGlow * uDayFactor * 0.5;
-        // Sky is semi-transparent so player sphere shows through!
-        fragColor = vec4(skyColor, 0.0);  // alpha=0 means "transparent" - sphere will be visible!
+        // Output sky color with alpha=1 (opaque)
+        fragColor = vec4(skyColor, 1.0);
     } else {
-        // Clouds are also semi-transparent
+        // Clouds are semi-transparent
         fragColor = vec4(color.rgb, max(color.a, 0.0));
     }
 }

@@ -371,9 +371,11 @@ void Engine::syncCameraToLocalPlayer() {
         forward.z = cos(_cameraYaw) * cos(_cameraPitch);
         forward = glm::normalize(forward);
         
-        // Position player IN FRONT of camera by 20 units (so we can see it!)
-        // Camera is at "eye" position, player sphere should be ahead of camera
-        transform.position = _cameraPos + forward * 20.0f;
+            // Position player AT camera Y level (near ground, not at 3000 height!)
+            // Keep relative position but adjust Y to be near camera
+            glm::vec3 adjustedPos = _cameraPos + forward * 20.0f;
+            adjustedPos.y = _cameraPos.y - 50.0f;  // 50 units below camera
+            transform.position = adjustedPos;
     });
 }
 

@@ -157,6 +157,7 @@ void PrimitiveMesh::updateMatrices() {
 
 void PrimitiveMesh::generateSphere(float radius, int segments) {
     cleanup();
+    createShader();  // Re-create shader after cleanup!
     _type = PrimitiveType::Sphere;
     
     std::vector<float> vertices;
@@ -202,6 +203,9 @@ void PrimitiveMesh::generateSphere(float radius, int segments) {
     glGenVertexArrays(1, &_vao);
     glGenBuffers(1, &_vbo);
     glGenBuffers(1, &_ebo);
+    
+    RENDER_LOG_DEBUG("PrimitiveMesh: VAO={}, VBO={}, EBO={}", _vao, _vbo, _ebo);
+    RENDER_LOG_DEBUG("PrimitiveMesh: vertices={}, indices={}, indexCount={}", vertices.size(), indices.size(), _indexCount);
     
     glBindVertexArray(_vao);
     
@@ -325,12 +329,21 @@ void PrimitiveMesh::render(const glm::vec3& position, float scale, const glm::ve
 }
 
 void PrimitiveMesh::render(const glm::vec3& position, float scale, const glm::quat& rotation, const glm::vec3& color) {
-    if (!_vao || !_shaderProgram) return;
+    if (!_vao || !_shaderProgram) {
+        RENDER_LOG_ERROR("PrimitiveMesh::render - VAO={} or shaderProgram={} is 0!", _vao, _shaderProgram);
+        return;
+    }
     
     // Update view/projection matrices from camera
     updateMatrices();
     
     glUseProgram(_shaderProgram);
+    
+    // DEBUG: Check current program
+    GLint currentProgram;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
+    RENDER_LOG_DEBUG("PrimitiveMesh::render - program={}, pos=({:.1f},{:.1f},{:.1f}) scale={}",
+        currentProgram, position.x, position.y, position.z, scale);
     
     // Model matrix
     glm::mat4 model = glm::translate(glm::mat4(1.0f), position);
