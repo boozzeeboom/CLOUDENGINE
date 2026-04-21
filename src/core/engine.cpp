@@ -441,64 +441,36 @@ void Engine::render() {
         glm::degrees(_cameraPitch)
     );
 
-    // Get window size for depth FBO
+    // Get window size
     int width, height;
     glfwGetWindowSize(Platform::Window::getGLFWwindow(), &width, &height);
 
     // ========================================================================
-    // PASS 1: GEOMETRY - render to DepthFBO
+    // SIMPLE TEST: Direct to screen, no FBO
     // ========================================================================
     
-    // Get or create depth FBO
-    static Rendering::DepthFBO depthFBO;
-    static bool depthFBOInit = false;
-    if (!depthFBOInit) {
-        if (depthFBO.init(width, height)) {
-            CE_LOG_INFO("DepthFBO initialized: {}x{}", width, height);
-        }
-        depthFBOInit = true;
-    }
+    // Bind default framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, width, height);
     
-    // Bind depth FBO for writing
-    depthFBO.bindForWriting();
-    glClearColor(0.53f, 0.81f, 0.92f, 1.0f);
+    // Clear to bright blue so we KNOW something changed
+    glClearColor(0.0f, 0.0f, 1.0f, 1.0f);  // BLUE = "clear happened"
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
     
-    // Render geometry to depth FBO
+    RENDER_LOG_DEBUG("=== RENDER FRAME ===");
+    
+    // Render spheres (they should appear ON TOP of blue)
     auto& primitives = Rendering::GetPrimitiveMesh();
     primitives.setCamera(&_camera);
     renderPlayerEntities();
     
-    // ========================================================================
-    // PASS 2: CLOUDS & SKY - use depth from FBO
-    // ========================================================================
-    
-    // Bind default framebuffer for final output
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, width, height);
-    glClearColor(0.53f, 0.81f, 0.92f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    
-    // Disable depth writes - clouds only read
-    glDepthMask(GL_FALSE);
-    glDepthFunc(GL_LEQUAL);
-    
-    // Set depth texture for cloud shader
-    Rendering::GetCloudRenderer().setDepthTexture(depthFBO.getDepthTexture());
-    
-    // Cloud shader will:
-    // - Read depth from texture
-    // - Raymarch clouds
-    // - Compare cloud distance vs geometry depth
-    // - Output transparent if sphere is in front
+    // Now render quad (should cover everything with gradient)
+    RENDER_LOG_DEBUG("Calling renderClouds...");
     Rendering::Renderer::renderClouds(_time, _deltaTime);
+    RENDER_LOG_DEBUG("renderClouds done");
     
-    // Re-enable depth writes for next frame
-    glDepthMask(GL_TRUE);
-    glDepthFunc(GL_LESS);
-
+    // Swap buffers
     Rendering::Renderer::endFrame();
 }
 

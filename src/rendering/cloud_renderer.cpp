@@ -63,6 +63,15 @@ void CloudRenderer::render(float time, float deltaTime) {
     
     _shader->use();
     
+    // DEBUG: Check if we have valid shader
+    static bool loggedOnce = false;
+    if (!loggedOnce) {
+        loggedOnce = true;
+        RENDER_LOG_DEBUG("CloudRenderer::render() - shader ID={}, uResolution loc={}",
+            _shader->getID(),
+            glGetUniformLocation(_shader->getID(), "uResolution"));
+    }
+    
     // Window resolution
     int width, height;
     glfwGetWindowSize(Platform::Window::getGLFWwindow(), &width, &height);
@@ -129,15 +138,14 @@ void CloudRenderer::render(float time, float deltaTime) {
     _shader->setInt("uRaymarchSteps", raymarchSteps);
     
     // Depth buffer uniforms for geometry comparison
+    // DEBUG: Temporarily disable depth test to see clouds
+    _shader->setInt("uDepthBufferEnabled", 0);  // 0 = disabled for debugging
     if (_depthTexture != 0) {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, _depthTexture);
         _shader->setInt("uDepthBuffer", 0);
         _shader->setFloat("uNearPlane", 0.1f);
         _shader->setFloat("uFarPlane", 100000.0f);
-        _shader->setInt("uDepthBufferEnabled", 1);  // 1 = true
-    } else {
-        _shader->setInt("uDepthBufferEnabled", 0);  // 0 = false
     }
     
     // DEBUG: Log raymarching parameters every 2 seconds

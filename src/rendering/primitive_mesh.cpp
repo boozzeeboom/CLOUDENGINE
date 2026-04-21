@@ -44,9 +44,11 @@ out vec4 fragColor;
 
 void main() {
     vec3 lightDir = normalize(vec3(0.5, 1.0, 0.3));
-    float diffuse = max(dot(normalize(vPosition), lightDir), 0.3);
+    // Use normalized normal for lighting (vPosition is direction from center)
+    vec3 normal = normalize(vPosition);
+    float diffuse = max(dot(normal, lightDir), 0.3);
     vec3 shaded = uColor * diffuse;
-    fragColor = vec4(shaded, 0.9);
+    fragColor = vec4(shaded, 1.0);  // Fully opaque
 }
 )";
 

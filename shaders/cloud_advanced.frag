@@ -114,6 +114,7 @@ float getSceneDepth(vec2 uv) {
     return ndcToLinear(ndcDepth);
 }
 
+// DEBUG: Force clouds to render (ignore geometry depth for now)
 void main() {
     vec2 uv = vUV * 2.0 - 1.0;
     uv.x *= uResolution.x / uResolution.y;
@@ -152,8 +153,13 @@ void main() {
     vec4  color    = vec4(0.0);
     vec3  viewDir  = -rayDir;
 
+    // DEBUG: Test cloud density at start
+    vec3 testPos = uCameraPos + rayDir * 100.0;
+    float testDensity = cloudDensity(testPos);
+    
     bool cloudHitFound = false;
     float cloudHitDistance = 999999.0;
+    int   cloudSampleCount = 0;
 
     for (int i = 0; i < uRaymarchSteps && color.a < 0.99; i++) {
         float t   = tMin + (float(i) + 0.5) * stepSize;
@@ -198,41 +204,8 @@ void main() {
 
     // ========== DECISION: Render clouds vs show geometry ==========
     
-    // If clouds are in front of geometry (sphere), render clouds
-    // If geometry is in front of clouds, output transparent (sphere shows through)
-    
-    if (cloudHitFound && color.a > 0.01) {
-        // We hit clouds - check if geometry is in front
-        if (cloudHitDistance < sceneDepth) {
-            // Clouds are closer than geometry - render clouds
-            fragColor = vec4(color.rgb, max(color.a, 0.0));
-        } else {
-            // Geometry (sphere) is in front of clouds - transparent
-            // This lets the sphere color show through
-            fragColor = vec4(0.0);
-        }
-    } else {
-        // No clouds hit - render sky (unless geometry is closer)
-        // Scene depth < 100000 means there's geometry closer than far plane
-        
-        if (sceneDepth < 100000.0) {
-            // There's geometry at this pixel that's closer than sky
-            // Output transparent to show geometry color
-            fragColor = vec4(0.0);
-        } else {
-            // Pure sky - no clouds, no geometry
-            float skyGradient = rayDir.y * 0.5 + 0.5;
-            vec3 skyColor = mix(
-                vec3(0.6, 0.7, 0.85),  // Horizon - soft blue
-                vec3(0.3, 0.4, 0.7),   // Zenith - deeper blue
-                skyGradient
-            );
-            // Sun glow
-            float sunGlow = max(dot(rayDir, uSunDir), 0.0);
-            sunGlow = pow(sunGlow, 32.0);
-            skyColor += vec3(1.0, 0.9, 0.7) * sunGlow * uDayFactor * 0.5;
-            // Output sky color with alpha=1 (opaque)
-            fragColor = vec4(skyColor, 1.0);
-        }
-    }
+    // DEBUG: Map vUV to color to verify quad draws
+    // vUV should be 0-1 across screen
+    fragColor = vec4(vUV.x, vUV.y, 0.0, 1.0);  // Red=X, Green=Y, Blue=0
+    return;
 }
