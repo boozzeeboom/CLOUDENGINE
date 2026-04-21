@@ -21,6 +21,12 @@ public:
     /// @brief Is renderer ready with shaders
     static bool isReady();
     
+    /// @brief Clear only color buffer
+    static void clearColorBuffer(float r, float g, float b, float a);
+    
+    /// @brief Clear only depth buffer  
+    static void clearDepthBuffer();
+    
 private:
     static bool _initialized;
     static bool _shadersLoaded;

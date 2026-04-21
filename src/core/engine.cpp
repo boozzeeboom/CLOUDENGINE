@@ -1,3 +1,7 @@
+#define __gl_h_
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+
 #include "engine.h"
 #include "logger.h"
 #include "config.h"
@@ -9,12 +13,12 @@
 #include <rendering/renderer.h>
 #include <rendering/primitive_mesh.h>
 #include <rendering/camera.h>
+#include <rendering/cloud_renderer.h>
 #include <world/chunk_manager.h>
 #include <world/world_components.h>
 #include <network/server.h>
 #include <network/client.h>
 #include <chrono>
-#include <GLFW/glfw3.h>
 #include <iostream>
 
 namespace Core {
@@ -430,24 +434,70 @@ void Engine::render() {
     _camera.setPosition(_cameraPos);
     _camera.setRotation(_cameraYaw, _cameraPitch);
 
-    // Set camera for cloud renderer (before any rendering)
+    // Set camera for cloud renderer
     Rendering::Renderer::setCamera(
         _cameraPos,
         glm::degrees(_cameraYaw),
         glm::degrees(_cameraPitch)
     );
 
-    // 1. CLEAR BUFFERS
-    Rendering::Renderer::clear(0.53f, 0.81f, 0.92f, 1.0f);  // Sky blue background
+    // Get window size for depth FBO
+    int width, height;
+    glfwGetWindowSize(Platform::Window::getGLFWwindow(), &width, &height);
 
-    // 2. RENDER PLAYER ENTITIES FIRST (with depth testing)
-    // This renders the sphere BEFORE clouds, so it appears behind clouds properly
+    // ========================================================================
+    // PASS 1: GEOMETRY - render to DepthFBO
+    // ========================================================================
+    
+    // Get or create depth FBO
+    static Rendering::DepthFBO depthFBO;
+    static bool depthFBOInit = false;
+    if (!depthFBOInit) {
+        if (depthFBO.init(width, height)) {
+            CE_LOG_INFO("DepthFBO initialized: {}x{}", width, height);
+        }
+        depthFBOInit = true;
+    }
+    
+    // Bind depth FBO for writing
+    depthFBO.bindForWriting();
+    glClearColor(0.53f, 0.81f, 0.92f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    
+    // Render geometry to depth FBO
     auto& primitives = Rendering::GetPrimitiveMesh();
     primitives.setCamera(&_camera);
     renderPlayerEntities();
-
-    // 3. RENDER CLOUDS ON TOP (additive blend - clouds render over the sphere)
+    
+    // ========================================================================
+    // PASS 2: CLOUDS & SKY - use depth from FBO
+    // ========================================================================
+    
+    // Bind default framebuffer for final output
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, width, height);
+    glClearColor(0.53f, 0.81f, 0.92f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    
+    // Disable depth writes - clouds only read
+    glDepthMask(GL_FALSE);
+    glDepthFunc(GL_LEQUAL);
+    
+    // Set depth texture for cloud shader
+    Rendering::GetCloudRenderer().setDepthTexture(depthFBO.getDepthTexture());
+    
+    // Cloud shader will:
+    // - Read depth from texture
+    // - Raymarch clouds
+    // - Compare cloud distance vs geometry depth
+    // - Output transparent if sphere is in front
     Rendering::Renderer::renderClouds(_time, _deltaTime);
+    
+    // Re-enable depth writes for next frame
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
 
     Rendering::Renderer::endFrame();
 }

@@ -128,6 +128,18 @@ void CloudRenderer::render(float time, float deltaTime) {
     _shader->setInt("uLODLevel", lodLevel);
     _shader->setInt("uRaymarchSteps", raymarchSteps);
     
+    // Depth buffer uniforms for geometry comparison
+    if (_depthTexture != 0) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, _depthTexture);
+        _shader->setInt("uDepthBuffer", 0);
+        _shader->setFloat("uNearPlane", 0.1f);
+        _shader->setFloat("uFarPlane", 100000.0f);
+        _shader->setInt("uDepthBufferEnabled", 1);  // 1 = true
+    } else {
+        _shader->setInt("uDepthBufferEnabled", 0);  // 0 = false
+    }
+    
     // DEBUG: Log raymarching parameters every 2 seconds
     static float lastDebugLog = 0.0f;
     if (time - lastDebugLog > 2.0f) {

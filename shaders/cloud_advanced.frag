@@ -23,6 +23,12 @@ uniform vec3  uRimColor;
 uniform int   uLODLevel;       // 0=ultra, 1=high, 2=medium, 3=low
 uniform int   uRaymarchSteps;  // Adaptive step count
 
+// Depth buffer uniform for geometry comparison
+uniform sampler2D uDepthBuffer;
+uniform float uNearPlane;
+uniform float uFarPlane;
+uniform bool uDepthBufferEnabled;
+
 // Cloud layer constants
 const float CLOUD_BOTTOM     = 2000.0;
 const float CLOUD_TOP        = 4000.0;
@@ -85,11 +91,37 @@ float celShade(float value, float steps) {
     return floor(value * steps) / steps;
 }
 
+// === Depth buffer handling ===
+
+// Convert NDC depth to linear depth
+float ndcToLinear(float ndcDepth) {
+    // ndcDepth is in [0,1] range
+    // Linear depth = distance from camera
+    if (ndcDepth >= 1.0) {
+        return 999999.0; // Far plane / sky
+    }
+    
+    // Simple linear mapping: 0 = near, 1 = far
+    float linearDepth = ndcDepth * 100000.0; // Far plane is 100000
+    return linearDepth;
+}
+
+// Get depth from buffer and convert to linear
+float getSceneDepth(vec2 uv) {
+    if (!uDepthBufferEnabled) return 999999.0;
+    
+    float ndcDepth = texture(uDepthBuffer, uv).r;
+    return ndcToLinear(ndcDepth);
+}
+
 void main() {
     vec2 uv = vUV * 2.0 - 1.0;
     uv.x *= uResolution.x / uResolution.y;
 
     vec3 rayDir = normalize(uCameraDir + uv.x * uCameraRight + uv.y * uCameraUp);
+
+    // Get scene depth at this pixel (geometry z-buffer)
+    float sceneDepth = getSceneDepth(vUV);
 
     // FIXED: Instead of returning black, render sky for horizontal rays
     if (abs(rayDir.y) < 0.001) {
@@ -114,9 +146,14 @@ void main() {
 
     tMin = max(tMin, 0.0);
 
+    // ========== DEPTH-AWARE CLOUD RENDERING ==========
+    
     float stepSize = (tMax - tMin) / float(uRaymarchSteps);
     vec4  color    = vec4(0.0);
     vec3  viewDir  = -rayDir;
+
+    bool cloudHitFound = false;
+    float cloudHitDistance = 999999.0;
 
     for (int i = 0; i < uRaymarchSteps && color.a < 0.99; i++) {
         float t   = tMin + (float(i) + 0.5) * stepSize;
@@ -125,6 +162,10 @@ void main() {
         float density = cloudDensity(pos);
 
         if (density > 0.01) {
+            // Found cloud at distance t
+            cloudHitFound = true;
+            cloudHitDistance = t;
+            
             // Calculate normal from density gradient (cheap)
             vec3 normal = normalize(vec3(
                 cloudDensity(pos + vec3(10.0, 0.0, 0.0)) - density,
@@ -155,23 +196,43 @@ void main() {
         }
     }
 
-    // If no clouds hit, use sky color as background
-    if (color.a < 0.01) {
-        // Ghibli-inspired sky gradient
-        float skyGradient = rayDir.y * 0.5 + 0.5;
-        vec3 skyColor = mix(
-            vec3(0.6, 0.7, 0.85),  // Horizon - soft blue
-            vec3(0.3, 0.4, 0.7),   // Zenith - deeper blue
-            skyGradient
-        );
-        // Sun glow
-        float sunGlow = max(dot(rayDir, uSunDir), 0.0);
-        sunGlow = pow(sunGlow, 32.0);
-        skyColor += vec3(1.0, 0.9, 0.7) * sunGlow * uDayFactor * 0.5;
-        // Output sky color with alpha=1 (opaque)
-        fragColor = vec4(skyColor, 1.0);
+    // ========== DECISION: Render clouds vs show geometry ==========
+    
+    // If clouds are in front of geometry (sphere), render clouds
+    // If geometry is in front of clouds, output transparent (sphere shows through)
+    
+    if (cloudHitFound && color.a > 0.01) {
+        // We hit clouds - check if geometry is in front
+        if (cloudHitDistance < sceneDepth) {
+            // Clouds are closer than geometry - render clouds
+            fragColor = vec4(color.rgb, max(color.a, 0.0));
+        } else {
+            // Geometry (sphere) is in front of clouds - transparent
+            // This lets the sphere color show through
+            fragColor = vec4(0.0);
+        }
     } else {
-        // Clouds are semi-transparent
-        fragColor = vec4(color.rgb, max(color.a, 0.0));
+        // No clouds hit - render sky (unless geometry is closer)
+        // Scene depth < 100000 means there's geometry closer than far plane
+        
+        if (sceneDepth < 100000.0) {
+            // There's geometry at this pixel that's closer than sky
+            // Output transparent to show geometry color
+            fragColor = vec4(0.0);
+        } else {
+            // Pure sky - no clouds, no geometry
+            float skyGradient = rayDir.y * 0.5 + 0.5;
+            vec3 skyColor = mix(
+                vec3(0.6, 0.7, 0.85),  // Horizon - soft blue
+                vec3(0.3, 0.4, 0.7),   // Zenith - deeper blue
+                skyGradient
+            );
+            // Sun glow
+            float sunGlow = max(dot(rayDir, uSunDir), 0.0);
+            sunGlow = pow(sunGlow, 32.0);
+            skyColor += vec3(1.0, 0.9, 0.7) * sunGlow * uDayFactor * 0.5;
+            // Output sky color with alpha=1 (opaque)
+            fragColor = vec4(skyColor, 1.0);
+        }
     }
 }
