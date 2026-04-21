@@ -87,16 +87,20 @@ bool Engine::init() {
                 CE_LOG_ERROR("Failed to start server on port 12345");
                 return false;
             }
+            
+            // CRITICAL FIX: Create LocalPlayer entity for the host itself
+            // The host is also a player and needs to see themselves
+            auto& world = ECS::getWorld();
+            ECS::createLocalPlayer(world, 1, _cameraPos);  // Host uses playerId=1
+            CE_LOG_INFO("Host: Created LocalPlayer entity for self (id=1)");
+            
             // Setup server callbacks for ECS integration
             _server->onPlayerConnected = [this](uint32_t playerId) {
                 auto& world = ECS::getWorld();
                 // Create RemotePlayer entity with rendering components
-                flecs::entity e = ECS::createRemotePlayer(world, playerId, glm::vec3(0.0f, 3000.0f, 0.0f));
-                // Add rendering components
-                ECS::PlayerColor playerColor = ECS::PlayerColor::fromId(playerId);
-                e.set<ECS::RenderMesh>({ECS::MeshType::Sphere, 5.0f})
-                 .set<ECS::PlayerColor>(playerColor);
-                CE_LOG_INFO("Server: Player {} connected, created RemotePlayer entity with color", playerId);
+                // FIX: createRemotePlayer() now sets RenderMesh + PlayerColor
+                ECS::createRemotePlayer(world, playerId, glm::vec3(0.0f, 3000.0f, 0.0f));
+                CE_LOG_INFO("Server: Player {} connected, created RemotePlayer entity", playerId);
             };
             _server->onPlayerDisconnected = [this](uint32_t playerId) {
                 auto& world = ECS::getWorld();
@@ -140,16 +144,11 @@ bool Engine::init() {
         case AppMode::Singleplayer:
         default: {
             // Create a local player entity for singleplayer mode
+            // FIX: createLocalPlayer() already sets Transform, RenderMesh, PlayerColor
             auto& world = ECS::getWorld();
             ECS::createLocalPlayer(world, 1, _cameraPos);
             
-            // Add RenderMesh and PlayerColor components for visualization
-            auto playerEntity = world.entity("LocalPlayer");
-            playerEntity.set(ECS::Transform{_cameraPos});  // Add Transform at camera position
-            playerEntity.set<ECS::RenderMesh>({ECS::MeshType::Sphere, 5.0f});  // 5 unit radius sphere (same as other players)
-            playerEntity.set<ECS::PlayerColor>({glm::vec3(1.0f, 0.2f, 0.2f)});  // Bright red color
-            
-            CE_LOG_INFO("Singleplayer: Created LocalPlayer entity (id=1) with large red sphere at ({:.0f},{:.0f},{:.0f})",
+            CE_LOG_INFO("Singleplayer: Created LocalPlayer entity (id=1) at ({:.0f},{:.0f},{:.0f})",
                 _cameraPos.x, _cameraPos.y, _cameraPos.z);
             break;
         }
@@ -190,13 +189,9 @@ void Engine::run() {
         if (!_client->connect(host, 12345, "Player")) {
             CE_LOG_WARN("Client failed to connect to {}:12345", host);
         } else {
-            // Create local player entity after successful connection
-            uint32_t localId = _client->getLocalPlayerId();
-            if (localId > 0) {
-                auto& world = ECS::getWorld();
-                ECS::createLocalPlayer(world, localId, _cameraPos);
-                CE_LOG_INFO("Client: Created LocalPlayer entity (id={})", localId);
-            }
+            CE_LOG_INFO("Client connection initiated, waiting for ConnectionAccept...");
+            // NOTE: LocalPlayer entity will be created by onPlayerConnected callback in network_manager
+            // when PT_CONNECTION_ACCEPT is received
         }
     }
 
@@ -259,20 +254,43 @@ void Engine::update(float dt) {
 }
 
 void Engine::updateNetwork(float dt) {
-    if (_server) {
-        _server->update(dt);
-        uint32_t count = static_cast<uint32_t>(_server->getPlayers().size());
-        static float lastNet = 0.0f;
-        if (_time - lastNet > 2.0f) {
-            CE_LOG_INFO("Network: SERVER, players={}", count);
-            lastNet = _time;
+    // CRITICAL FIX: Send position to network!
+    static float lastPositionSend = 0.0f;
+    const float POSITION_SEND_INTERVAL = 0.05f;  // Send position 20 times per second
+    
+    if (_time - lastPositionSend >= POSITION_SEND_INTERVAL) {
+        glm::vec3 zeroVel(0.0f, 0.0f, 0.0f);
+        
+        if (_server) {
+            // Server sends position for the host player (id=1)
+            _server->sendPosition(1, _cameraPos, zeroVel, _cameraYaw, _cameraPitch);
+            _server->update(dt);
+            uint32_t count = static_cast<uint32_t>(_server->getPlayers().size());
+            static float lastNet = 0.0f;
+            if (_time - lastNet > 2.0f) {
+                CE_LOG_INFO("Network: SERVER, players={}", count);
+                lastNet = _time;
+            }
+        } else if (_client) {
+            // Client sends position for local player
+            uint32_t localId = _client->getLocalPlayerId();
+            if (localId > 0) {
+                _client->sendPosition(localId, _cameraPos, zeroVel, _cameraYaw, _cameraPitch);
+            }
+            _client->update(dt);
+            static float lastNet = 0.0f;
+            if (_time - lastNet > 2.0f) {
+                CE_LOG_INFO("Network: CLIENT connected={}, localId={}", _client->isConnected(), localId);
+                lastNet = _time;
+            }
         }
-    } else if (_client) {
-        _client->update(dt);
-        static float lastNet = 0.0f;
-        if (_time - lastNet > 2.0f) {
-            CE_LOG_INFO("Network: CLIENT connected={}", _client->isConnected());
-            lastNet = _time;
+        lastPositionSend = _time;
+    } else {
+        // Still need to update network even if not sending position
+        if (_server) {
+            _server->update(dt);
+        } else if (_client) {
+            _client->update(dt);
         }
     }
 }
@@ -352,11 +370,6 @@ void Engine::updateFlightControls(float dt) {
     if (Platform::Window::isKeyPressed(GLFW_KEY_LEFT_CONTROL)) {
         _cameraPos += forward * moveSpeed * 2.0f * dt;
     }
-
-    // Send position over network
-    uint32_t localId = 0;
-    if (_server)      { _server->sendPosition(1, _cameraPos, glm::vec3(0), _cameraYaw, _cameraPitch); }
-    else if (_client) { _client->sendPosition(_client->getLocalPlayerId(), _cameraPos, glm::vec3(0), _cameraYaw, _cameraPitch); }
 }
 
 void Engine::syncCameraToLocalPlayer() {
@@ -389,12 +402,16 @@ void Engine::renderPlayerEntities() {
     // Query all entities with Transform, RenderMesh, and PlayerColor
     // and render them as primitives
     auto& world = ECS::getWorld();
+    
+    // Get camera position for frustum culling (future) and matrix calculation
+    // Camera is already set up in Engine::render() - use _camera member
+    auto& primitives = Rendering::GetPrimitiveMesh();
+    primitives.setCamera(&_camera);
+    
     auto q = world.query_builder<ECS::Transform, ECS::RenderMesh, ECS::PlayerColor>().build();
     
     int count = 0;
-    q.each([&count](ECS::Transform& transform, ECS::RenderMesh& mesh, ECS::PlayerColor& color) {
-        auto& primitives = Rendering::GetPrimitiveMesh();
-        // DEBUG: Log position
+    q.each([&count, &primitives](ECS::Transform& transform, ECS::RenderMesh& mesh, ECS::PlayerColor& color) {
         RENDER_LOG_DEBUG("PlayerEntity: rendering at pos=({:.1f},{:.1f},{:.1f}) size={} color=({:.1f},{:.1f},{:.1f})",
             transform.position.x, transform.position.y, transform.position.z,
             mesh.size, color.color.r, color.color.g, color.color.b);
@@ -472,7 +489,7 @@ void Engine::render() {
     Rendering::Renderer::renderClouds(_time, _deltaTime);
     
     // ========================================================================
-    // PASS 2: OPAQUE GEOMETRY - Render sphere on top of clouds
+    // PASS 2: OPAQUE GEOMETRY - Render player entities via ECS system
     // ========================================================================
     
     glEnable(GL_DEPTH_TEST);
@@ -482,10 +499,9 @@ void Engine::render() {
     // Disable blending for opaque geometry
     glDisable(GL_BLEND);
     
-    // Render sphere at PLAYER position (not camera)
-    auto& primitives = Rendering::GetPrimitiveMesh();
-    primitives.setCamera(&_camera);  // Camera at (_cameraPos - 10)
-    primitives.render(_cameraPos, 5.0f, glm::vec3(1.0f, 0.2f, 0.2f));  // Sphere at _cameraPos (10 units in front)
+    // FIX: Use ECS render system instead of manual sphere rendering
+    // The RenderRemotePlayersSystem in render_module.cpp handles all player entities
+    renderPlayerEntities();
 
     Rendering::Renderer::endFrame();
 }

@@ -57,14 +57,20 @@ inline void registerNetworkComponents(flecs::world& world) {
 /// @param initialPosition Initial spawn position
 /// @return The created entity (flecs::entity)
 inline flecs::entity createRemotePlayer(flecs::world& world, uint32_t playerId, const glm::vec3& initialPosition) {
+    PlayerColor playerColor = PlayerColor::fromId(playerId);
+    
     flecs::entity e = world.entity()
         .set<NetworkId>({playerId})
         .add<RemotePlayer>()
         .set<NetworkTransform>({initialPosition, glm::vec3(0.0f), 0.0f, 0.0f, 0.0f})
-        .set<Transform>({initialPosition, glm::quat_identity<float, glm::packed_highp>(), glm::vec3(1.0f)});
+        .set<Transform>({initialPosition, glm::quat_identity<float, glm::packed_highp>(), glm::vec3(1.0f)})
+        // CRITICAL FIX: Added rendering components so remote players are visible
+        .set<RenderMesh>({MeshType::Sphere, 5.0f})
+        .set<PlayerColor>(playerColor);
     
-    CE_LOG_INFO("Created RemotePlayer entity: id={}, pos=({},{},{})", 
-                playerId, initialPosition.x, initialPosition.y, initialPosition.z);
+    CE_LOG_INFO("[NETSYNC] Created RemotePlayer entity: id={}, pos=({},{},{}), color=({:.1f},{:.1f},{:.1f})", 
+                playerId, initialPosition.x, initialPosition.y, initialPosition.z,
+                playerColor.color.r, playerColor.color.g, playerColor.color.b);
     return e;
 }
 
@@ -141,6 +147,10 @@ inline void updateNetworkTransform(flecs::world& world, uint32_t playerId,
                     nt.positionBuffer.pop_front();
                 }
             }
+            
+            // DEBUG: Log position update
+            CE_LOG_INFO("[NETSYNC] Position update: playerId={}, pos=({:.0f},{:.0f},{:.0f}), buffer_size={}", 
+                playerId, position.x, position.y, position.z, nt.positionBuffer.size());
         }
     });
 }

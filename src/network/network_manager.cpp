@@ -124,6 +124,12 @@ void NetworkManager::handlePacket(ENetPacket* packet, ENetPeer* peer) {
                 _localPlayerId,
                 accept->spawnPosition.x, accept->spawnPosition.y, accept->spawnPosition.z,
                 accept->worldSeed);
+            
+            // CRITICAL FIX: Fire onPlayerConnected callback so client creates local entity
+            if (onPlayerConnected) {
+                NETWORK_LOG_INFO("Calling onPlayerConnected({})", _localPlayerId);
+                onPlayerConnected(_localPlayerId);
+            }
             break;
         }
 

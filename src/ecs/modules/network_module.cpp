@@ -22,14 +22,25 @@ struct NetworkSyncSystemImpl {
             .with<NetworkTransform>()
             .with<Transform>()
             .iter([](flecs::iter& it) {
+                static int syncCount = 0;
                 for (auto i : it) {
                     flecs::entity e = it.entity(i);
                     
                     // Get network transform data
                     const auto* nt = e.get<NetworkTransform>();
                     auto* t = e.get_mut<Transform>();
+                    const auto* nid = e.get<NetworkId>();
                     
                     if (nt && t && !nt->positionBuffer.empty()) {
+                        // DEBUG: Log sync
+                        if (syncCount < 5) {
+                            const auto& lastSample = nt->positionBuffer.back();
+                            CE_LOG_INFO("[ECSSYNC] Syncing entity {}, playerId={}, pos=({:.0f},{:.0f},{:.0f}), buffer={}", 
+                                e.id(), nid ? nid->id : 0,
+                                lastSample.position.x, lastSample.position.y, lastSample.position.z,
+                                nt->positionBuffer.size());
+                            syncCount++;
+                        }
                         // Calculate target time for interpolation
                         // We interpolate to a time in the past for smooth movement
                         const auto& lastSample = nt->positionBuffer.back();
