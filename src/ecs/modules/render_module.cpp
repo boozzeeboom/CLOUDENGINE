@@ -23,10 +23,11 @@ struct RenderModuleImpl {
     void registerSystems(flecs::world& world) {
         initMeshes();
         
-        // Remote player rendering system — runs in OnStore phase (after game logic, before GPU submit)
-        world.system("RenderRemotePlayers")
-            .kind(flecs::OnStore)
-            .with<RemotePlayer>()
+        // Player rendering system — renders all player entities (local + remote)
+        // Query: Transform + RenderMesh + PlayerColor
+        // Runs in PostUpdate (after game logic, before rendering)
+        world.system("RenderPlayers")
+            .kind(flecs::PostUpdate)
             .with<Transform>()
             .with<RenderMesh>()
             .with<PlayerColor>()

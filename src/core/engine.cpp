@@ -7,6 +7,7 @@
 #include <ecs/modules/render_module.h>
 #include <ecs/components/mesh_components.h>
 #include <rendering/renderer.h>
+#include <rendering/primitive_mesh.h>
 #include <world/chunk_manager.h>
 #include <world/world_components.h>
 #include <network/server.h>
@@ -132,8 +133,13 @@ bool Engine::init() {
             break;
         }
         case AppMode::Singleplayer:
-        default:
+        default: {
+            // Create a local player entity for singleplayer mode
+            auto& world = ECS::getWorld();
+            ECS::createLocalPlayer(world, 1, _cameraPos);
+            CE_LOG_INFO("Singleplayer: Created LocalPlayer entity (id=1)");
             break;
+        }
     }
 
     _running = true;
@@ -209,6 +215,9 @@ void Engine::update(float dt) {
 
     // Run ECS systems
     ECS::update(dt);
+
+    // Sync camera position to LocalPlayer Transform
+    syncCameraToLocalPlayer();
 
     // Update network
     updateNetwork(dt);
@@ -337,6 +346,31 @@ void Engine::updateFlightControls(float dt) {
     else if (_client) { _client->sendPosition(_client->getLocalPlayerId(), _cameraPos, glm::vec3(0), _cameraYaw, _cameraPitch); }
 }
 
+void Engine::syncCameraToLocalPlayer() {
+    // Find the local player entity and update its Transform to match camera position
+    auto& world = ECS::getWorld();
+    
+    // Query for entities with IsLocalPlayer tag
+    auto q = world.query_builder<ECS::Transform, ECS::IsLocalPlayer>().build();
+    
+    q.each([this](ECS::Transform& transform, ECS::IsLocalPlayer&) {
+        transform.position = _cameraPos;
+        // TODO: sync rotation too when we have proper camera rotation
+    });
+}
+
+void Engine::renderPlayerEntities() {
+    // Query all entities with Transform, RenderMesh, and PlayerColor
+    // and render them as primitives
+    auto& world = ECS::getWorld();
+    auto q = world.query_builder<ECS::Transform, ECS::RenderMesh, ECS::PlayerColor>().build();
+    
+    q.each([](ECS::Transform& transform, ECS::RenderMesh& mesh, ECS::PlayerColor& color) {
+        auto& primitives = Rendering::GetPrimitiveMesh();
+        primitives.render(transform.position, mesh.size, color.color);
+    });
+}
+
 void Engine::updateWorldSystem(float dt) {
     if (!_chunkManager) return;
 
@@ -372,6 +406,9 @@ void Engine::render() {
     // Render clouds with shader
     Rendering::Renderer::clear(0.53f, 0.81f, 0.92f, 1.0f);  // Sky blue background
     Rendering::Renderer::renderClouds(_time, _deltaTime);
+    
+    // Render player primitives (direct call to ensure they render on top of clouds)
+    renderPlayerEntities();
 
     Rendering::Renderer::endFrame();
 }

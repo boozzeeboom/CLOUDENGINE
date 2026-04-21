@@ -50,6 +50,12 @@ private:
 
     // Network update tick
     void updateNetwork(float dt);
+    
+    // Sync camera position to LocalPlayer entity
+    void syncCameraToLocalPlayer();
+    
+    // Render player entities (spheres/billboards)
+    void renderPlayerEntities();
 
     bool _running = false;
     AppMode _mode = AppMode::Singleplayer;
