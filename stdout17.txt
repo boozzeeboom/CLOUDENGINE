@@ -1,8 +1,0 @@
-[17:07:33.428] [Engine] [info] ========================================
-[17:07:33.429] [Engine] [info] CLOUDENGINE v0.2.0 starting...
-[17:07:33.429] [Engine] [info] Log file: logs/cloudengine.log
-[17:07:33.429] [Engine] [info] ========================================
-[17:07:33.430] [Engine] [info] Logger::Init() - complete
-[17:07:33.430] [Engine] [info] main() - START
-[17:07:33.430] [Engine] [info] Test 10: + ecs/world.h
-[17:07:33.431] [Engine] [info] CLOUDENGINE shutting down

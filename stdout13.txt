@@ -1,8 +1,0 @@
-[17:05:02.060] [Engine] [info] ========================================
-[17:05:02.062] [Engine] [info] CLOUDENGINE v0.2.0 starting...
-[17:05:02.062] [Engine] [info] Log file: logs/cloudengine.log
-[17:05:02.062] [Engine] [info] ========================================
-[17:05:02.063] [Engine] [info] Logger::Init() - complete
-[17:05:02.063] [Engine] [info] main() - START
-[17:05:02.063] [Engine] [info] Test 6: + rendering/quad.h
-[17:05:02.064] [Engine] [info] CLOUDENGINE shutting down
