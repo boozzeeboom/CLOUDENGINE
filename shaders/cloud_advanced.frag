@@ -158,8 +158,10 @@ void main() {
         float sunGlow = max(dot(rayDir, uSunDir), 0.0);
         sunGlow = pow(sunGlow, 32.0);
         skyColor += vec3(1.0, 0.9, 0.7) * sunGlow * uDayFactor * 0.5;
-        fragColor = vec4(skyColor, 1.0);
+        // Sky is semi-transparent so player sphere shows through!
+        fragColor = vec4(skyColor, 0.0);  // alpha=0 means "transparent" - sphere will be visible!
     } else {
-        fragColor = color;
+        // Clouds are also semi-transparent
+        fragColor = vec4(color.rgb, max(color.a, 0.0));
     }
 }

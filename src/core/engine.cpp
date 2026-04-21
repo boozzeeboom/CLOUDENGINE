@@ -8,6 +8,7 @@
 #include <ecs/components/mesh_components.h>
 #include <rendering/renderer.h>
 #include <rendering/primitive_mesh.h>
+#include <rendering/camera.h>
 #include <world/chunk_manager.h>
 #include <world/world_components.h>
 #include <network/server.h>
@@ -137,7 +138,15 @@ bool Engine::init() {
             // Create a local player entity for singleplayer mode
             auto& world = ECS::getWorld();
             ECS::createLocalPlayer(world, 1, _cameraPos);
-            CE_LOG_INFO("Singleplayer: Created LocalPlayer entity (id=1)");
+            
+            // Add RenderMesh and PlayerColor components for visualization
+            auto playerEntity = world.entity("LocalPlayer");
+            playerEntity.set(ECS::Transform{_cameraPos});  // Add Transform at camera position
+            playerEntity.set<ECS::RenderMesh>({ECS::MeshType::Sphere, 50.0f});  // 50 unit radius sphere for visibility
+            playerEntity.set<ECS::PlayerColor>({glm::vec3(1.0f, 0.2f, 0.2f)});  // Bright red color
+            
+            CE_LOG_INFO("Singleplayer: Created LocalPlayer entity (id=1) with large red sphere at ({:.0f},{:.0f},{:.0f})",
+                _cameraPos.x, _cameraPos.y, _cameraPos.z);
             break;
         }
     }
@@ -347,15 +356,24 @@ void Engine::updateFlightControls(float dt) {
 }
 
 void Engine::syncCameraToLocalPlayer() {
-    // Find the local player entity and update its Transform to match camera position
+    // Find the local player entity and update its Transform to follow camera
+    // Player is positioned slightly IN FRONT of camera for visibility
     auto& world = ECS::getWorld();
     
     // Query for entities with IsLocalPlayer tag
     auto q = world.query_builder<ECS::Transform, ECS::IsLocalPlayer>().build();
     
     q.each([this](ECS::Transform& transform, ECS::IsLocalPlayer&) {
-        transform.position = _cameraPos;
-        // TODO: sync rotation too when we have proper camera rotation
+        // Calculate forward direction from camera rotation
+        glm::vec3 forward;
+        forward.x = sin(_cameraYaw) * cos(_cameraPitch);
+        forward.y = sin(_cameraPitch);
+        forward.z = cos(_cameraYaw) * cos(_cameraPitch);
+        forward = glm::normalize(forward);
+        
+        // Position player IN FRONT of camera by 20 units (so we can see it!)
+        // Camera is at "eye" position, player sphere should be ahead of camera
+        transform.position = _cameraPos + forward * 20.0f;
     });
 }
 
@@ -365,10 +383,22 @@ void Engine::renderPlayerEntities() {
     auto& world = ECS::getWorld();
     auto q = world.query_builder<ECS::Transform, ECS::RenderMesh, ECS::PlayerColor>().build();
     
-    q.each([](ECS::Transform& transform, ECS::RenderMesh& mesh, ECS::PlayerColor& color) {
+    int count = 0;
+    q.each([&count](ECS::Transform& transform, ECS::RenderMesh& mesh, ECS::PlayerColor& color) {
         auto& primitives = Rendering::GetPrimitiveMesh();
+        // DEBUG: Log position
+        RENDER_LOG_DEBUG("PlayerEntity: rendering at pos=({:.1f},{:.1f},{:.1f}) size={} color=({:.1f},{:.1f},{:.1f})",
+            transform.position.x, transform.position.y, transform.position.z,
+            mesh.size, color.color.r, color.color.g, color.color.b);
         primitives.render(transform.position, mesh.size, color.color);
+        count++;
     });
+    
+    static int lastCount = -1;
+    if (count != lastCount) {
+        CE_LOG_INFO("PlayerEntities: rendering {} entities", count);
+        lastCount = count;
+    }
 }
 
 void Engine::updateWorldSystem(float dt) {
@@ -394,21 +424,28 @@ void Engine::updateWorldSystem(float dt) {
 }
 
 void Engine::render() {
-    Rendering::Renderer::beginFrame();
+    // Sync camera state from flight controls
+    _camera.setPosition(_cameraPos);
+    _camera.setRotation(_cameraYaw, _cameraPitch);
 
-    // Set camera from flight controls (convert radians to degrees for renderer)
+    // Set camera for cloud renderer (before any rendering)
     Rendering::Renderer::setCamera(
         _cameraPos,
-        glm::degrees(_cameraYaw),    // Yaw in degrees
-        glm::degrees(_cameraPitch)   // Pitch in degrees
+        glm::degrees(_cameraYaw),
+        glm::degrees(_cameraPitch)
     );
 
-    // Render clouds with shader
+    // 1. CLEAR BUFFERS
     Rendering::Renderer::clear(0.53f, 0.81f, 0.92f, 1.0f);  // Sky blue background
-    Rendering::Renderer::renderClouds(_time, _deltaTime);
-    
-    // Render player primitives (direct call to ensure they render on top of clouds)
+
+    // 2. RENDER PLAYER ENTITIES FIRST (with depth testing)
+    // This renders the sphere BEFORE clouds, so it appears behind clouds properly
+    auto& primitives = Rendering::GetPrimitiveMesh();
+    primitives.setCamera(&_camera);
     renderPlayerEntities();
+
+    // 3. RENDER CLOUDS ON TOP (additive blend - clouds render over the sphere)
+    Rendering::Renderer::renderClouds(_time, _deltaTime);
 
     Rendering::Renderer::endFrame();
 }

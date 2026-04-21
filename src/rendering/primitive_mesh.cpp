@@ -1,4 +1,5 @@
 #include "primitive_mesh.h"
+#include "camera.h"
 
 #define __gl_h_
 #include <glad/glad.h>
@@ -22,12 +23,14 @@ static const char* VERTEX_SHADER = R"(
 layout(location = 0) in vec3 aPosition;
 
 uniform mat4 uModelMatrix;
+uniform mat4 uViewMatrix;
+uniform mat4 uProjectionMatrix;
 
 out vec3 vPosition;
 
 void main() {
     vPosition = aPosition;
-    gl_Position = uModelMatrix * vec4(aPosition, 1.0);
+    gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
 }
 )";
 
@@ -121,9 +124,35 @@ void PrimitiveMesh::createShader() {
     _shaderProgram = createShaderProgram(VERTEX_SHADER, FRAGMENT_SHADER);
     if (_shaderProgram) {
         _uModelMatrix = glGetUniformLocation(_shaderProgram, "uModelMatrix");
+        _uViewMatrix = glGetUniformLocation(_shaderProgram, "uViewMatrix");
+        _uProjectionMatrix = glGetUniformLocation(_shaderProgram, "uProjectionMatrix");
         _uColor = glGetUniformLocation(_shaderProgram, "uColor");
-        RENDER_LOG_INFO("PrimitiveMesh shader created");
+        RENDER_LOG_INFO("PrimitiveMesh shader created with view/projection uniforms");
     }
+}
+
+void PrimitiveMesh::setCamera(const Camera* camera) {
+    _camera = camera;
+}
+
+void PrimitiveMesh::updateMatrices() {
+    if (!_shaderProgram || !_camera) return;
+    
+    glUseProgram(_shaderProgram);
+    
+    // Get view and projection from Camera class
+    int width = 1280, height = 720;
+    GLFWwindow* win = glfwGetCurrentContext();
+    if (win) {
+        glfwGetWindowSize(win, &width, &height);
+    }
+    float aspect = static_cast<float>(width) / static_cast<float>(height > 0 ? height : 1);
+    
+    glm::mat4 view = _camera->getViewMatrix();
+    glm::mat4 proj = _camera->getProjectionMatrix(aspect);
+    
+    glUniformMatrix4fv(_uViewMatrix, 1, GL_FALSE, &view[0][0]);
+    glUniformMatrix4fv(_uProjectionMatrix, 1, GL_FALSE, &proj[0][0]);
 }
 
 void PrimitiveMesh::generateSphere(float radius, int segments) {
@@ -298,14 +327,23 @@ void PrimitiveMesh::render(const glm::vec3& position, float scale, const glm::ve
 void PrimitiveMesh::render(const glm::vec3& position, float scale, const glm::quat& rotation, const glm::vec3& color) {
     if (!_vao || !_shaderProgram) return;
     
+    // Update view/projection matrices from camera
+    updateMatrices();
+    
     glUseProgram(_shaderProgram);
     
+    // Model matrix
     glm::mat4 model = glm::translate(glm::mat4(1.0f), position);
     model = model * glm::mat4_cast(rotation);
     model = glm::scale(model, glm::vec3(scale));
     
     glUniformMatrix4fv(_uModelMatrix, 1, GL_FALSE, &model[0][0]);
     glUniform3fv(_uColor, 1, &color[0]);
+    
+    // FIXED: Enable depth write for sphere visibility
+    // Sphere must write to depth buffer to be visible
+    glDepthMask(GL_TRUE);   // Write to depth
+    glDepthFunc(GL_LESS);   // Normal depth test
     
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -315,6 +353,7 @@ void PrimitiveMesh::render(const glm::vec3& position, float scale, const glm::qu
     glBindVertexArray(0);
     
     glDisable(GL_BLEND);
+    glDepthMask(GL_TRUE);   // Re-enable depth writes for other rendering
 }
 
 // ============================================================================

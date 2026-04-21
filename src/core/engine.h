@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <glm/glm.hpp>
+#include <rendering/camera.h>
 
 namespace World {
     class ChunkManager;
@@ -42,6 +43,9 @@ public:
 
     AppMode getMode() const { return _mode; }
 
+    /// @brief Get the camera instance (for rendering)
+    Rendering::Camera& getCamera() { return _camera; }
+
 private:
     void update(float dt);
     void render();
@@ -77,6 +81,9 @@ private:
 
     // World system
     World::ChunkManager* _chunkManager = nullptr;
+
+    // Rendering camera
+    Rendering::Camera _camera;
 };
 
 } // namespace Core

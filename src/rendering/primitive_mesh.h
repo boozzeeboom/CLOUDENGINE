@@ -4,6 +4,9 @@
 
 namespace Core { namespace Rendering {
 
+// Forward declaration
+class Camera;
+
 /// @brief Primitive mesh types for debugging and remote player visualization
 enum class PrimitiveType {
     Sphere,
@@ -32,6 +35,10 @@ public:
     /// @param height Quad height
     void generateBillboard(float width, float height);
 
+    /// @brief Set camera for view/projection matrices
+    /// @param camera Pointer to camera (must outlive this class)
+    void setCamera(const Camera* camera);
+
     /// @brief Render the primitive
     /// @param position World position
     /// @param scale Uniform scale
@@ -55,10 +62,16 @@ private:
     // Simple color shader for primitives
     unsigned int _shaderProgram = 0;
     int _uModelMatrix = -1;
+    int _uViewMatrix = -1;
+    int _uProjectionMatrix = -1;
     int _uColor = -1;
+
+    // Camera pointer for view/projection
+    const Camera* _camera = nullptr;
 
     void createShader();
     void cleanup();
+    void updateMatrices();
 };
 
 /// @brief Global primitive mesh manager

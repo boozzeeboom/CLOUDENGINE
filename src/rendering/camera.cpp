@@ -62,9 +62,10 @@ void Camera::rotate(float yawDelta, float pitchDelta) {
 }
 
 void Camera::updateVectors() {
-    _forward.x = glm::cos(_yaw) * glm::cos(_pitch);
+    // Fixed: sin/cos for X and Z were swapped (matching Engine.cpp formula)
+    _forward.x = glm::sin(_yaw) * glm::cos(_pitch);
     _forward.y = glm::sin(_pitch);
-    _forward.z = glm::sin(_yaw) * glm::cos(_pitch);
+    _forward.z = glm::cos(_yaw) * glm::cos(_pitch);
     _forward = glm::normalize(_forward);
 }
 
