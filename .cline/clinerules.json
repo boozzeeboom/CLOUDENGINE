@@ -7,7 +7,11 @@
   
   "permission": {
     "skill": {
-      "*": "allow"
+      "*": "allow",
+      "search-docs": "allow",
+      "memory-stats": "allow",
+      "index-project": "allow",
+      "task-context": "allow"
     },
     "tool": {
       "*": "allow"
@@ -270,8 +274,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .clinerules/hooks/session-stop.sh",
-            "timeout": 30
+            "command": "powershell -ExecutionPolicy Bypass -File .clinerules/hooks/session-stop.ps1",
+            "timeout": 60
           }
         ]
       }

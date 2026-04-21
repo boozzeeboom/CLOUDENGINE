@@ -9,7 +9,7 @@
 | Hook | When | What it does |
 |------|------|--------------|
 | `session-start` | Session start | Shows branch, recent commits, recovery state |
-| `session-stop` | Session end | Reminds to save state |
+| `session-stop` | Session end | Saves session log + stores context to Synapse Memory |
 | `detect-gaps` | Session start | Finds missing documentation |
 | `validate-commit` | Before `git commit` | Checks TODO/FIXME, magic numbers |
 | `validate-push` | Before `git push` | Warns about protected branches |

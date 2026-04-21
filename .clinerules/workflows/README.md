@@ -13,6 +13,9 @@
 | `feature` | Разработка новой функциональности | `/workflow feature` |
 | `sprint` | Планирование спринта | `/workflow sprint` |
 | `test` | Тестирование изменений | `/workflow test` |
+| `mcp-search` | Поиск документации через MCP | `/workflow mcp-search ECS` |
+| `mcp-stats` | Статистика памяти Synapse | `/workflow mcp-stats` |
+| `mcp-context` | Сохранение/загрузка контекста | `/workflow mcp-context save [task]` |
 
 ---
 
