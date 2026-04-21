@@ -1,4 +1,5 @@
 #include "rendering/quad.h"
+#include <core/logger.h>
 
 // GLAD must be included BEFORE GLFW
 #define __gl_h_
@@ -24,6 +25,8 @@ Quad::Quad() {
     glGenVertexArrays(1, &_vao);
     glGenBuffers(1, &_vbo);
     glGenBuffers(1, &_ebo);
+    
+    RENDER_LOG_INFO("Quad: VAO={}, VBO={}, EBO={}", _vao, _vbo, _ebo);
 
     glBindVertexArray(_vao);
 

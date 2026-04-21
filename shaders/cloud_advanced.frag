@@ -71,7 +71,8 @@ float cloudDensity(vec3 pos) {
     int baseOctaves   = 6 - uLODLevel;
     int detailOctaves = max(baseOctaves - 2, 2);
 
-    float baseScale   = 0.0003 + float(uLODLevel) * 0.0002;
+    // Increased scale for visible clouds
+    float baseScale   = 0.002 + float(uLODLevel) * 0.001;
     float detailScale = baseScale * 4.0;
 
     float windX = uTime * 0.01;
@@ -93,73 +94,66 @@ float celShade(float value, float steps) {
 
 // === Depth buffer handling ===
 
-// Convert NDC depth to linear depth
 float ndcToLinear(float ndcDepth) {
-    // ndcDepth is in [0,1] range
-    // Linear depth = distance from camera
     if (ndcDepth >= 1.0) {
-        return 999999.0; // Far plane / sky
+        return 999999.0;
     }
-    
-    // Simple linear mapping: 0 = near, 1 = far
-    float linearDepth = ndcDepth * 100000.0; // Far plane is 100000
+    float linearDepth = ndcDepth * 100000.0;
     return linearDepth;
 }
 
-// Get depth from buffer and convert to linear
 float getSceneDepth(vec2 uv) {
     if (!uDepthBufferEnabled) return 999999.0;
-    
     float ndcDepth = texture(uDepthBuffer, uv).r;
     return ndcToLinear(ndcDepth);
 }
 
-// DEBUG: Force clouds to render (ignore geometry depth for now)
+// === Main Rendering ===
+
 void main() {
     vec2 uv = vUV * 2.0 - 1.0;
     uv.x *= uResolution.x / uResolution.y;
 
     vec3 rayDir = normalize(uCameraDir + uv.x * uCameraRight + uv.y * uCameraUp);
 
-    // Get scene depth at this pixel (geometry z-buffer)
-    float sceneDepth = getSceneDepth(vUV);
-
-    // FIXED: Instead of returning black, render sky for horizontal rays
-    if (abs(rayDir.y) < 0.001) {
-        // Horizontal ray - render sky gradient
-        float skyGradient = rayDir.z * 0.5 + 0.5;
-        vec3 skyColor = mix(vec3(0.6, 0.7, 0.85), vec3(0.3, 0.4, 0.7), skyGradient);
-        fragColor = vec4(skyColor, 1.0);
+    // Check for invalid ray direction
+    if (length(rayDir) < 0.5 || isnan(rayDir.x) || isnan(rayDir.y) || isnan(rayDir.z)) {
+        fragColor = vec4(1.0, 0.0, 1.0, 1.0);  // Magenta = error
         return;
     }
+    
+    float sceneDepth = getSceneDepth(vUV);
 
+    // Sky gradient - enhanced visibility
+    float skyGradient = rayDir.y * 1.0 + 0.5;
+    skyGradient = clamp(skyGradient, 0.0, 1.0);
+    vec3 skyColor = mix(vec3(0.2, 0.3, 0.6), vec3(0.7, 0.85, 1.0), skyGradient);
+    
+    // Sun disk
+    float sunDot = dot(rayDir, uSunDir);
+    if (sunDot > 0.998) {
+        skyColor = vec3(1.0, 0.95, 0.8);
+    }
+
+    // Calculate cloud layer intersection
     float tMin = (CLOUD_BOTTOM - uCameraPos.y) / rayDir.y;
     float tMax = (CLOUD_TOP    - uCameraPos.y) / rayDir.y;
 
     if (tMin > tMax) { float tmp = tMin; tMin = tMax; tMax = tmp; }
-    // FIXED: Camera inside cloud layer (2000-4000) - tMax can be negative
-    // When inside, always render at least 0 distance
-    if (tMax < 0.0 && tMin < 0.0) { 
-        // Both negative - camera is below clouds, looking down at them
-        float tmp = tMin; tMin = 0.0; tMax = -tmp; 
+    
+    // Skip if ray doesn't intersect cloud layer
+    if (tMax < 0.0) { 
+        fragColor = vec4(skyColor, 1.0);
+        return; 
     }
-    if (tMax < 0.0)  { fragColor = vec4(0.0); return; }
 
     tMin = max(tMin, 0.0);
 
-    // ========== DEPTH-AWARE CLOUD RENDERING ==========
+    // ========== CLOUD RAYMARCHING ==========
     
     float stepSize = (tMax - tMin) / float(uRaymarchSteps);
     vec4  color    = vec4(0.0);
     vec3  viewDir  = -rayDir;
-
-    // DEBUG: Test cloud density at start
-    vec3 testPos = uCameraPos + rayDir * 100.0;
-    float testDensity = cloudDensity(testPos);
-    
-    bool cloudHitFound = false;
-    float cloudHitDistance = 999999.0;
-    int   cloudSampleCount = 0;
 
     for (int i = 0; i < uRaymarchSteps && color.a < 0.99; i++) {
         float t   = tMin + (float(i) + 0.5) * stepSize;
@@ -168,11 +162,7 @@ void main() {
         float density = cloudDensity(pos);
 
         if (density > 0.01) {
-            // Found cloud at distance t
-            cloudHitFound = true;
-            cloudHitDistance = t;
-            
-            // Calculate normal from density gradient (cheap)
+            // Calculate normal from density gradient
             vec3 normal = normalize(vec3(
                 cloudDensity(pos + vec3(10.0, 0.0, 0.0)) - density,
                 cloudDensity(pos + vec3(0.0, 10.0, 0.0)) - density,
@@ -183,16 +173,16 @@ void main() {
             float NdotL  = max(dot(normal, uSunDir), 0.0);
             float diffuse = celShade(NdotL, 3.0);
 
-            // Ghibli color blend: shadow -> base based on diffuse
+            // Ghibli color blend
             vec3 cloudColor = mix(uCloudShadowColor, uCloudBaseColor, diffuse);
 
-            // Ghibli signature rim lighting
+            // Rim lighting
             float rim = 1.0 - max(dot(viewDir, normal), 0.0);
             rim = pow(rim, 3.0);
             rim = smoothstep(0.4, 1.0, rim);
             cloudColor += uRimColor * rim * 0.5 * uDayFactor;
 
-            // Ambient (day factor affects intensity)
+            // Ambient
             cloudColor += uAmbientColor * 0.15 * uDayFactor;
 
             // Accumulate
@@ -202,31 +192,10 @@ void main() {
         }
     }
 
-    // ========== DECISION: Render clouds vs show geometry ==========
-    
-    // Check if geometry (sphere) is closer than clouds
-    bool geometryInFront = (cloudHitFound && cloudHitDistance < sceneDepth);
-    
-    if (geometryInFront) {
-        // Geometry is in front of clouds - output transparent to see sphere
-        fragColor = vec4(0.0);
-        return;
-    }
-    
-    // Output accumulated cloud color
+    // Output
     if (color.a > 0.01) {
         fragColor = vec4(color.rgb, color.a);
     } else {
-        // No clouds - render sky gradient
-        float skyGradient = rayDir.y * 0.5 + 0.5;
-        vec3 skyColor = mix(vec3(0.5, 0.7, 1.0), vec3(0.3, 0.4, 0.8), skyGradient);
-        
-        // Sun disk
-        float sunDot = dot(rayDir, uSunDir);
-        if (sunDot > 0.998) {
-            skyColor = vec3(1.0, 0.95, 0.8);  // Sun
-        }
-        
         fragColor = vec4(skyColor, 1.0);
     }
 }

@@ -56,21 +56,34 @@ void CloudRenderer::shutdown() {
 }
 
 void CloudRenderer::render(float time, float deltaTime) {
-    if (!_ready || !_shader) {
-        RENDER_LOG_WARN("CloudRenderer::render() - NOT ready!");
+    // DEBUG: Always log when render is called
+    static int frameCount = 0;
+    frameCount++;
+    if (frameCount <= 3) {
+        RENDER_LOG_INFO("[CLOUD_DEBUG] Frame {}, render called", frameCount);
+    }
+    
+    if (!_ready) {
+        RENDER_LOG_ERROR("CloudRenderer::render() - NOT ready (_ready=false)!");
+        return;
+    }
+    
+    if (!_shader) {
+        RENDER_LOG_ERROR("CloudRenderer::render() - _shader is nullptr!");
+        return;
+    }
+    
+    if (_shader->getID() == 0) {
+        RENDER_LOG_ERROR("CloudRenderer::render() - shader ID is 0!");
         return;
     }
     
     _shader->use();
     
     // DEBUG: Check if we have valid shader
-    static bool loggedOnce = false;
-    if (!loggedOnce) {
-        loggedOnce = true;
-        RENDER_LOG_DEBUG("CloudRenderer::render() - shader ID={}, uResolution loc={}",
-            _shader->getID(),
-            glGetUniformLocation(_shader->getID(), "uResolution"));
-    }
+    RENDER_LOG_DEBUG("CloudRenderer::render() - shader ID={}, uResolution loc={}",
+        _shader->getID(),
+        glGetUniformLocation(_shader->getID(), "uResolution"));
     
     // Window resolution
     int width, height;
