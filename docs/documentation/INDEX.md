@@ -9,6 +9,7 @@
 
 | Библиотека | Версия | Назначение | Документация |
 |------------|--------|-----------|--------------|
+| **ENet** | 1.3.18 | Сетевая библиотека (UDP) | [enet/README.md](enet/README.md) |
 | **flecs** | v3.2.x (bundled) | ECS — Entity Component System | [flecs/README.md](flecs/README.md) |
 | **GLFW** | 3.4.0 | Окно, контекст OpenGL, ввод | [glfw/README.md](glfw/README.md) |
 | **GLM** | 1.0.x master | Математика (векторы, матрицы) | [glm/README.md](glm/README.md) |
@@ -18,6 +19,12 @@
 ---
 
 ## Быстрые ссылки
+
+### Сеть (ENet)
+- [Быстрый старт](enet/README.md) — основные концепции, инициализация
+- [Хостинг](enet/hosting.md) — сервер, клиент, хост, события
+- [Пакеты](enet/packets.md) — создание, отправка, каналы
+- [Практика](enet/tutorial.md) — примеры для CLOUDENGINE
 
 ### ECS (flecs)
 - [Quickstart](flecs/quickstart.md) — создание мира, сущностей, компонентов
