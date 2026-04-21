@@ -204,8 +204,29 @@ void main() {
 
     // ========== DECISION: Render clouds vs show geometry ==========
     
-    // DEBUG: Map vUV to color to verify quad draws
-    // vUV should be 0-1 across screen
-    fragColor = vec4(vUV.x, vUV.y, 0.0, 1.0);  // Red=X, Green=Y, Blue=0
-    return;
+    // Check if geometry (sphere) is closer than clouds
+    bool geometryInFront = (cloudHitFound && cloudHitDistance < sceneDepth);
+    
+    if (geometryInFront) {
+        // Geometry is in front of clouds - output transparent to see sphere
+        fragColor = vec4(0.0);
+        return;
+    }
+    
+    // Output accumulated cloud color
+    if (color.a > 0.01) {
+        fragColor = vec4(color.rgb, color.a);
+    } else {
+        // No clouds - render sky gradient
+        float skyGradient = rayDir.y * 0.5 + 0.5;
+        vec3 skyColor = mix(vec3(0.5, 0.7, 1.0), vec3(0.3, 0.4, 0.8), skyGradient);
+        
+        // Sun disk
+        float sunDot = dot(rayDir, uSunDir);
+        if (sunDot > 0.998) {
+            skyColor = vec3(1.0, 0.95, 0.8);  // Sun
+        }
+        
+        fragColor = vec4(skyColor, 1.0);
+    }
 }

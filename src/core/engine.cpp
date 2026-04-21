@@ -146,7 +146,7 @@ bool Engine::init() {
             // Add RenderMesh and PlayerColor components for visualization
             auto playerEntity = world.entity("LocalPlayer");
             playerEntity.set(ECS::Transform{_cameraPos});  // Add Transform at camera position
-            playerEntity.set<ECS::RenderMesh>({ECS::MeshType::Sphere, 50.0f});  // 50 unit radius sphere for visibility
+            playerEntity.set<ECS::RenderMesh>({ECS::MeshType::Sphere, 5.0f});  // 5 unit radius sphere (same as other players)
             playerEntity.set<ECS::PlayerColor>({glm::vec3(1.0f, 0.2f, 0.2f)});  // Bright red color
             
             CE_LOG_INFO("Singleplayer: Created LocalPlayer entity (id=1) with large red sphere at ({:.0f},{:.0f},{:.0f})",
@@ -445,32 +445,37 @@ void Engine::render() {
     int width, height;
     glfwGetWindowSize(Platform::Window::getGLFWwindow(), &width, &height);
 
-    // ========================================================================
-    // SIMPLE TEST: Direct to screen, no FBO
-    // ========================================================================
-    
-    // Bind default framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, width, height);
     
-    // Clear to bright blue so we KNOW something changed
-    glClearColor(0.0f, 0.0f, 1.0f, 1.0f);  // BLUE = "clear happened"
+    // ========================================================================
+    // PASS 1: BACKGROUND - Clear and render clouds
+    // ========================================================================
+    
+    glClearColor(0.5f, 0.7f, 1.0f, 1.0f);  // Sky blue
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    // Render clouds (full screen quad, NO depth test)
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    Rendering::Renderer::renderClouds(_time, _deltaTime);
+    
+    // ========================================================================
+    // PASS 2: OPAQUE GEOMETRY - Render sphere on top of clouds
+    // ========================================================================
+    
     glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glDepthMask(GL_TRUE);
     
-    RENDER_LOG_DEBUG("=== RENDER FRAME ===");
+    // Disable blending for opaque geometry
+    glDisable(GL_BLEND);
     
-    // Render spheres (they should appear ON TOP of blue)
+    // Render sphere - will appear on TOP of clouds
     auto& primitives = Rendering::GetPrimitiveMesh();
     primitives.setCamera(&_camera);
     renderPlayerEntities();
-    
-    // Now render quad (should cover everything with gradient)
-    RENDER_LOG_DEBUG("Calling renderClouds...");
-    Rendering::Renderer::renderClouds(_time, _deltaTime);
-    RENDER_LOG_DEBUG("renderClouds done");
-    
-    // Swap buffers
+
     Rendering::Renderer::endFrame();
 }
 
