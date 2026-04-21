@@ -32,29 +32,23 @@ struct PlayerColor {
     /// @brief Generate a unique color based on player ID
     static PlayerColor fromId(uint32_t playerId) {
         PlayerColor pc;
-        // Generate colors using golden angle for good distribution
-        float hue = static_cast<float>((playerId * 137.5f));
-        hue = fmodf(hue, 360.0f);
         
-        // Simple HSV to RGB conversion
-        float s = 0.7f;
-        float v = 0.9f;
+        // FIX: Use distinct hues for players - avoid HSV wraparound
+        // Use simple predefined colors for MVP
+        static const glm::vec3 PLAYER_COLORS[] = {
+            glm::vec3(0.3f, 0.9f, 0.5f),   // Player 1: GREEN
+            glm::vec3(0.9f, 0.3f, 0.5f),   // Player 2: RED
+            glm::vec3(0.3f, 0.5f, 0.9f),   // Player 3: BLUE
+            glm::vec3(0.9f, 0.9f, 0.3f),   // Player 4: YELLOW
+            glm::vec3(0.9f, 0.5f, 0.9f),   // Player 5: MAGENTA
+            glm::vec3(0.5f, 0.9f, 0.9f),   // Player 6: CYAN
+            glm::vec3(0.9f, 0.6f, 0.3f),   // Player 7: ORANGE
+            glm::vec3(0.6f, 0.3f, 0.9f),   // Player 8: PURPLE
+        };
         
-        float h = hue / 60.0f;
-        int i = static_cast<int>(h);
-        float f = h - static_cast<float>(i);
-        float p = v * (1.0f - s);
-        float q = v * (1.0f - s * f);
-        float t = v * (1.0f - s * (1.0f - f));
-        
-        switch (i) {
-            case 0: pc.color = glm::vec3(v, t, p); break;
-            case 1: pc.color = glm::vec3(q, v, p); break;
-            case 2: pc.color = glm::vec3(p, v, t); break;
-            case 3: pc.color = glm::vec3(p, q, v); break;
-            case 4: pc.color = glm::vec3(t, p, v); break;
-            case 5: pc.color = glm::vec3(v, p, q); break;
-        }
+        // Cycle through colors based on player ID
+        uint32_t colorIndex = (playerId - 1) % 8;
+        pc.color = PLAYER_COLORS[colorIndex];
         
         return pc;
     }

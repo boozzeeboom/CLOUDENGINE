@@ -78,7 +78,7 @@ protected:
 
     std::unordered_map<uint32_t, PlayerInfo> _players;
     uint32_t _localPlayerId = 0;
-    uint32_t _nextPlayerId  = 1;        // auto-increment, only used on server
+    uint32_t _nextPlayerId  = 2;        // auto-increment, starts at 2 (host is always 1)
     bool     _connected     = false;
     bool     _isHost        = false;
 };

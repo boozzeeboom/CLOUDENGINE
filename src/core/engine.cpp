@@ -119,11 +119,17 @@ bool Engine::init() {
             // Setup client callbacks for ECS integration
             _client->onPlayerConnected = [this](uint32_t playerId) {
                 auto& world = ECS::getWorld();
+                uint32_t localId = _client->getLocalPlayerId();
+                
+                CE_LOG_INFO("Client onPlayerConnected: playerId={}, localId={}", playerId, localId);
+                
                 // Create entity for connected player
-                if (playerId == _client->getLocalPlayerId()) {
+                if (playerId == localId) {
+                    // This is our own local player
                     ECS::createLocalPlayer(world, playerId, glm::vec3(0.0f, 3000.0f, 0.0f));
                     CE_LOG_INFO("Client: Created LocalPlayer entity for self (id={})", playerId);
                 } else {
+                    // This is a remote player (like host)
                     ECS::createRemotePlayer(world, playerId, glm::vec3(0.0f, 3000.0f, 0.0f));
                     CE_LOG_INFO("Client: Created RemotePlayer entity for id={}", playerId);
                 }
@@ -134,8 +140,26 @@ bool Engine::init() {
                 CE_LOG_INFO("Client: Player {} disconnected", playerId);
             };
             _client->onPositionReceived = [this](uint32_t playerId, const glm::vec3& position, float yaw, float pitch) {
-                // Position received for remote player - update their NetworkTransform with timestamp
                 auto& world = ECS::getWorld();
+                
+                // CRITICAL FIX: Create RemotePlayer entity if it doesn't exist
+                // This handles the case when we receive position for host (id=1) before any entity exists
+                auto q = world.query_builder<ECS::NetworkId, ECS::RemotePlayer>().build();
+                bool entityExists = false;
+                
+                q.each([playerId, &entityExists](ECS::NetworkId& nid, ECS::RemotePlayer&) {
+                    if (nid.id == playerId) {
+                        entityExists = true;
+                    }
+                });
+                
+                if (!entityExists) {
+                    // Create RemotePlayer entity for this player
+                    ECS::createRemotePlayer(world, playerId, position);
+                    CE_LOG_INFO("Client: Created RemotePlayer entity for id={}", playerId);
+                }
+                
+                // Now update NetworkTransform with timestamp
                 double timestamp = glfwGetTime();
                 ECS::updateNetworkTransform(world, playerId, position, yaw, pitch, timestamp);
             };

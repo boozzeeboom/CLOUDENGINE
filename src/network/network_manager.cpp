@@ -42,7 +42,7 @@ void NetworkManager::update(float /*dt*/) {
         switch (event.type) {
             case ENET_EVENT_TYPE_CONNECT: {
                 if (_isHost) {
-                    // Server: assign new player ID
+                    // Server: assign new player ID (starting from 2, host is always 1)
                     uint32_t newId = _nextPlayerId++;
                     PlayerInfo info;
                     info.id       = newId;
@@ -56,6 +56,35 @@ void NetworkManager::update(float /*dt*/) {
                     accept.spawnPosition = info.position;
                     accept.worldSeed     = 12345;
                     sendPacket(event.peer, &accept, sizeof(accept), true);
+                    
+                    // CRITICAL FIX: Send host player info to new client
+                    // The host (id=1) is not in _players, so we send their info separately
+                    NETWORK_LOG_INFO("Sending host player info to new player {}", newId);
+                    
+                    // Get host position from camera (passed via external mechanism)
+                    // For now, send default position - host will update via position packets
+                    PositionUpdate hostInfo;
+                    hostInfo.playerId = 1;  // Host is always player 1
+                    hostInfo.position = glm::vec3(0.0f, 3000.0f, 0.0f);
+                    hostInfo.velocity = glm::vec3(0.0f);
+                    hostInfo.yaw = 0.0f;
+                    hostInfo.pitch = 0.0f;
+                    sendPacket(event.peer, &hostInfo, sizeof(hostInfo), true);
+                    NETWORK_LOG_INFO("Sent host player (id=1) info to new player {}", newId);
+                    
+                    // Also send info about other existing players
+                    for (auto& kv : _players) {
+                        if (kv.first != newId) {  // Don't send info about self
+                            PositionUpdate existing;
+                            existing.playerId = kv.first;
+                            existing.position = kv.second.position;
+                            existing.velocity = kv.second.velocity;
+                            existing.yaw = kv.second.yaw;
+                            existing.pitch = kv.second.pitch;
+                            sendPacket(event.peer, &existing, sizeof(existing), true);
+                            NETWORK_LOG_INFO("Sent existing player {} info to new player", kv.first);
+                        }
+                    }
 
                     NETWORK_LOG_INFO("Player {} connected (peer={})", newId, (void*)event.peer);
                     if (onPlayerConnected) onPlayerConnected(newId);
@@ -160,12 +189,22 @@ void NetworkManager::handlePacket(ENetPacket* packet, ENetPeer* peer) {
 
             auto it = _players.find(upd->playerId);
             if (it != _players.end()) {
+                // Update existing player
                 it->second.position = upd->position;
                 it->second.velocity = upd->velocity;
                 it->second.yaw      = upd->yaw;
                 it->second.pitch    = upd->pitch;
 
+                // Call callback if this is a remote player
                 if (!it->second.isLocal && onPositionReceived) {
+                    onPositionReceived(upd->playerId, upd->position, upd->yaw, upd->pitch);
+                }
+            } else {
+                // CRITICAL FIX: Client receives PositionUpdate for unknown player (e.g., host)
+                // This can happen when server sends existing players info
+                // For client: call onPositionReceived if it's not our local player
+                if (!_isHost && upd->playerId != _localPlayerId && onPositionReceived) {
+                    NETWORK_LOG_INFO("Received position for unknown player {}, calling onPositionReceived", upd->playerId);
                     onPositionReceived(upd->playerId, upd->position, upd->yaw, upd->pitch);
                 }
             }
