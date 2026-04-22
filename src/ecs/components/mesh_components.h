@@ -20,9 +20,10 @@ enum class MeshType {
 };
 
 /// @brief RenderMesh component — specifies mesh type for entity
+/// @note Ship size 50 units (~50m) for world radius 350,000 units
 struct RenderMesh {
     MeshType type = MeshType::Sphere;
-    float size = 5.0f;  // Radius for sphere, half-extent for cube, etc.
+    float size = 50.0f;  // Radius for sphere (ship ~50 units)
 };
 
 /// @brief PlayerColor component — unique color for each player

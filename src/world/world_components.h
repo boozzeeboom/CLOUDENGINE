@@ -3,7 +3,7 @@
 namespace World {
 
 // World constants
-constexpr float WORLD_RADIUS = 350000.0f;
+constexpr float WORLD_RADIUS = 650000.0f;  // Circular world radius (650km)
 constexpr float CHUNK_SIZE = 2000.0f;
 constexpr float CHUNK_HEIGHT = 1000.0f;
 constexpr int CHUNK_LOAD_RADIUS = 5; // 11x11 chunks

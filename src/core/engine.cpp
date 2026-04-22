@@ -487,9 +487,8 @@ void Engine::render() {
     camForward.z = cos(_cameraYaw) * cos(_cameraPitch);
     camForward = glm::normalize(camForward);
     
-    // Camera is 1000 units behind player position (HACK: scale issues need investigation)
-    // TODO: Normalize scale - sphere size of 5 units should not need 1000+ distance
-    glm::vec3 cameraViewPos = _cameraPos - camForward * 1000.0f;
+    // Camera is 250 units behind ship (ship size 50 units, world radius 650,000)
+    glm::vec3 cameraViewPos = _cameraPos - camForward * 250.0f;
     _camera.setPosition(cameraViewPos);
     _camera.setRotation(_cameraYaw, _cameraPitch);
     
