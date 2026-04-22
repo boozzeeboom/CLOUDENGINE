@@ -9,6 +9,7 @@
 #include <Jolt/Physics/Body/BodyID.h>
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Core/JobSystemThreadPool.h>
+#include <Jolt/Core/Memory.h>          // For JPH::AlignedAllocate/JPH::AlignedFree
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayerInterfaceMask.h>
 #include <Jolt/Physics/Collision/BroadPhase/ObjectVsBroadPhaseLayerFilterMask.h>
 #include <Jolt/Physics/Collision/ObjectLayerPairFilterMask.h>
@@ -49,8 +50,8 @@ public:
     void shutdown();
     void update(float deltaTime);
     
-    JPH::PhysicsSystem* getPhysicsSystem() { return &_physicsSystem; }
-    JPH::BodyInterface& getBodyInterface() { return _physicsSystem.GetBodyInterface(); }
+    JPH::PhysicsSystem* getPhysicsSystem() { return _physicsSystem; }
+    JPH::BodyInterface& getBodyInterface() { return _physicsSystem->GetBodyInterface(); }
     bool isInitialized() const { return _initialized; }
     void optimizeBroadPhase();
 
@@ -60,8 +61,8 @@ private:
     JoltPhysicsModule& operator=(const JoltPhysicsModule&) = delete;
 
     bool _initialized = false;
-    JPH::PhysicsSystem _physicsSystem;
-    JPH::BroadPhaseLayerInterfaceMask _broadPhaseLayerInterface;
+    JPH::PhysicsSystem* _physicsSystem = nullptr;
+    JPH::BroadPhaseLayerInterfaceMask* _broadPhaseLayerInterface = nullptr;
     JPH::ObjectVsBroadPhaseLayerFilterMask* _objectVsBroadPhaseLayerFilter = nullptr;
     JPH::ObjectLayerPairFilterMask* _objectLayerPairFilter = nullptr;
     float _accumulator = 0.0f;

@@ -1,6 +1,10 @@
 #include "jolt_module.h"
 #include "core/logger.h"
 
+#include <thread>      // std::thread::hardware_concurrency
+#include <algorithm>   // std::max
+#include <cstdlib>     // malloc
+
 #include <Jolt/RegisterTypes.h>
 #include <Jolt/Core/Factory.h>
 #include <Jolt/Core/TempAllocator.h>
@@ -9,6 +13,8 @@
 #include <Jolt/Physics/Body/BodyLockInterface.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
+
+#include <memory>
 
 using namespace Core::ECS;
 
@@ -21,23 +27,14 @@ namespace Core { namespace ECS {
 // =============================================================================
 
 JoltPhysicsModule::JoltPhysicsModule()
-    : _broadPhaseLayerInterface(ObjectLayer::NUM_LAYERS)
 {
-    // Configure broadphase layers
-    _broadPhaseLayerInterface.ConfigureLayer(JPH::BroadPhaseLayer(0), 1 << ObjectLayer::NON_MOVING | 1 << ObjectLayer::TERRAIN, 0); // Static layers
-    _broadPhaseLayerInterface.ConfigureLayer(JPH::BroadPhaseLayer(1), 1 << ObjectLayer::MOVING | 1 << ObjectLayer::SHIP, 0);     // Dynamic layers
-    
-    // Create filter objects (need broadphase interface reference)
-    _objectVsBroadPhaseLayerFilter = new JPH::ObjectVsBroadPhaseLayerFilterMask(_broadPhaseLayerInterface);
-    _objectLayerPairFilter = new JPH::ObjectLayerPairFilterMask();
+    // Empty - lazy initialization in init()
 }
 
 JoltPhysicsModule::~JoltPhysicsModule() {
     if (_initialized) {
         shutdown();
     }
-    delete _objectLayerPairFilter;
-    delete _objectVsBroadPhaseLayerFilter;
 }
 
 JoltPhysicsModule& JoltPhysicsModule::get() {
@@ -53,20 +50,66 @@ void JoltPhysicsModule::init() {
 
     CE_LOG_INFO("JoltPhysicsModule: Initializing Jolt Physics...");
 
-    // Register Jolt allocator
+    // IMPORTANT: Jolt requires registration BEFORE creating any physics objects
+    // Order: 1) Factory 2) RegisterAllocator 3) RegisterTypes 4) PhysicsSystem
+    
+    // Step 1: Register default allocator
+    CE_LOG_INFO("JoltPhysicsModule: RegisterDefaultAllocator()");
     JPH::RegisterDefaultAllocator();
-
-    // Create factory and register types
+    
+    // Step 2: Create Factory
+    CE_LOG_INFO("JoltPhysicsModule: Creating Factory");
     JPH::Factory::sInstance = new JPH::Factory();
+    
+    // Step 3: Register types
+    CE_LOG_INFO("JoltPhysicsModule: RegisterTypes()");
     JPH::RegisterTypes();
 
-    // Initialize physics system with layer interfaces
-    _physicsSystem.Init(
+    // Step 4: Create PhysicsSystem with aligned allocation
+    CE_LOG_INFO("JoltPhysicsModule: Creating PhysicsSystem (aligned allocation)");
+    void* physBuf = JPH::AlignedAllocate(sizeof(JPH::PhysicsSystem), JPH_VECTOR_ALIGNMENT);
+    if (physBuf == nullptr) {
+        CE_LOG_ERROR("JoltPhysicsModule: Failed to allocate PhysicsSystem");
+        JPH::UnregisterTypes();
+        delete JPH::Factory::sInstance;
+        JPH::Factory::sInstance = nullptr;
+        return;
+    }
+    _physicsSystem = new (physBuf) JPH::PhysicsSystem();
+    
+    // Step 5: Create BroadPhaseLayerInterfaceMask
+    CE_LOG_INFO("JoltPhysicsModule: Creating BroadPhaseLayerInterfaceMask");
+    void* broadBuf = JPH::AlignedAllocate(sizeof(JPH::BroadPhaseLayerInterfaceMask), JPH_VECTOR_ALIGNMENT);
+    if (broadBuf == nullptr) {
+        CE_LOG_ERROR("JoltPhysicsModule: Failed to allocate BroadPhaseLayerInterfaceMask");
+        _physicsSystem->~PhysicsSystem();
+        JPH::AlignedFree(physBuf);
+        _physicsSystem = nullptr;
+        JPH::UnregisterTypes();
+        delete JPH::Factory::sInstance;
+        JPH::Factory::sInstance = nullptr;
+        return;
+    }
+    _broadPhaseLayerInterface = new (broadBuf) JPH::BroadPhaseLayerInterfaceMask(ObjectLayer::NUM_LAYERS);
+    
+    // Step 6: Configure layers
+    CE_LOG_INFO("JoltPhysicsModule: Configuring layers");
+    _broadPhaseLayerInterface->ConfigureLayer(JPH::BroadPhaseLayer(0), 1 << ObjectLayer::NON_MOVING | 1 << ObjectLayer::TERRAIN, 0);
+    _broadPhaseLayerInterface->ConfigureLayer(JPH::BroadPhaseLayer(1), 1 << ObjectLayer::MOVING | 1 << ObjectLayer::SHIP, 0);
+    
+    // Step 7: Create filters
+    CE_LOG_INFO("JoltPhysicsModule: Creating filters");
+    _objectVsBroadPhaseLayerFilter = new JPH::ObjectVsBroadPhaseLayerFilterMask(*_broadPhaseLayerInterface);
+    _objectLayerPairFilter = new JPH::ObjectLayerPairFilterMask();
+
+    // Step 8: Initialize PhysicsSystem
+    CE_LOG_INFO("JoltPhysicsModule: PhysicsSystem::Init()");
+    _physicsSystem->Init(
         MAX_BODIES,
         NUM_BODY_MUTEXES,
         MAX_BODY_PAIRS,
         MAX_CONTACT_CONSTRAINTS,
-        _broadPhaseLayerInterface,
+        *_broadPhaseLayerInterface,
         *_objectVsBroadPhaseLayerFilter,
         *_objectLayerPairFilter
     );
@@ -74,7 +117,7 @@ void JoltPhysicsModule::init() {
     _initialized = true;
     _accumulator = 0.0f;
 
-    CE_LOG_INFO("JoltPhysicsModule: Jolt Physics initialized");
+    CE_LOG_INFO("JoltPhysicsModule: Jolt Physics initialized successfully!");
 }
 
 void JoltPhysicsModule::shutdown() {
@@ -84,7 +127,37 @@ void JoltPhysicsModule::shutdown() {
 
     CE_LOG_INFO("JoltPhysicsModule: Shutting down Jolt Physics...");
 
-    // Cleanup Jolt
+    // Cleanup Jolt in reverse order of init
+    
+    // 1. Destroy PhysicsSystem (placement new, must call destructor explicitly)
+    if (_physicsSystem != nullptr) {
+        _physicsSystem->~PhysicsSystem();
+        // Use AlignedFree because we used AlignedAllocate in init()
+        void* physBuf = static_cast<void*>(_physicsSystem);
+        JPH::AlignedFree(physBuf);
+        _physicsSystem = nullptr;
+    }
+    
+    // 2. Destroy BroadPhaseLayerInterfaceMask
+    if (_broadPhaseLayerInterface != nullptr) {
+        _broadPhaseLayerInterface->~BroadPhaseLayerInterfaceMask();
+        void* broadBuf = static_cast<void*>(_broadPhaseLayerInterface);
+        JPH::AlignedFree(broadBuf);
+        _broadPhaseLayerInterface = nullptr;
+    }
+    
+    // 3. Delete filter objects (regular delete is fine - they use operator new)
+    if (_objectVsBroadPhaseLayerFilter != nullptr) {
+        delete _objectVsBroadPhaseLayerFilter;
+        _objectVsBroadPhaseLayerFilter = nullptr;
+    }
+    
+    if (_objectLayerPairFilter != nullptr) {
+        delete _objectLayerPairFilter;
+        _objectLayerPairFilter = nullptr;
+    }
+
+    // 4. Unregister types and delete factory
     JPH::UnregisterTypes();
     delete JPH::Factory::sInstance;
     JPH::Factory::sInstance = nullptr;
@@ -108,7 +181,7 @@ void JoltPhysicsModule::update(float deltaTime) {
             std::max(1, static_cast<int>(std::thread::hardware_concurrency()) - 1)
         );
 
-        _physicsSystem.Update(FIXED_DELTA_TIME, COLLISION_STEPS, &tempAllocator, &jobSystem);
+        _physicsSystem->Update(FIXED_DELTA_TIME, COLLISION_STEPS, &tempAllocator, &jobSystem);
         _accumulator -= FIXED_DELTA_TIME;
     }
 }
@@ -118,7 +191,7 @@ void JoltPhysicsModule::optimizeBroadPhase() {
         CE_LOG_WARN("JoltPhysicsModule: Cannot optimize - not initialized");
         return;
     }
-    _physicsSystem.OptimizeBroadPhase();
+    _physicsSystem->OptimizeBroadPhase();
 }
 
 // =============================================================================
@@ -132,6 +205,7 @@ JPH::BodyID createBoxBody(
     float mass,
     uint32_t layer
 ) {
+    if (!module.isInitialized()) return JPH::BodyID();
     JPH::BodyInterface& bodyInterface = module.getBodyInterface();
 
     JPH::BoxShapeSettings shapeSettings(JPH::Vec3(halfExtents.x, halfExtents.y, halfExtents.z));
@@ -167,6 +241,7 @@ JPH::BodyID createSphereBody(
     float mass,
     uint32_t layer
 ) {
+    if (!module.isInitialized()) return JPH::BodyID();
     JPH::BodyInterface& bodyInterface = module.getBodyInterface();
 
     JPH::SphereShapeSettings shapeSettings(radius);
@@ -202,6 +277,7 @@ JPH::BodyID createStaticBoxBody(
     const glm::quat& rotation,
     uint32_t layer
 ) {
+    if (!module.isInitialized()) return JPH::BodyID();
     JPH::BodyInterface& bodyInterface = module.getBodyInterface();
 
     JPH::BoxShapeSettings shapeSettings(JPH::Vec3(halfExtents.x, halfExtents.y, halfExtents.z));
@@ -235,6 +311,7 @@ void applyForce(
     JPH::EActivation activation
 ) {
     if (bodyId == JPH::BodyID()) return;
+    if (!module.isInitialized()) return;
     JPH::BodyInterface& bodyInterface = module.getBodyInterface();
     bodyInterface.AddForce(bodyId, JPH::Vec3(force.x, force.y, force.z), activation);
 }
@@ -246,6 +323,7 @@ void applyTorque(
     JPH::EActivation activation
 ) {
     if (bodyId == JPH::BodyID()) return;
+    if (!module.isInitialized()) return;
     JPH::BodyInterface& bodyInterface = module.getBodyInterface();
     bodyInterface.AddTorque(bodyId, JPH::Vec3(torque.x, torque.y, torque.z), activation);
 }
@@ -258,7 +336,12 @@ void registerSystems(flecs::world& world) {
     world.system("PhysicsUpdate")
         .kind(flecs::OnUpdate)
         .iter([](flecs::iter& it) {
-            JoltPhysicsModule::get().update(1.0f / 60.0f);
+            JoltPhysicsModule& module = JoltPhysicsModule::get();
+            if (!module.isInitialized()) {
+                module.init();
+                CE_LOG_INFO("JoltPhysicsModule: Lazy initialization complete");
+            }
+            module.update(1.0f / 60.0f);
         });
 
     world.system<const JoltBodyId, Transform>("SyncJoltToECS")
@@ -268,7 +351,10 @@ void registerSystems(flecs::world& world) {
             if (!module.isInitialized()) return;
             if (joltId.id == JPH::BodyID()) return;
             
-            const JPH::BodyLockInterface& lockInterface = module.getPhysicsSystem()->GetBodyLockInterface();
+            JPH::PhysicsSystem* physicsSystem = module.getPhysicsSystem();
+            if (!physicsSystem) return;
+            
+            const JPH::BodyLockInterface& lockInterface = physicsSystem->GetBodyLockInterface();
             JPH::BodyLockRead lock(lockInterface, joltId.id);
             if (!lock.Succeeded()) return;
             
@@ -305,5 +391,3 @@ void initJoltPhysics(flecs::world& world) {
 }} // namespace Core::ECS
 
 #pragma warning(pop)
-
-

@@ -1,0 +1,11 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/CLOUDPROJECT/CLOUDENGINE/build_test/cmake_install.cmake",
+		"C:/CLOUDPROJECT/CLOUDENGINE/build_test/libs/jolt/Build/cmake_install.cmake",
+		"C:/CLOUDPROJECT/CLOUDENGINE/build_test/libs/glfw/cmake_install.cmake",
+		"C:/CLOUDPROJECT/CLOUDENGINE/build_test/libs/glfw/src/cmake_install.cmake",
+		"C:/CLOUDPROJECT/CLOUDENGINE/build_test/libs/glfw/docs/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

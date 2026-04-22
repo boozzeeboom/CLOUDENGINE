@@ -1,18 +1,37 @@
 cmake_minimum_required(VERSION 3.20)
 
 # =============================================================================
-# Jolt Physics — Local Library
-# Repository: https://github.com/jrouwe/JoltPhysics
-# Note: Clone to libs/jolt manually: git clone https://github.com/jrouwe/JoltPhysics.git libs/jolt
-# Build folder: libs/jolt/Build/ contains CMakeLists.txt
+# CLOUDENGINE — Custom Game Engine for Project C: The Clouds
 # =============================================================================
 
+# =============================================================================
+# Jolt Physics Configuration — MUST be set BEFORE add_subdirectory
+# Repository: https://github.com/jrouwe/JoltPhysics
+# =============================================================================
+
+# CRITICAL: Disable INTERPROCEDURAL_OPTIMIZATION (LTCG) for Jolt
+# - Jolt default is ON, which causes ABI mismatch when CLOUDENGINE uses /GL:OFF
+# - Setting variables BEFORE add_subdirectory ensures Jolt uses our settings
+# See: libs/jolt/Build/CMakeLists.txt lines 32-35
+
+# Disable interprocedural optimizations (link-time code generation)
+# This MUST be before add_subdirectory(jolt/Build) to take effect
+set(INTERPROCEDURAL_OPTIMIZATION OFF CACHE BOOL "Enable interprocedural optimizations" FORCE)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
+
 # Force Jolt to use dynamic MSVC runtime library (/MD) to match CLOUDENGINE
-# Jolt option: USE_STATIC_MSVC_RUNTIME_LIBRARY (default ON = static /MT)
-# Set to OFF to use dynamic /MD
+# Jolt default: ON (static /MT), we want OFF (dynamic /MD)
 set(USE_STATIC_MSVC_RUNTIME_LIBRARY OFF CACHE BOOL "Use static MSVC runtime library" FORCE)
 
-# Jolt build (local) — use Build subfolder
+# Disable exceptions and RTTI for better performance (Jolt doesn't use them)
+set(CPP_EXCEPTIONS_ENABLED OFF CACHE BOOL "Enable C++ exceptions" FORCE)
+set(CPP_RTTI_ENABLED OFF CACHE BOOL "Enable C++ RTTI" FORCE)
+
+# Enable assertions in Debug builds for better diagnostics
+# In Release, assertions are controlled by JPH_DEBUG define
+set(USE_ASSERTS ON CACHE BOOL "Enable asserts" FORCE)
+
+# Jolt build (local) — use Build subfolder AFTER configuration
 add_subdirectory(libs/jolt/Build)
 
 # =============================================================================

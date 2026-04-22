@@ -1,0 +1,133 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\clouds\cloud_budget.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\clouds\cloud_generator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\clouds\cloud_lod.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\clouds\lighting_system.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\clouds\noise.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\clouds\wind_system.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\core\engine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\core\logger.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\ecs\modules\jolt_module.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\ecs\modules\network_module.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\ecs\modules\render_module.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\ecs\pipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\ecs\world.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\network\client.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\network\network_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\network\server.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\platform\window.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\rendering\camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\rendering\cloud_renderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\rendering\depth_fbo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\rendering\primitive_mesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\rendering\quad.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\rendering\renderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\rendering\shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\rendering\shader_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\world\chunk.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\world\chunk_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\world\circular_world.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\libs\glad\src\glad.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\libs\flecs\flecs.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\libs\enet-1.3.18\callbacks.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\libs\enet-1.3.18\compress.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\libs\enet-1.3.18\host.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\libs\enet-1.3.18\list.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\libs\enet-1.3.18\packet.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\libs\enet-1.3.18\peer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\libs\enet-1.3.18\protocol.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\libs\enet-1.3.18\unix.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\libs\enet-1.3.18\win32.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\CLOUDPROJECT\CLOUDENGINE\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{CC20039C-3516-3B40-84FF-585235161B5A}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

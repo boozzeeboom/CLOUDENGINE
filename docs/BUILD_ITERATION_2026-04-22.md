@@ -111,3 +111,54 @@ cmake --build build --config Release
 
 ## Synapse Memory
 Indexed: `jolt_runtime_library_fix_2026-04-22`
+
+---
+
+## Iteration 3: Jolt Physics Integration in ECS
+
+### Change
+**File:** `src/ecs/world.cpp`
+```cpp
+#include "modules/jolt_module.h"
+
+void init() {
+    // ... existing initialization ...
+    
+    // Initialize Jolt Physics (after all other systems registered)
+    initJoltPhysics(s_world);
+    
+    CE_LOG_INFO("ECS World initialized with pipeline, network and render modules");
+}
+```
+
+### Build Result
+✅ Success — Jolt module integrated into ECS pipeline
+
+### Expected Runtime Output (from initJoltPhysics)
+```
+[2026-04-22 xx:xx:xx.xxx] [info] JoltPhysicsModule: Initializing Jolt Physics...
+[2026-04-22 xx:xx:xx.xxx] [info] JoltPhysicsModule: Jolt Physics initialized
+[2026-04-22 xx:xx:xx.xxx] [info] JoltPhysicsModule: Components registered
+[2026-04-22 xx:xx:xx.xxx] [info] JoltPhysicsModule: Systems registered
+[2026-04-22 xx:xx:xx.xxx] [info] JoltPhysicsModule: Module initialized
+```
+
+### Jolt Physics Features Now Available
+- `JoltBodyId` component for physics entities
+- `PhysicsUpdate` system (OnUpdate phase)
+- `SyncJoltToECS` system (PostUpdate phase)
+- Helper functions: `createBoxBody()`, `createSphereBody()`, `createStaticBoxBody()`
+- Force/torque application: `applyForce()`, `applyTorque()`
+
+### Next Steps
+1. Test Jolt physics in runtime (create test bodies)
+2. Verify PhysicsUpdate system running each frame
+3. Check SyncJoltToECS syncing positions to ECS Transform
+
+---
+
+## Files Modified (All Iterations)
+1. `CMakeLists.txt` — Jolt runtime library fix (USE_STATIC_MSVC_RUNTIME_LIBRARY=OFF)
+2. `src/rendering/renderer.cpp` — Shader path detection + filesystem includes
+3. `src/ecs/world.cpp` — Jolt Physics integration
+4. `docs/BUILD_ITERATION_2026-04-22.md` — Build iteration documentation

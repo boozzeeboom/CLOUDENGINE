@@ -4,6 +4,7 @@
 #include "systems.h"
 #include "modules/network_module.h"
 #include "modules/render_module.h"
+#include "modules/jolt_module.h"
 #include "components/mesh_components.h"
 #include "../core/logger.h"
 
@@ -16,26 +17,41 @@ void init() {
     
     // Register pipeline phases FIRST (order matters!)
     registerPipeline(s_world);
+    CE_LOG_INFO("ECS: Pipeline registered");
     
     // Register all components
     registerComponents(s_world);
+    CE_LOG_INFO("ECS: Components registered");
     
     // Register all singletons
     registerSingletons(s_world);
+    CE_LOG_INFO("ECS: Singletons registered");
     
     // Register mesh components (RenderMesh, PlayerColor)
     registerMeshComponents(s_world);
+    CE_LOG_INFO("ECS: Mesh components registered");
     
     // Register network components (for ECS + Network integration)
     registerNetworkComponents(s_world);
+    CE_LOG_INFO("ECS: Network components registered");
     registerNetworkSyncSystem(s_world);
+    CE_LOG_INFO("ECS: Network sync system registered");
     
     // Register render module (RemotePlayer rendering system)
     registerRenderComponents(s_world);
+    CE_LOG_INFO("ECS: Render components registered");
     registerRemotePlayerRenderSystem(s_world);
+    CE_LOG_INFO("ECS: Remote player render system registered");
     
     // Register time system (runs in PreUpdate phase)
     registerTimeSystem(s_world);
+    CE_LOG_INFO("ECS: Time system registered");
+    
+    // Register Jolt Physics systems (lazy initialization on first update)
+    registerJoltComponents(s_world);
+    CE_LOG_INFO("ECS: Jolt components registered");
+    registerJoltSystems(s_world);
+    CE_LOG_INFO("ECS: Jolt systems registered (lazy init)");
     
     CE_LOG_INFO("ECS World initialized with pipeline, network and render modules");
 }
