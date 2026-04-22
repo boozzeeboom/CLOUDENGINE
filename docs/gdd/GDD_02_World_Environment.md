@@ -34,9 +34,22 @@
 
 | Параметр | Значение |
 |----------|----------|
-| Радиус генерации | [настраивается через WorldGenerationSettings] |
+| Радиус генерации | 650,000 единиц (650km) |
 | Высота пиков | Вариативная, Perlin noise |
-| Высота облаков | 3 слоя на разных высотах |
+| Высота облаков | 3 слоя (500-6000m): Lower, Middle, Upper |
+
+### Scale Constants (2026-04-23)
+
+| Entity | Scale (units) | Notes |
+|--------|---------------|-------|
+| World Radius | 650,000 | Circular world |
+| Human | 1.5 - 2 | Player character |
+| Ship (light) | 5 | Small ships |
+| Ship (medium) | 50 | Standard ships |
+| Ship (heavy) | 100 | Large ships |
+| Ship (heavy II) | 500 | Massive transports |
+| Camera offset | 100 - 500 | Distance from ship |
+| Clouds | 500 - 6000 | Height layer (meters) |
 
 ---
 
@@ -269,7 +282,7 @@
 
 | Параметр | Описание |
 |----------|----------|
-| worldRadius | Радиус генерации |
+| worldRadius | Радиус генерации (650,000) |
 | peakCount | Количество пиков |
 | peakHeight | Высота пиков |
 | peakRadius | Радиус пиков |
@@ -332,7 +345,7 @@
 | `peakCount` | 5 | 30 | 15 | Количество пиков |
 | `peakHeight` | 100 | 500 | 200 | Высота пиков |
 | `cloudCount` | 100 | 2000 | 890 | Количество облаков |
-| `worldRadius` | 500 | 5000 | 2000 | Радиус мира |
+| `worldRadius` | 100000 | 1000000 | 650000 | Радиус мира |
 | `dayCycleDuration` | 60 | 3600 | 600 | Длительность цикла (сек) |
 
 ---
@@ -354,4 +367,4 @@
 
 ---
 
-**Связанные документы:** [GDD_INDEX.md](GDD_INDEX.md) | [WORLD_LORE_BOOK.md](../WORLD_LORE_BOOK.md) | [ART_BIBLE.md](../ART_BIBLE.md)
+**Связанные документы:** [GDD_INDEX.md](GDD_INDEX.md) | [WORLD_LORE_BOOK.md](../WORLD_LORE_BOOK.md) | [ART_BIBLE.md](../ART_BIBLE.md) | [SCALE_ANALYSIS.md](../CLOUDENGINE/SCALE_ANALYSIS.md)
