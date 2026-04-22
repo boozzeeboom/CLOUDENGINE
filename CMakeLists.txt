@@ -1,4 +1,23 @@
 cmake_minimum_required(VERSION 3.20)
+
+# =============================================================================
+# Jolt Physics — Local Library
+# Repository: https://github.com/jrouwe/JoltPhysics
+# Note: Clone to libs/jolt manually: git clone https://github.com/jrouwe/JoltPhysics.git libs/jolt
+# Build folder: libs/jolt/Build/ contains CMakeLists.txt
+# =============================================================================
+
+# Force Jolt to use dynamic MSVC runtime library (/MD) to match CLOUDENGINE
+# Jolt option: USE_STATIC_MSVC_RUNTIME_LIBRARY (default ON = static /MT)
+# Set to OFF to use dynamic /MD
+set(USE_STATIC_MSVC_RUNTIME_LIBRARY OFF CACHE BOOL "Use static MSVC runtime library" FORCE)
+
+# Jolt build (local) — use Build subfolder
+add_subdirectory(libs/jolt/Build)
+
+# =============================================================================
+# Project Definition
+# =============================================================================
 project(CLOUDENGINE VERSION 0.4.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -47,6 +66,8 @@ target_include_directories(CloudEngine PRIVATE
     ${CMAKE_SOURCE_DIR}/libs/glm-master
     ${CMAKE_SOURCE_DIR}/libs/spdlog/include
     ${CMAKE_SOURCE_DIR}/libs/enet-1.3.18/include    # ENet headers
+    ${CMAKE_SOURCE_DIR}/libs/jolt/                   # Jolt headers root (for #include <Jolt/...>)
+    ${CMAKE_SOURCE_DIR}/libs/jolt/TestFramework/     # Jolt test framework
 )
 
 # Copy shaders to build directory (works for both build/ and build/Debug/)
@@ -61,4 +82,5 @@ target_link_libraries(CloudEngine PRIVATE
     glfw
     ${OPENGL_gl_LIBRARY}
     winmm.lib   # ENet time functions
+    Jolt::Jolt  # Jolt Physics
 )

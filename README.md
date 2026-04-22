@@ -1,6 +1,7 @@
 # CLOUDENGINE — Project C: The Clouds
 
 **Custom Game Engine for Cloud-floating MMO**
+*AI-Friendly Architecture • ECS-based • Migration from Unity 6*
 
 ---
 
@@ -10,8 +11,8 @@
 |----------|-------|
 | **Game** | Project C: The Clouds |
 | **Type** | MMO with open world over clouds |
-| **Engine** | Custom CLOUDENGINE (migrating from Unity 6) |
-| **World Size** | ~350,000 units radius |
+| **Engine** | Custom CLOUDENGINE (replacing Unity 6) |
+| **World Size** | ~350,000 units radius (circular) |
 | **Platform** | Windows (future: Linux) |
 
 ### Core Vision
@@ -30,36 +31,81 @@
 
 ---
 
+## Current Status (2026-04-22)
+
+### ✅ Completed Iterations (0-5)
+
+| # | Iteration | Status | Key Components |
+|---|-----------|--------|----------------|
+| 0 | Build Fix | ✅ | CMake + glad.c integration |
+| 1 | Core Foundation | ✅ | Engine, ECS (flecs), Logger, Config, Window (GLFW) |
+| 2 | Rendering Foundation | ✅ | CloudRenderer, ShaderManager, Camera, PrimitiveMesh |
+| 3 | Circular World | ✅ | ChunkManager, Chunk, CircularWorld, World streaming |
+| 4.1 | Basic Networking | ✅ | ENet, Server, Client, PacketTypes |
+| 4.2 | ECS Network Integration | ✅ | NetworkId, RemotePlayer, NetworkTransform components |
+| 4.3 | Player Sync | ✅ | Position interpolation, Yaw/Pitch sync, remote rendering |
+| 5 | Network Sync Priority | ✅ | Position buffer, full transform, player visualization |
+
+### 🔴 Current Tech Debt
+
+| Issue | Priority | Files |
+|-------|----------|-------|
+| Scale Issue — sphere visible only at 1000 units | HIGH | engine.cpp, camera.cpp, primitive_mesh.cpp |
+| Hardcoded 1000.0f camera offset | HIGH | engine.cpp:492 |
+| No Ship Physics (free flight only) | MEDIUM | engine.cpp (updateFlightControls) |
+| No Asset Loading (no 3D models) | MEDIUM | N/A |
+| No UI System | MEDIUM | N/A |
+
+### ✅ Working Features
+
+```
+✓ Window opens, 60 FPS stable
+✓ Volumetric cloud rendering (raymarch)
+✓ Sky, sun, ambient lighting
+✓ WASD + mouse flight controls
+✓ Host/Client multiplayer via ENet
+✓ Players see each other (spheres)
+✓ Circular world wrapping (350k radius)
+✓ Chunk loading/unloading system
+```
+
+---
+
 ## Architecture Stack
 
 ```
-┌─────────────────────────────────────────────────┐
-│                   GAME LAYER                     │
-│   (Scripts: Ship, Wind, Chunk Generation)       │
-├─────────────────────────────────────────────────┤
-│                     ECS (flecs)                 │
-├─────────────────────────────────────────────────┤
-│    Window (GLFW) │ Network (ENet) │ Render (OpenGL)    │
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                      GAME LAYER                         │
+│   (Ship Physics, Wind, Cloud Generation, Gameplay)      │
+├─────────────────────────────────────────────────────────┤
+│                      ECS (flecs)                        │
+│         Components • Systems • Pipeline Phases          │
+├─────────────────────────────────────────────────────────┤
+│  Window (GLFW) │ Network (ENet) │ Render (OpenGL 4.6)  │
+│        Input         Sessions          Shaders          │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ### Technology Stack
 
-| Component | Library | Purpose |
-|-----------|---------|---------|
-| Window | GLFW | Window, input |
-| ECS | flecs | Architecture |
-| Network | ENet | Multiplayer |
-| Render | OpenGL 4.6 | Rendering |
-| Math | GLM | Mathematics |
+| Component | Library | Version | Purpose |
+|-----------|---------|--------|---------|
+| Window | GLFW | 3.4 | Window, input |
+| ECS | flecs | 3.x | Architecture |
+| Network | ENet | 1.3.18 | Multiplayer |
+| Render | OpenGL | 4.6 | Rendering |
+| Math | GLM | 1.0 | Mathematics |
+| Logging | spdlog | 1.12 | Debug output |
+| GL Loading | glad | - | OpenGL loader |
 
-### What We DON'T Need
+### ECS Pipeline Phases
 
 ```
-✗ Terrain collision (clouds are visual)
-✗ Full physics engine (PhysX/Bullet)
-✗ Complex rigid body dynamics
-✗ AI pathfinding (ships fly where pilot wants)
+PreUpdate    → TimeData update, animation
+OnUpdate     → Gameplay logic, input processing, AI
+PostUpdate   → World system, chunk streaming
+PreStore     → Camera matrix, frustum culling
+OnStore      → Render calls (OpenGL)
 ```
 
 ---
@@ -67,94 +113,163 @@
 ## Documentation Structure
 
 ```
-docs/
-├── gdd/                    # Game Design Documents
-│   ├── GDD_00_Overview.md           # Game concept, pillars, audience
-│   ├── GDD_01_Core_Gameplay.md      # Controls, ship physics, movement
-│   ├── GDD_02_World_Environment.md  # World, floating islands, lore
-│   ├── GDD_10_Ship_System.md        # Ship classes, modules, fuel
-│   ├── GDD_11_Inventory_Items.md    # Item types, inventory wheel
-│   ├── GDD_12_Network_Multiplayer.md # Multiplayer architecture
-│   ├── GDD_13_UI_UX_System.md      # HUD, menus, tooltips
-│   ├── GDD_14_Visual_Art_Pipeline.md # Art style, shaders, effects
-│   ├── GDD_15_Audio_System.md       # Sound design
-│   ├── GDD_20_Progression_RPG.md    # XP, levels, ranks
-│   ├── GDD_21_Quest_Mission_System.md # Quests, contracts
-│   ├── GDD_22_Economy_Trading.md   # Economy, trade
-│   ├── GDD_23_Faction_Reputation.md # 5 Guilds, reputation
-│   ├── GDD_24_Narrative_World_Lore.md # Story, world lore
-│   └── GDD_25_Trade_Routes.md       # Trade routes, logistics
-│
-├── CLOUDENGINE/            # Engine Documentation
-│   ├── Research/           # Technical research documents
-│   │   ├── 01_VOLUMETRIC_CLOUD_RENDERING.md
-│   │   ├── 02_INFINITE_WORLD_ARCHITECTURE.md
-│   │   ├── 03_MINIMAL_PHYSICS_ENGINE.md
-│   │   ├── 04_NETWORKING_CLOUD_MMO.md
-│   │   ├── 05_ENGINE_CORE_INTEGRATION.md
-│   │   ├── 06_COMPARISON_MATRIX.md
-│   │   ├── 07_CUSTOM_ENGINE_ARCHITECTURE.md
-│   │   ├── 08_CIRCULAR_WORLD_ARCHITECTURE.md
-│   │   ├── 09_OPEN_SOURCE_LIB_STACK.md
-│   │   ├── 10_MINIMAL_ENGINE_ARCHITECTURE.md
-│   │   └── SYNTHESIS_MASTER.md
+CLOUDENGINE/
+├── README.md                          # This file
+├── ITERATION_PLAN.md                  # Original iteration plan
+├── docs/
+│   ├── gdd/                           # Game Design Documents
+│   │   ├── GDD_00_Overview.md         # Game concept, pillars
+│   │   ├── NEW_GDD_00_Overview.md     # Updated overview
+│   │   ├── GDD_12_Network_Multiplayer.md
+│   │   └── ... (25 GDD documents)
 │   │
-│   └── Iterations/        # Development iteration logs
-│       └── SESSION_LOG_YYYY-MM-DD.md  # Session summaries
+│   ├── CLOUDENGINE/
+│   │   ├── ITERATION_PLAN_EXTENDED.md # Extended roadmap (NEW)
+│   │   ├── Iterations/
+│   │   │   ├── Iteration-1-5/         # Session logs 2026-04-19 to 2026-04-21
+│   │   │   └── Iteration-6/           # Future iterations
+│   │   └── Research/
+│   │       └── (10 technical research docs)
+│   │
+│   ├── documentation/                 # Library documentation
+│   │   ├── INDEX.md
+│   │   ├── flecs/                     # ECS docs
+│   │   ├── glfw/                      # Window/input docs
+│   │   ├── glm/                       # Math docs
+│   │   ├── glad/                      # OpenGL loader docs
+│   │   └── spdlog/                    # Logging docs
+│   │
+│   └── MIGRATION_GUIDE.md             # Unity → CLOUDENGINE
 │
-└── MIGRATION_GUIDE.md     # Unity → CLOUDENGINE migration
+└── unity_migration/                   # Legacy Unity docs (reference)
 ```
 
 ---
 
-## Key Systems
+## Key Systems (Current)
 
 ### 1. Volumetric Clouds
 
 ```
 Layers: Upper (4000-6000m), Middle (2000-4000m), Lower (500-2000m)
 Rendering: Volumetric raymarching (48 steps)
-Style: Ghibli (rim lighting, soft edges)
-Animation: Wind-driven
+Style: Ghibli (rim lighting, soft edges, warm colors)
+Animation: Wind-driven, seed-based (deterministic)
+Shaders: cloud_raymarch.frag, cloud_advanced.frag
 ```
 
 ### 2. Wind System
 
 ```
-Global: Always present, changes slowly
-Local zones: Thermal, Gust, Shear
-Affects: Ships, clouds
+Global: Always present, direction changes slowly
+Speed: 5-20 m/s
+Local zones: Thermal (updrafts), Gust (bursts), Shear (turbulence)
+Affects: Ship movement, cloud animation
 ```
 
-### 3. Procedural World
+### 3. Procedural World (Circular)
 
 ```
-Chunk: 2000×2000×1000 units
-Generation: Seed-based (deterministic)
-Streaming: Load/unload based on movement
-Floating Origin: For large coordinates
+World radius: ~350,000 units
+Chunk size: 2000×2000×1000 units
+Generation: Seed-based (deterministic, multiplayer-compatible)
+Streaming: Load/unload based on camera position
+Wrapping: Seamless circular boundary
 ```
 
-### 4. Ships
+### 4. Ships (Planned)
 
 ```
-Classes: Light, Medium, Heavy, Heavy II
-Physics: Antigravity + wind + inertia
+Classes: Light (800kg), Medium (1000kg), Heavy (1500kg), Heavy II (2000kg)
+Physics: Antigravity + wind + inertia (custom, no physics engine)
 Coop: 2-4 players per airship
+Controls: WASD + mouse (yaw/pitch), Q/E (lift), Shift (boost), F (exit)
 ```
 
 ---
 
-## Migration Status (Unity → CLOUDENGINE)
+## Build & Run
+
+### Requirements
+
+- CMake 3.20+
+- MinGW or MSVC
+- GLFW 3.4, GLM, flecs, ENet, spdlog (included in libs/)
+
+### Build
+
+```bash
+# Create build directory
+mkdir build && cd build
+
+# Configure (MinGW Makefiles)
+cmake .. -G "MinGW Makefiles"
+
+# Build
+cmake --build . --config Debug
+
+# Run singleplayer
+./Debug/CloudEngine.exe
+
+# Run as host
+./Debug/CloudEngine.exe --host
+
+# Run as client
+./Debug/CloudEngine.exe --client localhost
+```
+
+### Quick Test Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `test_player.bat` | Singleplayer mode |
+| `test_multiplayer.bat` | Host + Client test |
+| `run_debug_player.bat` | Debug singleplayer |
+
+---
+
+## Development Roadmap
+
+### Phase 1: Tech Debt Fix (1-2 days)
+- [ ] Scale Issue investigation (camera, projection, sphere generation)
+- [ ] Remove hardcoded 1000.0f offset
+- [ ] Update documentation
+
+### Phase 2: Ship Physics MVP (3-5 days)
+- [ ] ShipController components (Rigidbody, ShipInput, Aerodynamics)
+- [ ] ShipControllerSystem (input → forces → physics)
+- [ ] Wind integration (global + local zones)
+- [ ] Test "feels right" feedback
+
+### Phase 3: Asset System (2-3 days)
+- [ ] AssetManager (glTF loader)
+- [ ] Texture loading (PNG/DDS)
+- [ ] Player ship model (replace spheres)
+
+### Phase 4: UI System (3-5 days)
+- [ ] UIRenderer (OpenGL-based)
+- [ ] HUD elements (speed, altitude, fuel)
+- [ ] Menu system (main menu, pause)
+
+### Phase 5: Polish
+- [ ] Performance optimization
+- [ ] Network improvements
+- [ ] LLM-friendly documentation
+
+---
+
+## Migration Status (Unity 6 → CLOUDENGINE)
 
 | System | Status | Notes |
 |--------|--------|-------|
-| Engine Core | In Progress | ECS architecture |
-| Network Stack | Pending | Custom UDP/RPC |
-| Rendering | Pending | Custom renderer + HLSL |
-| Physics | Pending | Custom collision/rigidbody |
-| Input System | Pending | Custom InputReader |
-| World Streaming | Pending | ChunkLoader adaptation |
+| Engine Core | ✅ DONE | ECS architecture complete |
+| Cloud Rendering | ✅ DONE | Volumetric raymarch |
+| World System | ✅ DONE | Circular world, chunks |
+| Network Stack | ✅ DONE | ENet, Host/Client |
+| Ship Physics | 🟡 IN PROGRESS | Free flight → Ship physics |
+| Asset System | ⬜ PENDING | No model loading yet |
+| UI System | ⬜ PENDING | No HUD/menus yet |
+| Physics | ⬜ PENDING | Custom (no PhysX/Bullet) |
 
 ### Key Migration Patterns
 
@@ -167,53 +282,43 @@ Coop: 2-4 players per airship
 | Update() | ISystem.Execute() |
 | Coroutine | Job + completion callback |
 | Resources.Load() | AssetRegistry.Get() |
+| NetworkVariable | NetworkTransform + serialization |
+| ServerRpc/ClientRpc | Custom Rpc system |
 
 ---
 
-## Quick Start
+## AI Agent Support
 
-### Option A: Unity 6 (current)
+CLOUDENGINE is designed to be **AI-agent-friendly**:
+
+- **Clear file structure** — predictable locations for components
+- **ECS patterns** — consistent architecture across systems
+- **Synapse Memory** — indexed documentation for context
+- **Skills** — `.clinerules/skills/` for common tasks
+- **Session recovery** — context saved between sessions
+
+### Commands for AI
 
 ```bash
-# Open project in Unity 6
-# Use existing C# scripts
+# Reindex project
+/index-project
+
+# Search docs
+/search-docs "ECS component system"
+
+# Check memory stats
+/memory-stats
 ```
-
-### Option B: Custom Engine
-
-```bash
-# Clone repository
-git clone https://github.com/boozzeeboom/CLOUDENGINE.git
-cd CLOUDENGINE
-
-# Build with CMake
-mkdir build && cd build
-cmake ..
-make
-
-# Run
-./CloudEngine
-```
-
----
-
-## Development Timeline
-
-| Phase | Weeks | Focus |
-|-------|-------|-------|
-| Prototype | 2-4 | Clouds + ship + wind |
-| World | 4-6 | Chunks + generation |
-| Network | 4-6 | Networking |
-| Polish | 2-4 | UI + fixes |
-| **Total** | **12-20** | **3-5 months** |
 
 ---
 
 ## Links
 
 - GitHub: https://github.com/boozzeeboom/CLOUDENGINE
-- Original Unity Project: (separate repository)
+- Extended Plan: `docs/CLOUDENGINE/ITERATION_PLAN_EXTENDED.md`
+- Iteration Plan: `docs/ITERATION_PLAN.md`
 
 ---
 
-**Last Updated:** 2026-04-19
+**Last Updated:** 2026-04-22  
+**Current Version:** v0.5 (Pre-alpha, MVP functional)

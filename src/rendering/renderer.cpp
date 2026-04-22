@@ -4,6 +4,8 @@
 #include <ecs/world.h>
 #include "shader_manager.h"
 #include "cloud_renderer.h"
+#include <fstream>
+#include <filesystem>
 
 // GLAD must be included BEFORE GLFW
 #define __gl_h_
@@ -48,7 +50,32 @@ bool Renderer::init() {
     // Initialize shader manager (simple, no hot-reload)
     RENDER_LOG_INFO("Renderer::init() - initializing ShaderManager");
     GetShaderManager().init();
-    GetShaderManager().setBasePath("shaders/");
+    
+    // Set shader base path - find shaders/ folder relative to executable location
+    // Try multiple potential locations
+    std::string shaderBasePath = "shaders/";
+    
+    // Check if shaders exist in CWD first
+    if (!std::filesystem::exists(shaderBasePath + "fullscreen.vert")) {
+        // Try relative to build directory (build/Release/shaders/)
+        if (std::filesystem::exists("../shaders/fullscreen.vert")) {
+            shaderBasePath = "../shaders/";
+            RENDER_LOG_DEBUG("Renderer::init() - using relative path: {}", shaderBasePath);
+        }
+        // Try absolute path from project root
+        else if (std::filesystem::exists("C:/CLOUDPROJECT/CLOUDENGINE/shaders/fullscreen.vert")) {
+            shaderBasePath = "C:/CLOUDPROJECT/CLOUDENGINE/shaders/";
+            RENDER_LOG_DEBUG("Renderer::init() - using absolute path: {}", shaderBasePath);
+        }
+        else {
+            RENDER_LOG_WARN("Renderer::init() - shaders not found, using default: {}", shaderBasePath);
+        }
+    }
+    else {
+        RENDER_LOG_DEBUG("Renderer::init() - shaders found in CWD: {}", shaderBasePath);
+    }
+    
+    GetShaderManager().setBasePath(shaderBasePath.c_str());
     
     // Load cloud shader
     ShaderID cloudShaderID = GetShaderManager().load("cloud_advanced", "fullscreen.vert", "cloud_advanced.frag");
