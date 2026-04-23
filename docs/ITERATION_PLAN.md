@@ -170,8 +170,8 @@ CloudEngine.exe --client  # Client (localhost:12345)
 ## ITERATION 6 — Airship Physics (3–4 недели) 🔄 IN PROGRESS
 
 **Цель**: Базовые физика и управление воздушными судами.
-**Статус**: Jolt Physics работает, управление частично реализовано
-**Дата последнего обновления**: 2026-04-23
+**Статус**: Jolt Physics работает, ShipController реализован
+**Дата последнего обновления**: 2026-04-24
 
 ### 6.1 Jolt Physics Integration ✅
 - [x] Jolt Physics library integrated
@@ -190,22 +190,26 @@ CloudEngine.exe --client  # Client (localhost:12345)
 | Key | Action | Status |
 |-----|--------|--------|
 | W/S | Forward/backward thrust | ✅ Working |
-| A/D | Yaw rotation (turn left/right) | ⚠️ Weak |
+| A/D | Yaw rotation (turn left/right) | ✅ Working |
 | Q/E | Up/down thrust | ✅ Working |
 | Space | Up thrust | ✅ Working |
-| Z/X | Roll rotation | ✅ Code implemented |
-| C/V | Pitch rotation (backup) | ✅ Code implemented |
+| Z/X | Roll rotation | ✅ Working |
+| C/V | Pitch rotation | ✅ Working |
 | Shift | Boost | ✅ Working |
 | Mouse | Pitch/yaw camera | ✅ Working |
 
-### 6.4 Physics System ✅
-- [x] Fixed delta time physics integration
-- [x] applyForce() for linear movement
-- [x] applyTorque() for rotation
-- [x] SyncJoltToECS system for position sync
+### 6.4 Wind System 🔄 IN PROGRESS
+- [x] Architecture design completed
+- [ ] `wind_components.h` — ECS components
+- [ ] `wind_module.h/cpp` — Wind systems
+- [ ] `WindForceApplicationSystem` — Jolt integration
+- [ ] Global wind + zone support
+- [ ] Profile types: Constant, Gust, Shear, Thermal, Turbulence
+
+**Session 6.2 Prompt:** `docs/CLOUDENGINE/Iterations/Iteration_6_2/SESSION_PROMPT_WIND_INTEGRATION.md`
 
 ### Known Issues
-- A/D yaw rotation is weak — needs more torque
+- A/D yaw rotation was weak — increased torque (fixed)
 - Rotation not visible on primitive sphere (needs 3D model)
 
 ---

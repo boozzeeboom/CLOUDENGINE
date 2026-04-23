@@ -517,7 +517,7 @@ data/
 - [ ] Basic constant wind calculation
 - [ ] WindCalculationSystem skeleton
 
-### Phase 2: Jolt Integration (2-3 days)
+### Phase 2: Jolt Integration (2-3 days) 🔄 IN PROGRESS (6.2)
 - [ ] WindForceApplicationSystem (Jolt BodyInterface)
 - [ ] Link WindReceiver to JoltBodyId
 - [ ] Apply forces in PhysicsPhase
@@ -546,6 +546,43 @@ data/
 - [ ] Network protocol for wind zones
 - [ ] Client-side wind application
 - [ ] Synchronization of global wind changes
+
+---
+
+## 10.1 Session 6.2: Wind Integration Sprint
+
+**Date:** 2026-04-24  
+**Duration:** 3-4 hours  
+**Session Prompt:** `docs/CLOUDENGINE/Iterations/Iteration_6_2/SESSION_PROMPT_WIND_INTEGRATION.md`
+
+### Session Goals
+
+| Priority | Task | Status |
+|----------|------|--------|
+| P1 | Create wind_components.h | ⏳ |
+| P1 | Create WindModule + systems | ⏳ |
+| P1 | Implement WindForceApplicationSystem | ⏳ |
+| P1 | Test: ships drift in wind | ⏳ |
+| P2 | Gust profile implementation | ⏳ |
+| P2 | Zone detection (AABB) | ⏳ |
+| P3 | Shear profile | ⏳ |
+
+### Files to Create
+
+```
+src/ecs/components/wind_components.h
+src/ecs/modules/wind_module.h
+src/ecs/modules/wind_module.cpp
+data/wind/global_wind.json
+```
+
+### Success Criteria
+
+- [ ] Build passes
+- [ ] Ships drift in global wind
+- [ ] Heavy < Light ship affected
+- [ ] Gust creates oscillation
+- [ ] <1ms for 1000 receivers
 
 ---
 
