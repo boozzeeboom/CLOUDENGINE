@@ -135,7 +135,7 @@ inline flecs::entity createLocalPlayer(flecs::world& world, uint32_t playerId, c
     }
     
     CE_LOG_INFO("createLocalPlayer: Adding ShipPhysics...");
-    e.set<ShipPhysics>({1000.0f, 50000.0f});  // mass=1000kg, thrust=50000N
+    e.set<ShipPhysics>({1000.0f, 50000000.0f});  // mass=1000kg, thrust=50000000N (TEST: x1000)
     CE_LOG_INFO("createLocalPlayer: ShipPhysics ADDED OK");
     
     CE_LOG_INFO("createLocalPlayer: Adding ShipInput...");

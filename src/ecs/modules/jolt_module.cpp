@@ -96,6 +96,10 @@ void JoltPhysicsModule::init() {
         *_objectLayerPairFilter
     );
 
+    // FIX: Set gravity to zero for space environment (no gravity in clouds)
+    _physicsSystem->SetGravity(JPH::Vec3::sZero());
+    CE_LOG_INFO("JoltPhysicsModule: SetGravity to (0,0,0) - space mode");
+
     _initialized = true;
     _accumulator = 0.0f;
 
@@ -153,8 +157,8 @@ void JoltPhysicsModule::shutdown() {
     JPH::Factory::sInstance = nullptr;
 
     // PRIORITY 3 FIX: Release persistent allocator and job system
-        delete _jobSystem;
-        _jobSystem = nullptr;
+    delete _jobSystem;
+    _jobSystem = nullptr;
     _tempAllocator.reset();
 
     _initialized = false;
@@ -226,8 +230,13 @@ JPH::BodyID createBoxBody(
         JPH::EMotionType::Dynamic,
         layer
     );
-    // FIX: Set mass directly using mMass property
-    settings.mMassPropertiesOverride.SetMass(mass);
+    
+    // Calculate proper mass properties - use uniform scale for mass
+    JPH::MassProperties massProps = shape->GetMassProperties();
+    massProps.Scale(JPH::Vec3(mass, mass, mass));  // Scale uniformly by mass (kg)
+    settings.mMassPropertiesOverride = massProps;
+    
+    CE_LOG_INFO("createBoxBody: mass={} kg, motionType=Dynamic, layer={}", mass, layer);
     settings.mAllowDynamicOrKinematic = true;
 
     JPH::BodyID bodyId = bodyInterface.CreateAndAddBody(settings, JPH::EActivation::Activate);
@@ -235,6 +244,11 @@ JPH::BodyID createBoxBody(
         CE_LOG_ERROR("JoltPhysicsModule: Failed to create body");
         return JPH::BodyID();
     }
+    
+    // FIX: Set gravity factor to 0 so body is not affected by gravity
+    bodyInterface.SetGravityFactor(bodyId, 0.0f);
+    CE_LOG_INFO("createBoxBody: SetGravityFactor=0.0 for bodyId={}", bodyId.GetIndex());
+    
     return bodyId;
 }
 
@@ -263,7 +277,13 @@ JPH::BodyID createSphereBody(
         JPH::EMotionType::Dynamic,
         layer
     );
-    settings.mMassPropertiesOverride.mMass = mass;
+    
+    // Calculate proper mass properties - use uniform scale for mass
+    JPH::MassProperties massProps = shape->GetMassProperties();
+    massProps.Scale(JPH::Vec3(mass, mass, mass));  // Scale uniformly by mass (kg)
+    settings.mMassPropertiesOverride = massProps;
+    
+    CE_LOG_INFO("createSphereBody: mass={} kg, motionType=Dynamic, layer={}", mass, layer);
     settings.mAllowDynamicOrKinematic = true;
 
     JPH::BodyID bodyId = bodyInterface.CreateAndAddBody(settings, JPH::EActivation::Activate);
@@ -271,6 +291,11 @@ JPH::BodyID createSphereBody(
         CE_LOG_ERROR("JoltPhysicsModule: Failed to create sphere body");
         return JPH::BodyID();
     }
+    
+    // FIX: Set gravity factor to 0 so body is not affected by gravity
+    bodyInterface.SetGravityFactor(bodyId, 0.0f);
+    CE_LOG_INFO("createSphereBody: SetGravityFactor=0.0 for bodyId={}", bodyId.GetIndex());
+    
     return bodyId;
 }
 
@@ -316,8 +341,25 @@ void applyForce(
 ) {
     if (bodyId == JPH::BodyID()) return;
     if (!module.isInitialized()) return;
+    
     JPH::BodyInterface& bodyInterface = module.getBodyInterface();
+    
+    // DIAGNOSTIC: Log velocity before force
+    JPH::Vec3 velBefore = bodyInterface.GetLinearVelocity(bodyId);
+    CE_LOG_TRACE("applyForce: PRE vel=({:.2f},{:.2f},{:.2f})", 
+        velBefore.GetX(), velBefore.GetY(), velBefore.GetZ());
+    
+    // Log force being applied
+    CE_LOG_TRACE("applyForce: bodyId={}, force=({:.1f}, {:.1f}, {:.1f}), activation={}", 
+        bodyId.GetIndex(), force.x, force.y, force.z,
+        activation == JPH::EActivation::Activate ? "Activate" : "DontActivate");
+    
     bodyInterface.AddForce(bodyId, JPH::Vec3(force.x, force.y, force.z), activation);
+    
+    // DIAGNOSTIC: Log velocity after force
+    JPH::Vec3 velAfter = bodyInterface.GetLinearVelocity(bodyId);
+    CE_LOG_TRACE("applyForce: POST vel=({:.2f},{:.2f},{:.2f})", 
+        velAfter.GetX(), velAfter.GetY(), velAfter.GetZ());
 }
 
 void applyTorque(
@@ -329,7 +371,18 @@ void applyTorque(
     if (bodyId == JPH::BodyID()) return;
     if (!module.isInitialized()) return;
     JPH::BodyInterface& bodyInterface = module.getBodyInterface();
+    
+    // DIAGNOSTIC: Log angular velocity before and after torque
+    JPH::Vec3 angVelBefore = bodyInterface.GetAngularVelocity(bodyId);
+    CE_LOG_TRACE("applyTorque: PRE angVel=({:.4f},{:.4f},{:.4f}), torque=({:.1f},{:.1f},{:.1f})", 
+        angVelBefore.GetX(), angVelBefore.GetY(), angVelBefore.GetZ(),
+        torque.x, torque.y, torque.z);
+    
     bodyInterface.AddTorque(bodyId, JPH::Vec3(torque.x, torque.y, torque.z), activation);
+    
+    JPH::Vec3 angVelAfter = bodyInterface.GetAngularVelocity(bodyId);
+    CE_LOG_TRACE("applyTorque: POST angVel=({:.4f},{:.4f},{:.4f})", 
+        angVelAfter.GetX(), angVelAfter.GetY(), angVelAfter.GetZ());
 }
 
 // =============================================================================

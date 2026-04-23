@@ -32,26 +32,47 @@ void registerShipControllerSystem(flecs::world& world) {
             static float mouseSensitivity = 0.002f;
             static double lastMouseX = 0.0;
             static double lastMouseY = 0.0;
+            static int lastLogFrame = 0;
+            static int frameCounter = 0;
+            frameCounter++;
+            
+            // DIAGNOSTIC: Log when system runs and if entities found
+            if (frameCounter % 60 == 0 || frameCounter == 1) {
+                CE_LOG_INFO("ShipInputCapture: frame={}, entities found={}", frameCounter, it.count());
+            }
+            
+            if (it.count() == 0) {
+                // Only log once per second to avoid spam
+                if (frameCounter - lastLogFrame > 60) {
+                    CE_LOG_WARN("ShipInputCapture: NO entities match filter! Check if LocalPlayer has ShipInput+IsPlayerShip components.");
+                    lastLogFrame = frameCounter;
+                }
+                return;
+            }
             
             for (auto i : it) {
                 flecs::entity e = it.entity(i);
                 ShipInput* input = e.get_mut<ShipInput>();
                 if (!input) continue;
                 
-                // Toggle cursor capture on right mouse button
-                if (Platform::Window::isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT)) {
-                    if (!cursorCaptured) {
-                        cursorCaptured = true;
-                        Platform::Window::setCursorCapture(true);
-                        CE_LOG_INFO("ShipInput: CURSOR CAPTURED (RMB)");
-                    }
-                } else if (cursorCaptured) {
-                    cursorCaptured = false;
-                    Platform::Window::setCursorCapture(false);
-                    *input = ShipInput{};
-                    continue;
-                }
+                // FIX: Toggle cursor capture on RMB press (not hold!)
+                // Use edge detection - capture on press, not while held
+                static bool lastRMBPressed = false;
+                bool currentRMBPressed = Platform::Window::isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
                 
+                // Rising edge: was not pressed, now pressed
+                if (currentRMBPressed && !lastRMBPressed) {
+                    cursorCaptured = !cursorCaptured;  // Toggle!
+                    Platform::Window::setCursorCapture(cursorCaptured);
+                    if (cursorCaptured) {
+                        CE_LOG_INFO("ShipInput: CURSOR CAPTURED (RMB pressed)");
+                    } else {
+                        CE_LOG_INFO("ShipInput: CURSOR RELEASED (RMB pressed)");
+                    }
+                }
+                lastRMBPressed = currentRMBPressed;
+                
+                // Skip input if cursor not captured
                 if (!cursorCaptured) {
                     *input = ShipInput{};
                     continue;
@@ -71,8 +92,19 @@ void registerShipControllerSystem(flecs::world& world) {
                 if (Platform::Window::isKeyPressed(GLFW_KEY_S)) input->forwardThrust = -1.0f;
                 if (Platform::Window::isKeyPressed(GLFW_KEY_A)) { input->lateralThrust = -1.0f; input->yawInput = -1.0f; }
                 if (Platform::Window::isKeyPressed(GLFW_KEY_D)) { input->lateralThrust = 1.0f; input->yawInput = 1.0f; }
-                if (Platform::Window::isKeyPressed(GLFW_KEY_E) || Platform::Window::isKeyPressed(GLFW_KEY_SPACE)) input->verticalThrust = 1.0f;
-                if (Platform::Window::isKeyPressed(GLFW_KEY_Q)) input->verticalThrust = -1.0f;
+                
+                // DIAGNOSTIC: Log key states every second
+                static int keyLogFrame = 0;
+                keyLogFrame++;
+                bool spacePressed = Platform::Window::isKeyPressed(GLFW_KEY_SPACE);
+                bool ePressed = Platform::Window::isKeyPressed(GLFW_KEY_E);
+                bool qPressed = Platform::Window::isKeyPressed(GLFW_KEY_Q);
+                if (keyLogFrame % 60 == 0) {
+                    CE_LOG_INFO("KeyState: Space={} E={} Q={}", spacePressed ? "PRESSED" : "up", ePressed ? "PRESSED" : "up", qPressed ? "PRESSED" : "up");
+                }
+                
+                if (spacePressed || ePressed) input->verticalThrust = 1.0f;
+                if (qPressed) input->verticalThrust = -1.0f;
                 if (Platform::Window::isKeyPressed(GLFW_KEY_LEFT_SHIFT)) input->boost = true;
                 input->pitchInput = -glm::clamp(cameraPitch, -1.0f, 1.0f);
             }
@@ -128,18 +160,17 @@ void registerShipControllerSystem(flecs::world& world) {
                     ::Core::ECS::applyForce(JoltPhysicsModule::get(), joltId->id, force, JPH::EActivation::Activate);
                 }
                 
-                // Apply vertical thrust
+                // Apply vertical thrust (Space/E = up, Q = down)
                 if (input->verticalThrust != 0.0f) {
-                    // FIX: Increased multiplier from 0.5 to 2.0 for stronger upward lift
                     glm::vec3 force(0.0f, input->verticalThrust * physics->thrust * 2.0f, 0.0f);
                     CE_LOG_DEBUG("ShipController: vert force=({:.1f},{:.1f},{:.1f}) bodyId={}", 
                         force.x, force.y, force.z, joltId->id.GetIndex());
                     ::Core::ECS::applyForce(JoltPhysicsModule::get(), joltId->id, force, JPH::EActivation::Activate);
                 }
                 
-                // Apply yaw torque
+                // Apply yaw torque (INCREASED x10 for better turn)
                 if (input->yawInput != 0.0f) {
-                    glm::vec3 torque(0.0f, physics->mass * 10.0f * input->yawInput, 0.0f);
+                    glm::vec3 torque(0.0f, physics->mass * 100.0f * input->yawInput, 0.0f);
                     CE_LOG_DEBUG("ShipController: yaw torque=({:.1f},{:.1f},{:.1f}) bodyId={}", 
                         torque.x, torque.y, torque.z, joltId->id.GetIndex());
                     ::Core::ECS::applyTorque(JoltPhysicsModule::get(), joltId->id, torque, JPH::EActivation::Activate);
