@@ -89,28 +89,52 @@ void registerShipControllerSystem(flecs::world& world) {
                 // Reset and read keyboard
                 *input = ShipInput{};
                 
-                // Linear thrust - W/S for forward/back
-                if (Platform::Window::isKeyPressed(GLFW_KEY_W)) input->forwardThrust = 1.0f;
-                if (Platform::Window::isKeyPressed(GLFW_KEY_S)) input->forwardThrust = -1.0f;
+                // === THRUST CONTROLS ===
+                // Forward/backward - W/S keys
+                if (Platform::Window::isKeyPressed(GLFW_KEY_W)) {
+                    input->forwardThrust = 1.0f;
+                } else if (Platform::Window::isKeyPressed(GLFW_KEY_S)) {
+                    input->forwardThrust = -1.0f;
+                } else {
+                    input->forwardThrust = 0.0f;
+                }
                 
-                // Yaw rotation - A/D keys (SEPARATE from lateral thrust!)
-                if (Platform::Window::isKeyPressed(GLFW_KEY_A)) input->yawInput = -1.0f;
-                if (Platform::Window::isKeyPressed(GLFW_KEY_D)) input->yawInput = 1.0f;
+                // Vertical thrust - Q/E keys (Q=down, E=up)
+                if (Platform::Window::isKeyPressed(GLFW_KEY_E)) {
+                    input->verticalThrust = 1.0f;
+                } else if (Platform::Window::isKeyPressed(GLFW_KEY_Q)) {
+                    input->verticalThrust = -1.0f;
+                } else {
+                    input->verticalThrust = 0.0f;
+                }
                 
-                // Vertical thrust - Q/E for up/down lift
-                if (Platform::Window::isKeyPressed(GLFW_KEY_E)) input->verticalThrust = 1.0f;
-                if (Platform::Window::isKeyPressed(GLFW_KEY_Q)) input->verticalThrust = -1.0f;
+                // === ROTATION CONTROLS ===
+                // Roll - Z/X keys
+                if (Platform::Window::isKeyPressed(GLFW_KEY_Z)) {
+                    input->rollInput = -1.0f;
+                } else if (Platform::Window::isKeyPressed(GLFW_KEY_X)) {
+                    input->rollInput = 1.0f;
+                } else {
+                    input->rollInput = 0.0f;
+                }
                 
-                // Roll control - Z/X keys
-                if (Platform::Window::isKeyPressed(GLFW_KEY_Z)) input->rollInput = -1.0f;
-                if (Platform::Window::isKeyPressed(GLFW_KEY_X)) input->rollInput = 1.0f;
+                // Yaw - A/D keys
+                if (Platform::Window::isKeyPressed(GLFW_KEY_A)) {
+                    input->yawInput = -1.0f;
+                } else if (Platform::Window::isKeyPressed(GLFW_KEY_D)) {
+                    input->yawInput = 1.0f;
+                } else {
+                    input->yawInput = 0.0f;
+                }
                 
-                // Secondary pitch - C/V keys (backup for mouse)
-                if (Platform::Window::isKeyPressed(GLFW_KEY_C)) input->pitchInput -= 1.0f;
-                if (Platform::Window::isKeyPressed(GLFW_KEY_V)) input->pitchInput += 1.0f;
-                
-                // Mouse pitch from camera look
-                input->pitchInput -= glm::clamp(cameraPitch, -1.0f, 1.0f);
+                // Pitch - C/V keys
+                if (Platform::Window::isKeyPressed(GLFW_KEY_C)) {
+                    input->pitchInput = -1.0f;
+                } else if (Platform::Window::isKeyPressed(GLFW_KEY_V)) {
+                    input->pitchInput = 1.0f;
+                } else {
+                    input->pitchInput = 0.0f;
+                }
                 
                 if (Platform::Window::isKeyPressed(GLFW_KEY_LEFT_SHIFT)) input->boost = true;
             }
@@ -184,12 +208,12 @@ void registerShipControllerSystem(flecs::world& world) {
                 
                 // Apply torque for rotation (pitch, yaw, roll)
                 // pitch = X, yaw = Y, roll = Z (Jolt convention)
-                // Use reasonable torque magnitude for spacecraft feel
+                // FIX: Increased multiplier from 50 to 500 to 50000 for much better responsiveness
                 if (input->yawInput != 0.0f || input->pitchInput != 0.0f || input->rollInput != 0.0f) {
                     glm::vec3 torque(
-                        physics->mass * 50.0f * input->pitchInput,  // pitch around X
-                        physics->mass * 50.0f * input->yawInput,    // yaw around Y
-                        physics->mass * 50.0f * input->rollInput     // roll around Z
+                        physics->mass * 50000.0f * input->pitchInput,  // pitch around X (50,000,000 N*m for mass=1000)
+                        physics->mass * 50000.0f * input->yawInput,    // yaw around Y
+                        physics->mass * 50000.0f * input->rollInput     // roll around Z
                     );
                     CE_LOG_DEBUG("ShipController: torque=({:.1f},{:.1f},{:.1f}) bodyId={}", 
                         torque.x, torque.y, torque.z, joltId->id.GetIndex());

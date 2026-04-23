@@ -269,16 +269,51 @@ JPH::BodyID createBoxBody(
     bodyInterface.SetGravityFactor(bodyId, 0.0f);
     CE_LOG_INFO("createBoxBody: SetGravityFactor=0.0 for bodyId={}", bodyId.GetIndex());
     
-    // DIAGNOSTIC: Check body motion properties
+    // CRITICAL FIX: Set inverse inertia manually via MotionProperties
+    // Jolt's mMassPropertiesOverride can have issues, so we always ensure correct values
     JPH::PhysicsSystem* physicsSystem = module.getPhysicsSystem();
-    JPH::BodyLockRead lock(physicsSystem->GetBodyLockInterface(), bodyId);
-    if (lock.Succeeded()) {
-        const JPH::Body& body = lock.GetBody();
-        CE_LOG_INFO("createBoxBody: motionType={} (0=Static,1=Kinematic,2=Dynamic)", (int)body.GetMotionType());
-        // Check inertia
-        JPH::Mat44 inertia = body.GetInverseInertia();
-        CE_LOG_INFO("createBoxBody: invInertia diag=({:.4f},{:.4f},{:.4f})", 
-            inertia(0,0), inertia(1,1), inertia(2,2));
+    
+    // First: read lock to check motion type
+    {
+        JPH::BodyLockRead lock(physicsSystem->GetBodyLockInterface(), bodyId);
+        if (lock.Succeeded()) {
+            const JPH::Body& body = lock.GetBody();
+            CE_LOG_INFO("createBoxBody: motionType={} (0=Static,1=Kinematic,2=Dynamic)", (int)body.GetMotionType());
+            JPH::Vec3 angVel = body.GetAngularVelocity();
+            CE_LOG_INFO("createBoxBody: angVel=({:.4f},{:.4f},{:.4f})", 
+                angVel.GetX(), angVel.GetY(), angVel.GetZ());
+        }
+    }
+    
+    // Second: write lock to set inverse inertia
+    {
+        JPH::BodyLockWrite writeLock(physicsSystem->GetBodyLockInterface(), bodyId);
+        if (writeLock.Succeeded()) {
+            JPH::Body& writableBody = writeLock.GetBody();
+            JPH::MotionProperties* mp = writableBody.GetMotionProperties();
+            if (mp != nullptr) {
+                // Calculate inverse inertia from our direct tensor
+                // invI = 1/I for each principal axis
+                float invIx = (Ix > 0.0f) ? 1.0f / Ix : 0.0f;
+                float invIy = (Iy > 0.0f) ? 1.0f / Iy : 0.0f;
+                float invIz = (Iz > 0.0f) ? 1.0f / Iz : 0.0f;
+                
+                // Set inverse inertia directly via MotionProperties
+                mp->SetInverseInertia(JPH::Vec3(invIx, invIy, invIz), JPH::Quat::sIdentity());
+                
+                CE_LOG_INFO("createBoxBody: SetInverseInertia({:.6f},{:.6f},{:.6f})", 
+                    invIx, invIy, invIz);
+                
+                // Verify the values
+                JPH::Mat44 fixedInertia = writableBody.GetInverseInertia();
+                CE_LOG_INFO("createBoxBody: invInertia final diag=({:.6f},{:.6f},{:.6f})", 
+                    fixedInertia(0,0), fixedInertia(1,1), fixedInertia(2,2));
+            } else {
+                CE_LOG_ERROR("createBoxBody: MotionProperties is NULL!");
+            }
+        } else {
+            CE_LOG_ERROR("createBoxBody: Could not acquire write lock!");
+        }
     }
     
     return bodyId;
@@ -400,32 +435,51 @@ void applyTorque(
     const glm::vec3& torque,
     JPH::EActivation activation
 ) {
-    if (bodyId == JPH::BodyID()) return;
-    if (!module.isInitialized()) return;
+    if (bodyId == JPH::BodyID()) {
+        CE_LOG_WARN("applyTorque: bodyId is INVALID!");
+        return;
+    }
+    if (!module.isInitialized()) {
+        CE_LOG_WARN("applyTorque: module not initialized!");
+        return;
+    }
     JPH::BodyInterface& bodyInterface = module.getBodyInterface();
     
-    // Use AddTorque to properly apply rotational force to the body
-    // This respects body inertia and integrates with Jolt's physics
-    // Scale down the torque: ship_controller sends mass * multiplier (e.g., 1000 * 100 = 100000 N*m)
-    // Too large! Scale to reasonable values (~10-100 N*m for a spacecraft)
-    float torqueScale = 0.001f;  // Scale from 100,000 to ~100 N*m
+    // Get current angular velocity
+    JPH::Vec3 currentAngVel = bodyInterface.GetAngularVelocity(bodyId);
     
-    JPH::Vec3 joltTorque(
-        torque.x * torqueScale,  // pitch
-        torque.y * torqueScale,  // yaw
-        torque.z * torqueScale   // roll (unused)
+    // FIX: Convert world-space torque to body-local torque
+    // Get body rotation to transform torque from world to local space
+    JPH::Quat bodyRotation = bodyInterface.GetRotation(bodyId);
+    JPH::Mat44 rotMatrix = JPH::Mat44::sRotation(bodyRotation);
+    JPH::Mat44 invRotMatrix = rotMatrix.Transposed();  // Rotation matrix is orthogonal, so transpose = inverse
+    
+    // Transform torque to local space (rotate out of world orientation)
+    JPH::Vec3 localTorque = invRotMatrix * JPH::Vec3(torque.x, torque.y, torque.z);
+    
+    // Calculate target angular velocity from torque input
+    float maxAngVel = 3.0f;  // max 3 rad/s (~0.5 rotations/sec)
+    JPH::Vec3 targetAngVel(
+        localTorque.GetX() / 1000.0f * maxAngVel,  // X = pitch
+        localTorque.GetY() / 1000.0f * maxAngVel,  // Y = yaw
+        localTorque.GetZ() / 1000.0f * maxAngVel   // Z = roll
     );
     
-    // DIAGNOSTIC: Log when torque is applied
-    CE_LOG_INFO("applyTorque: bodyId={}, raw=({:.1f},{:.1f},{:.1f}), scaled=({:.2f},{:.2f},{:.2f})", 
-        bodyId.GetIndex(), torque.x, torque.y, torque.z,
-        joltTorque.GetX(), joltTorque.GetY(), joltTorque.GetZ());
+    // DIAGNOSTIC: Log all values
+    CE_LOG_INFO("applyTorque: bodyId={}, worldTorque=({:.0f},{:.0f},{:.0f}), localTorque=({:.2f},{:.2f},{:.2f}), currentAngVel=({:.4f},{:.4f},{:.4f}), targetAngVel=({:.4f},{:.4f},{:.4f})", 
+        bodyId.GetIndex(), 
+        torque.x, torque.y, torque.z,
+        localTorque.GetX(), localTorque.GetY(), localTorque.GetZ(),
+        currentAngVel.GetX(), currentAngVel.GetY(), currentAngVel.GetZ(),
+        targetAngVel.GetX(), targetAngVel.GetY(), targetAngVel.GetZ());
     
-    bodyInterface.AddTorque(bodyId, joltTorque, activation);
+    // Apply angular velocity directly
+    bodyInterface.SetAngularVelocity(bodyId, targetAngVel);
     
-    CE_LOG_TRACE("applyTorque: bodyId={}, torque=({:.1f},{:.1f},{:.1f}) scaled=({:.2f},{:.2f},{:.2f})", 
-        bodyId.GetIndex(), torque.x, torque.y, torque.z,
-        joltTorque.GetX(), joltTorque.GetY(), joltTorque.GetZ());
+    // DIAGNOSTIC: Verify the set worked
+    JPH::Vec3 verifyAngVel = bodyInterface.GetAngularVelocity(bodyId);
+    CE_LOG_INFO("applyTorque: AFTER Set, angVel=({:.4f},{:.4f},{:.4f})", 
+        verifyAngVel.GetX(), verifyAngVel.GetY(), verifyAngVel.GetZ());
 }
 
 // =============================================================================
