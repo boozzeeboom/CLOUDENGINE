@@ -61,15 +61,23 @@ private:
     JoltPhysicsModule& operator=(const JoltPhysicsModule&) = delete;
 
     bool _initialized = false;
+    
+    // Storage for PhysicsSystem (16-byte aligned for SIMD types)
+    alignas(JPH_VECTOR_ALIGNMENT) uint8_t _physicsSystemStorage[sizeof(JPH::PhysicsSystem)];
     JPH::PhysicsSystem* _physicsSystem = nullptr;
+    
+    // Storage for BroadPhaseLayerInterfaceMask (16-byte aligned)
+    alignas(JPH_VECTOR_ALIGNMENT) uint8_t _broadPhaseLayerStorage[sizeof(JPH::BroadPhaseLayerInterfaceMask)];
     JPH::BroadPhaseLayerInterfaceMask* _broadPhaseLayerInterface = nullptr;
+    
     JPH::ObjectVsBroadPhaseLayerFilterMask* _objectVsBroadPhaseLayerFilter = nullptr;
     JPH::ObjectLayerPairFilterMask* _objectLayerPairFilter = nullptr;
-    float _accumulator = 0.0f;
     
-    // PRIORITY 3 FIX: Persistent allocator and job system (created once, reused every frame)
+    // PERSISTENT TempAllocator and JobSystem (NOT local to update loop!)
     std::unique_ptr<JPH::TempAllocatorImpl> _tempAllocator;
-    std::unique_ptr<JPH::JobSystemThreadPool> _jobSystem;
+    JPH::JobSystemThreadPool* _jobSystem = nullptr;
+    
+    float _accumulator = 0.0f;
 };
 
 // =============================================================================
@@ -133,3 +141,4 @@ void registerJoltSystems(flecs::world& world);
 void initJoltPhysics(flecs::world& world);
 
 }} // namespace Core::ECS
+

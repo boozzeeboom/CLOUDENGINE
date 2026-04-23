@@ -65,32 +65,14 @@ void JoltPhysicsModule::init() {
     CE_LOG_INFO("JoltPhysicsModule: RegisterTypes()");
     JPH::RegisterTypes();
 
-    // Step 4: Create PhysicsSystem with aligned allocation
-    CE_LOG_INFO("JoltPhysicsModule: Creating PhysicsSystem (aligned allocation)");
-    void* physBuf = JPH::AlignedAllocate(sizeof(JPH::PhysicsSystem), JPH_VECTOR_ALIGNMENT);
-    if (physBuf == nullptr) {
-        CE_LOG_ERROR("JoltPhysicsModule: Failed to allocate PhysicsSystem");
-        JPH::UnregisterTypes();
-        delete JPH::Factory::sInstance;
-        JPH::Factory::sInstance = nullptr;
-        return;
-    }
-    _physicsSystem = new (physBuf) JPH::PhysicsSystem();
+    // Step 4: Create PhysicsSystem - use regular new, NOT placement new
+    // JPH_OVERRIDE_NEW_DELETE may cause issues with placement new
+    CE_LOG_INFO("JoltPhysicsModule: Creating PhysicsSystem (regular new)");
+    _physicsSystem = new JPH::PhysicsSystem();
     
     // Step 5: Create BroadPhaseLayerInterfaceMask
     CE_LOG_INFO("JoltPhysicsModule: Creating BroadPhaseLayerInterfaceMask");
-    void* broadBuf = JPH::AlignedAllocate(sizeof(JPH::BroadPhaseLayerInterfaceMask), JPH_VECTOR_ALIGNMENT);
-    if (broadBuf == nullptr) {
-        CE_LOG_ERROR("JoltPhysicsModule: Failed to allocate BroadPhaseLayerInterfaceMask");
-        _physicsSystem->~PhysicsSystem();
-        JPH::AlignedFree(physBuf);
-        _physicsSystem = nullptr;
-        JPH::UnregisterTypes();
-        delete JPH::Factory::sInstance;
-        JPH::Factory::sInstance = nullptr;
-        return;
-    }
-    _broadPhaseLayerInterface = new (broadBuf) JPH::BroadPhaseLayerInterfaceMask(ObjectLayer::NUM_LAYERS);
+    _broadPhaseLayerInterface = new JPH::BroadPhaseLayerInterfaceMask(ObjectLayer::NUM_LAYERS);
     
     // Step 6: Configure layers
     CE_LOG_INFO("JoltPhysicsModule: Configuring layers");
@@ -117,10 +99,18 @@ void JoltPhysicsModule::init() {
     _initialized = true;
     _accumulator = 0.0f;
 
-    // TEMP DISABLED FOR DEBUG: Don't create JobSystemThreadPool - it might be causing crash
-    // _jobSystem = std::make_unique<JPH::JobSystemThreadPool>(...);
+    // Create JobSystemThreadPool with MINIMAL threads (1-2 threads)
+    int numThreads = std::max(1, int(std::thread::hardware_concurrency()) - 4);
+    CE_LOG_INFO("JoltPhysicsModule: Creating JobSystemThreadPool with {} threads", numThreads);
+    _jobSystem = new JPH::JobSystemThreadPool(
+        1024,  // max jobs
+        32,    // max barriers
+        numThreads
+    );
+    CE_LOG_INFO("JoltPhysicsModule: JobSystemThreadPool created with {} threads", numThreads);
+    
     _tempAllocator = std::make_unique<JPH::TempAllocatorImpl>(10 * 1024 * 1024);
-    CE_LOG_INFO("JoltPhysicsModule: Created persistent TempAllocator (10MB) - JobSystem DISABLED");
+    CE_LOG_INFO("JoltPhysicsModule: Created persistent TempAllocator (10MB)");
 
     CE_LOG_INFO("JoltPhysicsModule: Jolt Physics initialized successfully!");
 }
@@ -134,20 +124,15 @@ void JoltPhysicsModule::shutdown() {
 
     // Cleanup Jolt in reverse order of init
     
-    // 1. Destroy PhysicsSystem (placement new, must call destructor explicitly)
+    // 1. Destroy PhysicsSystem (regular new, use delete)
     if (_physicsSystem != nullptr) {
-        _physicsSystem->~PhysicsSystem();
-        // Use AlignedFree because we used AlignedAllocate in init()
-        void* physBuf = static_cast<void*>(_physicsSystem);
-        JPH::AlignedFree(physBuf);
+        delete _physicsSystem;
         _physicsSystem = nullptr;
     }
     
-    // 2. Destroy BroadPhaseLayerInterfaceMask
+    // 2. Destroy BroadPhaseLayerInterfaceMask (regular new, use delete)
     if (_broadPhaseLayerInterface != nullptr) {
-        _broadPhaseLayerInterface->~BroadPhaseLayerInterfaceMask();
-        void* broadBuf = static_cast<void*>(_broadPhaseLayerInterface);
-        JPH::AlignedFree(broadBuf);
+        delete _broadPhaseLayerInterface;
         _broadPhaseLayerInterface = nullptr;
     }
     
@@ -168,7 +153,8 @@ void JoltPhysicsModule::shutdown() {
     JPH::Factory::sInstance = nullptr;
 
     // PRIORITY 3 FIX: Release persistent allocator and job system
-    _jobSystem.reset();
+        delete _jobSystem;
+        _jobSystem = nullptr;
     _tempAllocator.reset();
 
     _initialized = false;
@@ -185,10 +171,8 @@ void JoltPhysicsModule::update(float deltaTime) {
     CE_LOG_TRACE("JoltPhysicsModule::update: accumulator={}", _accumulator);
 
     while (_accumulator >= FIXED_DELTA_TIME) {
-        // TEMP FIX: Use nullptr for JobSystem to avoid multi-threading crash
-        // TODO: Re-enable JobSystemThreadPool after debugging
-        CE_LOG_TRACE("JoltPhysicsModule::update: calling PhysicsSystem::Update");
-        _physicsSystem->Update(FIXED_DELTA_TIME, COLLISION_STEPS, _tempAllocator.get(), nullptr);
+        CE_LOG_TRACE("JoltPhysicsModule::update: calling PhysicsSystem::Update with JobSystem");
+        _physicsSystem->Update(FIXED_DELTA_TIME, COLLISION_STEPS, _tempAllocator.get(), _jobSystem);
         CE_LOG_TRACE("JoltPhysicsModule::update: PhysicsSystem::Update completed");
         _accumulator -= FIXED_DELTA_TIME;
     }
@@ -213,10 +197,21 @@ JPH::BodyID createBoxBody(
     float mass,
     uint32_t layer
 ) {
-    if (!module.isInitialized()) return JPH::BodyID();
+    CE_LOG_TRACE("createBoxBody: START - pos=({},{},{}), halfExtents=({},{},{}), mass={}, layer={}",
+                 position.x, position.y, position.z, halfExtents.x, halfExtents.y, halfExtents.z, mass, layer);
+    
+    if (!module.isInitialized()) {
+        CE_LOG_ERROR("createBoxBody: module NOT initialized!");
+        return JPH::BodyID();
+    }
+    
+    CE_LOG_TRACE("createBoxBody: Getting BodyInterface...");
     JPH::BodyInterface& bodyInterface = module.getBodyInterface();
+    CE_LOG_TRACE("createBoxBody: BodyInterface acquired");
 
+    CE_LOG_TRACE("createBoxBody: Creating BoxShapeSettings...");
     JPH::BoxShapeSettings shapeSettings(JPH::Vec3(halfExtents.x, halfExtents.y, halfExtents.z));
+    CE_LOG_TRACE("createBoxBody: Calling shapeSettings.Create()...");
     JPH::ShapeSettings::ShapeResult shapeResult = shapeSettings.Create();
     if (shapeResult.HasError()) {
         CE_LOG_ERROR("JoltPhysicsModule: Failed to create box shape");

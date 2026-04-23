@@ -42,8 +42,8 @@ void Logger::Init() {
     s_Network  = createLogger("Network",  sinks);
     s_Physics  = createLogger("Physics",  sinks);
 
-    // Flush on error or higher
-    spdlog::flush_on(spdlog::level::err);
+    // Flush on trace to ensure all logs appear immediately (DEBUG mode)
+    spdlog::flush_on(spdlog::level::trace);
 
     CE_LOG_INFO("========================================");
     CE_LOG_INFO("CLOUDENGINE v0.2.0 starting...");

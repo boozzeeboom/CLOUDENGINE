@@ -205,6 +205,8 @@ void Engine::shutdown() {
 }
 
 void Engine::run() {
+    CE_LOG_INFO("Engine::run() - START");
+    CE_LOG_INFO("Engine::run() - starting main loop");
     CE_LOG_INFO("Engine running...");
     // Force log flush to ensure "Engine running..." appears before main loop
     spdlog::default_logger()->flush();
@@ -223,16 +225,24 @@ void Engine::run() {
     }
 
     while (_running && !Platform::Window::shouldClose()) {
+        CE_LOG_TRACE("Engine::run() - iteration start");
         uint64_t currentTime = getCurrentTimeMs();
         float dt = (currentTime - _lastTime) / 1000.0f;
         _lastTime = currentTime;
 
+        CE_LOG_TRACE("Engine::run() - calling update()");
         update(dt);
+        CE_LOG_TRACE("Engine::run() - update() returned");
+
+        CE_LOG_TRACE("Engine::run() - calling render()");
         render();
+        CE_LOG_TRACE("Engine::run() - render() returned");
 
         Platform::Window::pollEvents();
+        CE_LOG_TRACE("Engine::run() - iteration end");
     }
 
+    CE_LOG_INFO("Engine::run() - main loop ended");
     shutdown();
 }
 

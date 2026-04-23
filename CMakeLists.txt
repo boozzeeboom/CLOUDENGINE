@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
 
 # =============================================================================
-# CLOUDENGINE — Custom Game Engine for Project C: The Clouds
+# CLOUDENGINE вЂ” Custom Game Engine for Project C: The Clouds
 # =============================================================================
 
 # =============================================================================
-# Jolt Physics Configuration — MUST be set BEFORE add_subdirectory
+# Jolt Physics Configuration вЂ” MUST be set BEFORE add_subdirectory
 # Repository: https://github.com/jrouwe/JoltPhysics
 # =============================================================================
 
@@ -31,7 +31,7 @@ set(CPP_RTTI_ENABLED OFF CACHE BOOL "Enable C++ RTTI" FORCE)
 # In Release, assertions are controlled by JPH_DEBUG define
 set(USE_ASSERTS ON CACHE BOOL "Enable asserts" FORCE)
 
-# Jolt build (local) — use Build subfolder AFTER configuration
+# Jolt build (local) вЂ” use Build subfolder AFTER configuration
 add_subdirectory(libs/jolt/Build)
 
 # =============================================================================
@@ -51,7 +51,7 @@ else()
     add_compile_definitions(NDEBUG SPDLOG_ACTIVE_LEVEL=3)
 endif()
 
-# Source files — C++ sources via GLOB_RECURSE
+# Source files вЂ” C++ sources via GLOB_RECURSE
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 list(APPEND SOURCES 
     "libs/glad/src/glad.c"
