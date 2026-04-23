@@ -1,6 +1,8 @@
 #pragma once
 #include "../components.h"
 #include "../components/mesh_components.h"
+#include "../components/ship_components.h"
+#include "jolt_module.h"
 #include <deque>
 
 namespace Core { namespace ECS {
@@ -80,17 +82,73 @@ inline flecs::entity createRemotePlayer(flecs::world& world, uint32_t playerId, 
 /// @param initialPosition Initial spawn position
 /// @return The created entity
 inline flecs::entity createLocalPlayer(flecs::world& world, uint32_t playerId, const glm::vec3& initialPosition) {
-    PlayerColor playerColor = PlayerColor::fromId(playerId);
+    CE_LOG_INFO("createLocalPlayer: START - playerId={}, pos=({},{},{})", playerId, initialPosition.x, initialPosition.y, initialPosition.z);
     
+    PlayerColor playerColor = PlayerColor::fromId(playerId);
+    CE_LOG_INFO("createLocalPlayer: PlayerColor created");
+    
+    // Ensure Jolt is initialized before creating body
+    if (!JoltPhysicsModule::get().isInitialized()) {
+        CE_LOG_WARN("createLocalPlayer: JoltPhysicsModule not initialized yet, will create body later");
+    }
+    
+    // Create Jolt body for the ship
+    JPH::BodyID shipBodyId;
+    bool bodyCreated = false;
+    
+    // Check if Jolt is initialized
+    if (JoltPhysicsModule::get().isInitialized()) {
+        CE_LOG_INFO("createLocalPlayer: Creating Jolt body...");
+        glm::dvec3 joltPos(initialPosition.x, initialPosition.y, initialPosition.z);
+        glm::vec3 halfExtents(5.0f, 5.0f, 5.0f); // Size 10x10x10
+        
+        shipBodyId = createBoxBody(JoltPhysicsModule::get(), joltPos, halfExtents, 1000.0f, ObjectLayer::MOVING);
+        
+        if (shipBodyId != JPH::BodyID()) {
+            CE_LOG_INFO("createLocalPlayer: Jolt body created, id={}", shipBodyId.GetIndex());
+            bodyCreated = true;
+        } else {
+            CE_LOG_WARN("createLocalPlayer: Jolt body creation FAILED");
+        }
+    } else {
+        CE_LOG_WARN("createLocalPlayer: JoltPhysicsModule not initialized, skipping body creation");
+    }
+    
+    CE_LOG_INFO("createLocalPlayer: About to create ECS entity...");
     flecs::entity e = world.entity("LocalPlayer")
         .set<NetworkId>({playerId})
         .add<IsLocalPlayer>()
+        .add<IsPlayerShip>()
         .set<Transform>({initialPosition, glm::quat_identity<float, glm::packed_highp>(), glm::vec3(1.0f)})
         .set<RenderMesh>({MeshType::Sphere, 5.0f})
         .set<PlayerColor>(playerColor);
     
-    CE_LOG_INFO("Created LocalPlayer entity: id={}, pos=({},{},{})", 
-                playerId, initialPosition.x, initialPosition.y, initialPosition.z);
+    CE_LOG_INFO("createLocalPlayer: ECS entity created (base components), adding physics components...");
+    
+    // Only add JoltBodyId component if body was successfully created
+    if (bodyCreated) {
+        CE_LOG_INFO("createLocalPlayer: Adding JoltBodyId...");
+        e.set<JoltBodyId>(JoltBodyId(shipBodyId));
+        CE_LOG_INFO("createLocalPlayer: JoltBodyId ADDED OK");
+    } else {
+        CE_LOG_INFO("createLocalPlayer: Skipping JoltBodyId component (no body created)");
+    }
+    
+    CE_LOG_INFO("createLocalPlayer: Adding ShipPhysics...");
+    e.set<ShipPhysics>({1000.0f, 50000.0f});  // mass=1000kg, thrust=50000N
+    CE_LOG_INFO("createLocalPlayer: ShipPhysics ADDED OK");
+    
+    CE_LOG_INFO("createLocalPlayer: Adding ShipInput...");
+    e.set<ShipInput>({});  // default input values
+    CE_LOG_INFO("createLocalPlayer: ShipInput ADDED OK");
+    
+    CE_LOG_INFO("createLocalPlayer: Adding Aerodynamics...");
+    e.set<Aerodynamics>({});  // default aerodynamics
+    CE_LOG_INFO("createLocalPlayer: Aerodynamics ADDED OK");
+    
+    CE_LOG_INFO("createLocalPlayer: COMPLETE - id={}, pos=({},{},{}), JoltBodyId={}", 
+                playerId, initialPosition.x, initialPosition.y, initialPosition.z,
+                shipBodyId.GetIndex());
     return e;
 }
 

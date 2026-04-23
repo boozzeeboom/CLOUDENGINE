@@ -37,6 +37,9 @@
     <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\ecs\pipeline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\ecs\systems\ship_controller.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="C:\CLOUDPROJECT\CLOUDENGINE\src\ecs\world.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

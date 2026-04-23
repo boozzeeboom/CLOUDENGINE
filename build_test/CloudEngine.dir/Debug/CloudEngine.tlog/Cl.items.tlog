@@ -10,6 +10,7 @@ C:\CLOUDPROJECT\CLOUDENGINE\src\ecs\modules\jolt_module.cpp;C:\CLOUDPROJECT\CLOU
 C:\CLOUDPROJECT\CLOUDENGINE\src\ecs\modules\network_module.cpp;C:\CLOUDPROJECT\CLOUDENGINE\build_test\CloudEngine.dir\Debug\network_module.obj
 C:\CLOUDPROJECT\CLOUDENGINE\src\ecs\modules\render_module.cpp;C:\CLOUDPROJECT\CLOUDENGINE\build_test\CloudEngine.dir\Debug\render_module.obj
 C:\CLOUDPROJECT\CLOUDENGINE\src\ecs\pipeline.cpp;C:\CLOUDPROJECT\CLOUDENGINE\build_test\CloudEngine.dir\Debug\pipeline.obj
+C:\CLOUDPROJECT\CLOUDENGINE\src\ecs\systems\ship_controller.cpp;C:\CLOUDPROJECT\CLOUDENGINE\build_test\CloudEngine.dir\Debug\ship_controller.obj
 C:\CLOUDPROJECT\CLOUDENGINE\src\ecs\world.cpp;C:\CLOUDPROJECT\CLOUDENGINE\build_test\CloudEngine.dir\Debug\world.obj
 C:\CLOUDPROJECT\CLOUDENGINE\src\main.cpp;C:\CLOUDPROJECT\CLOUDENGINE\build_test\CloudEngine.dir\Debug\main.obj
 C:\CLOUDPROJECT\CLOUDENGINE\src\network\client.cpp;C:\CLOUDPROJECT\CLOUDENGINE\build_test\CloudEngine.dir\Debug\client.obj

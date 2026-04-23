@@ -6,6 +6,7 @@
 #include "modules/render_module.h"
 #include "modules/jolt_module.h"
 #include "components/mesh_components.h"
+#include "systems/ship_controller.h"
 #include "../core/logger.h"
 
 namespace Core { namespace ECS {
@@ -47,11 +48,19 @@ void init() {
     registerTimeSystem(s_world);
     CE_LOG_INFO("ECS: Time system registered");
     
-    // Register Jolt Physics systems (lazy initialization on first update)
+    // CRITICAL FIX: Initialize Jolt BEFORE creating LocalPlayer
+    // LocalPlayer needs Jolt body, so Jolt must be ready
+    JoltPhysicsModule::get().init();
+    CE_LOG_INFO("JoltPhysicsModule: Early initialization for LocalPlayer");
     registerJoltComponents(s_world);
     CE_LOG_INFO("ECS: Jolt components registered");
     registerJoltSystems(s_world);
-    CE_LOG_INFO("ECS: Jolt systems registered (lazy init)");
+    CE_LOG_INFO("ECS: Jolt systems registered");
+    
+    // Register Ship components and systems
+    // Note: components registered inside registerShipControllerSystem()
+    registerShipControllerSystem(s_world);
+    CE_LOG_INFO("ECS: Ship controller system registered");
     
     CE_LOG_INFO("ECS World initialized with pipeline, network and render modules");
 }

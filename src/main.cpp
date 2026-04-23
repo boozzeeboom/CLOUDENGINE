@@ -1,4 +1,5 @@
 #define __gl_h_
+#include <spdlog/spdlog.h>
 #include <core/logger.h>
 #include <core/engine.h>
 
@@ -35,9 +36,13 @@ int main(int argc, char* argv[]) {
 
     CE_LOG_INFO("main() - engine.init() SUCCESS, starting main loop");
     CE_LOG_INFO("Press ESC in window to exit...");
+    // Force log flush before run()
+    spdlog::default_logger()->flush();
+    
+    CE_LOG_INFO("main() - ABOUT TO CALL engine.run()");
+    spdlog::default_logger()->flush();
     engine.run();
-
-    CE_LOG_INFO("main() - engine.run() completed");
+    CE_LOG_INFO("main() - engine.run() RETURNED (normal exit)");
     Logger::Shutdown();
     return 0;
 }

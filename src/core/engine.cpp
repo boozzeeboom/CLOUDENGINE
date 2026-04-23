@@ -237,6 +237,7 @@ void Engine::run() {
 }
 
 void Engine::update(float dt) {
+    CE_LOG_TRACE("Engine::update() - START, dt={}", dt);
     _time += dt;
     _deltaTime = dt;
 
@@ -525,6 +526,8 @@ void Engine::updateWorldSystem(float dt) {
 }
 
 void Engine::render() {
+    CE_LOG_TRACE("Engine::render() - START");
+    
     // Get window size
     int width, height;
     glfwGetWindowSize(Platform::Window::getGLFWwindow(), &width, &height);

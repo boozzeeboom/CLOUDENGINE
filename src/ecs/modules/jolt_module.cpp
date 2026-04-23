@@ -117,14 +117,10 @@ void JoltPhysicsModule::init() {
     _initialized = true;
     _accumulator = 0.0f;
 
-    // PRIORITY 3 FIX: Create persistent allocator and job system (one-time allocation)
+    // TEMP DISABLED FOR DEBUG: Don't create JobSystemThreadPool - it might be causing crash
+    // _jobSystem = std::make_unique<JPH::JobSystemThreadPool>(...);
     _tempAllocator = std::make_unique<JPH::TempAllocatorImpl>(10 * 1024 * 1024);
-    _jobSystem = std::make_unique<JPH::JobSystemThreadPool>(
-        MAX_PHYSICS_JOBS,
-        MAX_PHYSICS_BARRIERS,
-        std::max(1, static_cast<int>(std::thread::hardware_concurrency()) - 1)
-    );
-    CE_LOG_INFO("JoltPhysicsModule: Created persistent TempAllocator (10MB) and JobSystemThreadPool");
+    CE_LOG_INFO("JoltPhysicsModule: Created persistent TempAllocator (10MB) - JobSystem DISABLED");
 
     CE_LOG_INFO("JoltPhysicsModule: Jolt Physics initialized successfully!");
 }
@@ -181,14 +177,19 @@ void JoltPhysicsModule::shutdown() {
 
 void JoltPhysicsModule::update(float deltaTime) {
     if (!_initialized) {
+        CE_LOG_ERROR("JoltPhysicsModule::update: NOT initialized!");
         return;
     }
 
     _accumulator += deltaTime;
+    CE_LOG_TRACE("JoltPhysicsModule::update: accumulator={}", _accumulator);
 
     while (_accumulator >= FIXED_DELTA_TIME) {
-        // PRIORITY 3 FIX: Use persistent allocator and job system (reused every frame)
-        _physicsSystem->Update(FIXED_DELTA_TIME, COLLISION_STEPS, _tempAllocator.get(), _jobSystem.get());
+        // TEMP FIX: Use nullptr for JobSystem to avoid multi-threading crash
+        // TODO: Re-enable JobSystemThreadPool after debugging
+        CE_LOG_TRACE("JoltPhysicsModule::update: calling PhysicsSystem::Update");
+        _physicsSystem->Update(FIXED_DELTA_TIME, COLLISION_STEPS, _tempAllocator.get(), nullptr);
+        CE_LOG_TRACE("JoltPhysicsModule::update: PhysicsSystem::Update completed");
         _accumulator -= FIXED_DELTA_TIME;
     }
 }
