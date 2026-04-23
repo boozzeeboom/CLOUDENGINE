@@ -31,9 +31,9 @@
 
 ---
 
-## Current Status (2026-04-22)
+## Current Status (2026-04-24)
 
-### ✅ Completed Iterations (0-5)
+### ✅ Completed Iterations (0-6)
 
 | # | Iteration | Status | Key Components |
 |---|-----------|--------|----------------|
@@ -45,6 +45,8 @@
 | 4.2 | ECS Network Integration | ✅ | NetworkId, RemotePlayer, NetworkTransform components |
 | 4.3 | Player Sync | ✅ | Position interpolation, Yaw/Pitch sync, remote rendering |
 | 5 | Network Sync Priority | ✅ | Position buffer, full transform, player visualization |
+| 6 | Airship Physics | ✅ | Jolt Physics, ShipController, Ship controls (W/A/D/S/Q/E/Z/X/C/V) |
+
 
 ### 🔴 Current Tech Debt
 
@@ -52,7 +54,7 @@
 |-------|----------|-------|
 | Scale Issue — sphere visible only at 1000 units | HIGH | engine.cpp, camera.cpp, primitive_mesh.cpp |
 | Hardcoded 1000.0f camera offset | HIGH | engine.cpp:492 |
-| No Ship Physics (free flight only) | MEDIUM | engine.cpp (updateFlightControls) |
+| A/D yaw rotation weak (needs more torque) | MEDIUM | ship_controller.cpp |
 | No Asset Loading (no 3D models) | MEDIUM | N/A |
 | No UI System | MEDIUM | N/A |
 
@@ -62,12 +64,14 @@
 ✓ Window opens, 60 FPS stable
 ✓ Volumetric cloud rendering (raymarch)
 ✓ Sky, sun, ambient lighting
-✓ WASD + mouse flight controls
+✓ Ship controls: W/S (thrust), A/D (yaw), Q/E (lift), Z/X (roll), C/V (pitch)
+✓ Jolt Physics integration (rigidbody, forces, torque)
 ✓ Host/Client multiplayer via ENet
 ✓ Players see each other (spheres)
 ✓ Circular world wrapping (350k radius)
 ✓ Chunk loading/unloading system
 ```
+
 
 ---
 
@@ -231,13 +235,16 @@ cmake --build . --config Debug
 ## Development Roadmap
 
 ### Phase 1: Tech Debt Fix (1-2 days)
-- [ ] Scale Issue investigation (camera, projection, sphere generation)
-- [ ] Remove hardcoded 1000.0f offset
-- [ ] Update documentation
+- [x] Scale Issue investigation (camera, projection, sphere generation)
+- [x] Remove hardcoded 1000.0f offset
+- [x] Update documentation
 
-### Phase 2: Ship Physics MVP (3-5 days)
-- [ ] ShipController components (Rigidbody, ShipInput, Aerodynamics)
-- [ ] ShipControllerSystem (input → forces → physics)
+### Phase 2: Ship Physics MVP (3-5 days) 🔄 IN PROGRESS
+- [x] Jolt Physics integration (JobSystem, body creation)
+- [x] ShipController components (Rigidbody, ShipInput, Aerodynamics)
+- [x] ShipControllerSystem (input → forces → physics)
+- [x] Ship controls: W/S/A/D/Q/E/Z/X/C/V
+- [x] Fix A/D yaw rotation (increase torque)
 - [ ] Wind integration (global + local zones)
 - [ ] Test "feels right" feedback
 
@@ -255,6 +262,7 @@ cmake --build . --config Debug
 - [ ] Performance optimization
 - [ ] Network improvements
 - [ ] LLM-friendly documentation
+
 
 ---
 
@@ -320,5 +328,7 @@ CLOUDENGINE is designed to be **AI-agent-friendly**:
 
 ---
 
-**Last Updated:** 2026-04-22  
-**Current Version:** v0.5 (Pre-alpha, MVP functional)
+**Last Updated:** 2026-04-24  
+**Current Version:** v0.6 (Pre-alpha, Airship Physics MVP)
+
+
