@@ -1,5 +1,0 @@
-f=open("src/core/engine.cpp","rb")  
-d=f.read();f.close()  
-f=open("log.txt","w")  
-f.write("len="+str(len(d)))  
-f.close()  

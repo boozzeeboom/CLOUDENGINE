@@ -1,2 +1,0 @@
-[17:30:01.971] [Engine] [trace] ShipController: entity=LocalPlayer, bodyId=0, fwd:0.0/vert:1.0/yaw:0.0/pitch:0.7/boost:no
-[17:30:01.971] [Engine] [debug] ShipController: vert force=(0.0,100000.0,0.0) bodyId=0

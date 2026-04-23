@@ -1,9 +1,0 @@
-main() - 4. After Window::init()
-main() - 5. Before Renderer::init()
-main() - 6. After Renderer::init()
-main() - 7. Creating objects
-main() - 8. After object creation
-main() - 9. Loading shaders
-main() - 10. After shader loading
-main() - 11. Logging complete
-main() - 12. Done
