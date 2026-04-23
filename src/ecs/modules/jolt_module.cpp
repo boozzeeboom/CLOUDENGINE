@@ -231,13 +231,30 @@ JPH::BodyID createBoxBody(
         layer
     );
     
-    // Calculate proper mass properties - use uniform scale for mass
-    JPH::MassProperties massProps = shape->GetMassProperties();
-    massProps.Scale(JPH::Vec3(mass, mass, mass));  // Scale uniformly by mass (kg)
+    // For box: calculate inertia manually
+    // Box inertia: I = mass/12 * (h² + d², w² + d², w² + h²)
+    // Then invert for inverse inertia
+    float hx = halfExtents.x;
+    float hy = halfExtents.y;
+    float hz = halfExtents.z;
+    
+    float Ix = mass * (hy*hy + hz*hz) / 3.0f;
+    float Iy = mass * (hx*hx + hz*hz) / 3.0f;
+    float Iz = mass * (hx*hx + hy*hy) / 3.0f;
+    
+    // mInertia is the INVERSE tensor, so set it to 1/I
+    JPH::MassProperties massProps;
+    massProps.mMass = mass;
+    massProps.mInertia = JPH::Mat44::sIdentity();
+    massProps.mInertia(0,0) = (Ix > 0.0f) ? 1.0f / Ix : 0.0f;
+    massProps.mInertia(1,1) = (Iy > 0.0f) ? 1.0f / Iy : 0.0f;
+    massProps.mInertia(2,2) = (Iz > 0.0f) ? 1.0f / Iz : 0.0f;
     settings.mMassPropertiesOverride = massProps;
     
-    CE_LOG_INFO("createBoxBody: mass={} kg, motionType=Dynamic, layer={}", mass, layer);
+    CE_LOG_INFO("createBoxBody: mass={} kg, invI=(Ix={:.6f}, Iy={:.6f}, Iz={:.6f})", 
+        mass, massProps.mInertia(0,0), massProps.mInertia(1,1), massProps.mInertia(2,2));
     settings.mAllowDynamicOrKinematic = true;
+    settings.mMassPropertiesOverride = massProps;
 
     JPH::BodyID bodyId = bodyInterface.CreateAndAddBody(settings, JPH::EActivation::Activate);
     if (bodyId == JPH::BodyID()) {
@@ -245,9 +262,30 @@ JPH::BodyID createBoxBody(
         return JPH::BodyID();
     }
     
+    // Apply mass AFTER body creation using BodyInterface
+    bodyInterface.SetMassAndInertia(bodyId, mass, JPH::Vec3(
+        massProps.mInertia(0,0) > 0 ? 1.0f / massProps.mInertia(0,0) : 1.0f,
+        massProps.mInertia(1,1) > 0 ? 1.0f / massProps.mInertia(1,1) : 1.0f,
+        massProps.mInertia(2,2) > 0 ? 1.0f / massProps.mInertia(2,2) : 1.0f
+    ));
+    
+    CE_LOG_INFO("createBoxBody: SetMassAndInertia applied, mass={}", mass);
+    
     // FIX: Set gravity factor to 0 so body is not affected by gravity
     bodyInterface.SetGravityFactor(bodyId, 0.0f);
     CE_LOG_INFO("createBoxBody: SetGravityFactor=0.0 for bodyId={}", bodyId.GetIndex());
+    
+    // DIAGNOSTIC: Check body motion properties
+    JPH::PhysicsSystem* physicsSystem = module.getPhysicsSystem();
+    JPH::BodyLockRead lock(physicsSystem->GetBodyLockInterface(), bodyId);
+    if (lock.Succeeded()) {
+        const JPH::Body& body = lock.GetBody();
+        CE_LOG_INFO("createBoxBody: motionType={} (0=Static,1=Kinematic,2=Dynamic)", (int)body.GetMotionType());
+        // Check inertia
+        JPH::Mat44 inertia = body.GetInverseInertia();
+        CE_LOG_INFO("createBoxBody: invInertia diag=({:.4f},{:.4f},{:.4f})", 
+            inertia(0,0), inertia(1,1), inertia(2,2));
+    }
     
     return bodyId;
 }
@@ -384,6 +422,11 @@ void applyTorque(
         torque.z * torqueScale   // roll (unused)
     );
     
+    // DIAGNOSTIC: Log when torque is applied
+    CE_LOG_INFO("applyTorque: bodyId={}, raw=({:.1f},{:.1f},{:.1f}), scaled=({:.2f},{:.2f},{:.2f})", 
+        bodyId.GetIndex(), torque.x, torque.y, torque.z,
+        joltTorque.GetX(), joltTorque.GetY(), joltTorque.GetZ());
+    
     bodyInterface.AddTorque(bodyId, joltTorque, activation);
     
     CE_LOG_TRACE("applyTorque: bodyId={}, torque=({:.1f},{:.1f},{:.1f}) scaled=({:.2f},{:.2f},{:.2f})", 
@@ -428,6 +471,18 @@ void registerSystems(flecs::world& world) {
             
             JPH::Quat rot = body.GetRotation();
             transform.rotation = glm::quat(rot.GetW(), rot.GetX(), rot.GetY(), rot.GetZ());
+            
+            // DIAGNOSTIC: Log rotation and angular velocity every 60 frames
+            JPH::Vec3 angVel = body.GetAngularVelocity();
+            static int rotLogFrame = 0;
+            rotLogFrame++;
+            if (rotLogFrame % 60 == 0) {
+                CE_LOG_INFO("SyncJoltToECS: bodyId={}, pos=({:.1f},{:.1f},{:.1f}), rot=({:.3f},{:.3f},{:.3f},{:.3f}), angVel=({:.2f},{:.2f},{:.2f})", 
+                    joltId.id.GetIndex(), 
+                    pos.GetX(), pos.GetY(), pos.GetZ(),
+                    rot.GetW(), rot.GetX(), rot.GetY(), rot.GetZ(),
+                    angVel.GetX(), angVel.GetY(), angVel.GetZ());
+            }
         });
 }
 
