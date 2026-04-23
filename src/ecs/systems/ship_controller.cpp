@@ -168,18 +168,15 @@ void registerShipControllerSystem(flecs::world& world) {
                     ::Core::ECS::applyForce(JoltPhysicsModule::get(), joltId->id, force, JPH::EActivation::Activate);
                 }
                 
-                // Apply yaw torque (INCREASED x10 for better turn)
-                if (input->yawInput != 0.0f) {
-                    glm::vec3 torque(0.0f, physics->mass * 100.0f * input->yawInput, 0.0f);
-                    CE_LOG_DEBUG("ShipController: yaw torque=({:.1f},{:.1f},{:.1f}) bodyId={}", 
-                        torque.x, torque.y, torque.z, joltId->id.GetIndex());
-                    ::Core::ECS::applyTorque(JoltPhysicsModule::get(), joltId->id, torque, JPH::EActivation::Activate);
-                }
-                
-                // Apply pitch torque
-                if (input->pitchInput != 0.0f) {
-                    glm::vec3 torque(physics->mass * 5.0f * input->pitchInput, 0.0f, 0.0f);
-                    CE_LOG_DEBUG("ShipController: pitch torque=({:.1f},{:.1f},{:.1f}) bodyId={}", 
+                // Apply combined yaw and pitch torque (single call to avoid overwriting)
+                // pitch = X, yaw = Y (Jolt convention)
+                if (input->yawInput != 0.0f || input->pitchInput != 0.0f) {
+                    glm::vec3 torque(
+                        physics->mass * 5.0f * input->pitchInput,   // pitch around X
+                        physics->mass * 100.0f * input->yawInput,   // yaw around Y
+                        0.0f
+                    );
+                    CE_LOG_DEBUG("ShipController: combined torque=({:.1f},{:.1f},{:.1f}) bodyId={}", 
                         torque.x, torque.y, torque.z, joltId->id.GetIndex());
                     ::Core::ECS::applyTorque(JoltPhysicsModule::get(), joltId->id, torque, JPH::EActivation::Activate);
                 }

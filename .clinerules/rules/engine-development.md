@@ -118,7 +118,34 @@ binding 2 = LightData (reserved)
 
 ---
 
-## 5. Правила CMake
+## 5. Правила CMake и сборки
+
+### Компилятор
+**ТОЛЬКО Visual Studio 2026 (18)** — ЕДИНСТВЕННЫЙ поддерживаемый компилятор.
+```
+VS Root:      C:\Program Files\Microsoft Visual Studio\18\Community
+MSVC:         14.50.35717
+Generator:    Visual Studio 18 2026
+```
+
+**НИКОГДА не использовать `Visual Studio 17 2022`** — это для VS 2022, не совместим.
+
+### Сборка — всегда через build.bat
+```batch
+build.bat
+```
+Автоматически:
+1. Запускает VS Developer Command Prompt
+2. Конфигурирует CMake с правильным генератором
+3. Собирает в `build/Debug/CloudEngine.exe`
+
+### Единственная рабочая папка сборки: `build/`
+```
+build/   ← ТОЛЬКО ЭТА папка для сборки
+build_test/       ← УДАЛЕНА
+build_test_new/   ← УДАЛЕНА
+build_test_ninja/ ← УДАЛЕНА
+```
 
 ### Структура source list
 ```cmake
@@ -128,16 +155,6 @@ list(APPEND SOURCES
     "libs/glad/src/glad.c"   # OpenGL loader
     "libs/flecs/flecs.c"     # ECS (C source, не C++)
 )
-```
-
-### Единственная рабочая папка сборки: `build/`
-```
-build/   ← ТОЛЬКО ЭТА папка для сборки
-build2/  ← устарела, не использовать
-build3/  ← устарела, не использовать
-build4/  ← устарела, не использовать
-build5/  ← устарела, не использовать
-build6/  ← устарела, не использовать
 ```
 
 ### Debug vs Release

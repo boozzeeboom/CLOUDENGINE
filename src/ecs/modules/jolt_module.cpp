@@ -372,17 +372,23 @@ void applyTorque(
     if (!module.isInitialized()) return;
     JPH::BodyInterface& bodyInterface = module.getBodyInterface();
     
-    // DIAGNOSTIC: Log angular velocity before and after torque
-    JPH::Vec3 angVelBefore = bodyInterface.GetAngularVelocity(bodyId);
-    CE_LOG_TRACE("applyTorque: PRE angVel=({:.4f},{:.4f},{:.4f}), torque=({:.1f},{:.1f},{:.1f})", 
-        angVelBefore.GetX(), angVelBefore.GetY(), angVelBefore.GetZ(),
-        torque.x, torque.y, torque.z);
+    // Use AddTorque to properly apply rotational force to the body
+    // This respects body inertia and integrates with Jolt's physics
+    // Scale down the torque: ship_controller sends mass * multiplier (e.g., 1000 * 100 = 100000 N*m)
+    // Too large! Scale to reasonable values (~10-100 N*m for a spacecraft)
+    float torqueScale = 0.001f;  // Scale from 100,000 to ~100 N*m
     
-    bodyInterface.AddTorque(bodyId, JPH::Vec3(torque.x, torque.y, torque.z), activation);
+    JPH::Vec3 joltTorque(
+        torque.x * torqueScale,  // pitch
+        torque.y * torqueScale,  // yaw
+        torque.z * torqueScale   // roll (unused)
+    );
     
-    JPH::Vec3 angVelAfter = bodyInterface.GetAngularVelocity(bodyId);
-    CE_LOG_TRACE("applyTorque: POST angVel=({:.4f},{:.4f},{:.4f})", 
-        angVelAfter.GetX(), angVelAfter.GetY(), angVelAfter.GetZ());
+    bodyInterface.AddTorque(bodyId, joltTorque, activation);
+    
+    CE_LOG_TRACE("applyTorque: bodyId={}, torque=({:.1f},{:.1f},{:.1f}) scaled=({:.2f},{:.2f},{:.2f})", 
+        bodyId.GetIndex(), torque.x, torque.y, torque.z,
+        joltTorque.GetX(), joltTorque.GetY(), joltTorque.GetZ());
 }
 
 // =============================================================================
