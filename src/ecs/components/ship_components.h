@@ -22,12 +22,13 @@ struct ShipPhysics {
 
 struct ShipInput {
     float forwardThrust = 0.0f;    // -1 to 1 (W/S)
-    float lateralThrust = 0.0f;     // -1 to 1 (A/D)
-    float verticalThrust = 0.0f;    // -1 to 1 (Q/E)
-    float yawInput = 0.0f;          // -1 to 1
-    float pitchInput = 0.0f;         // -1 to 1
-    bool boost = false;             // Shift key
-    bool brake = false;             // Space key
+    float lateralThrust = 0.0f;    // -1 to 1 (Arrow keys or numpad)
+    float verticalThrust = 0.0f;   // -1 to 1 (Q/E)
+    float yawInput = 0.0f;         // -1 to 1 (A/D)
+    float pitchInput = 0.0f;       // -1 to 1 (C/V or mouse)
+    float rollInput = 0.0f;        // -1 to 1 (Z/X)
+    bool boost = false;            // Shift key
+    bool brake = false;            // Space key
 };
 
 struct Aerodynamics {

@@ -42,9 +42,9 @@ struct RenderModuleImpl {
                     const auto* color = e.get<PlayerColor>();
                     
                     if (transform && mesh && color) {
-                        // Render sphere at remote player position
-                        // TODO: Distance check for billboard switch (>1000 units)
-                        primitives.render(transform->position, mesh->size, color->color);
+                        // Render sphere at player position with rotation from physics
+                        // FIX: Added transform->rotation to apply physics rotation
+                        primitives.render(transform->position, mesh->size, transform->rotation, color->color);
                     }
                 }
             });

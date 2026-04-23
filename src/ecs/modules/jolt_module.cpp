@@ -233,7 +233,7 @@ JPH::BodyID createBoxBody(
     
     // For box: calculate inertia manually
     // Box inertia: I = mass/12 * (h² + d², w² + d², w² + h²)
-    // Then invert for inverse inertia
+    // NOTE: mInertia stores the DIRECT inertia tensor, NOT inverse!
     float hx = halfExtents.x;
     float hy = halfExtents.y;
     float hz = halfExtents.z;
@@ -242,19 +242,20 @@ JPH::BodyID createBoxBody(
     float Iy = mass * (hx*hx + hz*hz) / 3.0f;
     float Iz = mass * (hx*hx + hy*hy) / 3.0f;
     
-    // mInertia is the INVERSE tensor, so set it to 1/I
     JPH::MassProperties massProps;
     massProps.mMass = mass;
     massProps.mInertia = JPH::Mat44::sIdentity();
-    massProps.mInertia(0,0) = (Ix > 0.0f) ? 1.0f / Ix : 0.0f;
-    massProps.mInertia(1,1) = (Iy > 0.0f) ? 1.0f / Iy : 0.0f;
-    massProps.mInertia(2,2) = (Iz > 0.0f) ? 1.0f / Iz : 0.0f;
+    massProps.mInertia(0,0) = Ix;  // DIRECT inertia tensor (not inverse!)
+    massProps.mInertia(1,1) = Iy;
+    massProps.mInertia(2,2) = Iz;
+    
+    // CRITICAL FIX: Must set this flag or mMassPropertiesOverride is IGNORED!
+    settings.mOverrideMassProperties = JPH::EOverrideMassProperties::MassAndInertiaProvided;
     settings.mMassPropertiesOverride = massProps;
     
-    CE_LOG_INFO("createBoxBody: mass={} kg, invI=(Ix={:.6f}, Iy={:.6f}, Iz={:.6f})", 
-        mass, massProps.mInertia(0,0), massProps.mInertia(1,1), massProps.mInertia(2,2));
+    CE_LOG_INFO("createBoxBody: mass={} kg, I=(Ix={:.2f}, Iy={:.2f}, Iz={:.2f})", 
+        mass, Ix, Iy, Iz);
     settings.mAllowDynamicOrKinematic = true;
-    settings.mMassPropertiesOverride = massProps;
 
     JPH::BodyID bodyId = bodyInterface.CreateAndAddBody(settings, JPH::EActivation::Activate);
     if (bodyId == JPH::BodyID()) {
@@ -262,14 +263,7 @@ JPH::BodyID createBoxBody(
         return JPH::BodyID();
     }
     
-    // Apply mass AFTER body creation using BodyInterface
-    bodyInterface.SetMassAndInertia(bodyId, mass, JPH::Vec3(
-        massProps.mInertia(0,0) > 0 ? 1.0f / massProps.mInertia(0,0) : 1.0f,
-        massProps.mInertia(1,1) > 0 ? 1.0f / massProps.mInertia(1,1) : 1.0f,
-        massProps.mInertia(2,2) > 0 ? 1.0f / massProps.mInertia(2,2) : 1.0f
-    ));
-    
-    CE_LOG_INFO("createBoxBody: SetMassAndInertia applied, mass={}", mass);
+    CE_LOG_INFO("createBoxBody: body created with MassAndInertiaProvided override");
     
     // FIX: Set gravity factor to 0 so body is not affected by gravity
     bodyInterface.SetGravityFactor(bodyId, 0.0f);
