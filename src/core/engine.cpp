@@ -1,6 +1,7 @@
 #define __gl_h_
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <spdlog/spdlog.h>
 
 #include "engine.h"
 #include "logger.h"
@@ -205,6 +206,8 @@ void Engine::shutdown() {
 
 void Engine::run() {
     CE_LOG_INFO("Engine running...");
+    // Force log flush to ensure "Engine running..." appears before main loop
+    spdlog::default_logger()->flush();
     _lastTime = getCurrentTimeMs();
 
     // Late client connect (after window is up)
@@ -254,8 +257,20 @@ void Engine::update(float dt) {
     // Update network
     updateNetwork(dt);
 
-    // Update flight controls
-    updateFlightControls(dt);
+    // PRIORITY 2 FIX: Skip updateFlightControls() for physics-controlled ships
+    // updateFlightControls() moves _cameraPos directly, conflicting with ShipControllerSystem
+    // Only call if there are NO physics-controlled local players
+    {
+        auto& world = ECS::getWorld();
+        auto q = world.query_builder<ECS::IsLocalPlayer, ECS::JoltBodyId>().build();
+        int physicsShipCount = 0;
+        q.each([&physicsShipCount](ECS::IsLocalPlayer&, ECS::JoltBodyId&) {
+            physicsShipCount++;
+        });
+        if (physicsShipCount == 0) {
+            updateFlightControls(dt);
+        }
+    }
 
     // Update circular world system (chunk streaming, position wrapping)
     updateWorldSystem(dt);
@@ -274,6 +289,8 @@ void Engine::update(float dt) {
         CE_LOG_INFO("Update #{}: FPS={:.0f}, dt={:.3f}s, camera=({:.0f},{:.0f},{:.0f})",
                    frameCount, fps, dt, _cameraPos.x, _cameraPos.y, _cameraPos.z);
         lastTitleUpdate = _time;
+        // CRITICAL: Force log flush to see updates in log file
+        spdlog::default_logger()->flush();
     }
 }
 
@@ -398,13 +415,17 @@ void Engine::updateFlightControls(float dt) {
 
 void Engine::syncCameraToLocalPlayer() {
     // Find the local player entity and update its Transform to follow camera
-    // Player is positioned slightly IN FRONT of camera for visibility
+    // IMPORTANT: Skip entities that have JoltBodyId - those use physics, not camera sync
     auto& world = ECS::getWorld();
     
-    // Query for entities with IsLocalPlayer tag
-    auto q = world.query_builder<ECS::Transform, ECS::IsLocalPlayer>().build();
+    // Query for entities with IsLocalPlayer tag but WITHOUT JoltBodyId
+    // (entities with JoltBodyId are controlled by ShipControllerSystem via physics)
+    auto q = world.query_builder<ECS::Transform, ECS::IsLocalPlayer>()
+        .without<ECS::JoltBodyId>()  // Skip physics-controlled entities
+        .build();
     
-    q.each([this](ECS::Transform& transform, ECS::IsLocalPlayer&) {
+    int count = 0;
+    q.each([this, &count](ECS::Transform& transform, ECS::IsLocalPlayer&) {
         // Calculate forward direction from camera rotation
         glm::vec3 forward;
         forward.x = sin(_cameraYaw) * cos(_cameraPitch);
@@ -419,7 +440,38 @@ void Engine::syncCameraToLocalPlayer() {
         // Player is at camera position (tiny forward offset for visibility)
         glm::vec3 adjustedPos = _cameraPos + forward * 1.0f;
         transform.position = adjustedPos;
+        count++;
     });
+    
+    if (count > 0) {
+        CE_LOG_TRACE("syncCameraToLocalPlayer: synced {} non-physics entities to camera", count);
+    }
+    
+    // NEW: For physics-controlled ships, sync CAMERA to ship instead of ship to camera
+    // This makes the camera follow the ship
+    auto shipQ = world.query_builder<ECS::Transform, ECS::IsLocalPlayer, ECS::IsPlayerShip>()
+        .with<ECS::JoltBodyId>()  // Only physics-controlled ships
+        .build();
+    
+    static int lastShipCount = 0;
+    int shipCount = 0;
+    shipQ.each([this, &shipCount](ECS::Transform& shipTransform, ECS::IsLocalPlayer&, ECS::IsPlayerShip&) {
+        // Camera follows ship (ship is in front of camera)
+        glm::vec3 forward;
+        forward.x = sin(_cameraYaw) * cos(_cameraPitch);
+        forward.y = sin(_cameraPitch);
+        forward.z = cos(_cameraYaw) * cos(_cameraPitch);
+        forward = glm::normalize(forward);
+        
+        // Camera is 250 units behind ship
+        _cameraPos = shipTransform.position - forward * 250.0f;
+        shipCount++;
+    });
+    
+    if (shipCount > 0 && shipCount != lastShipCount) {
+        CE_LOG_INFO("syncCameraToLocalPlayer: {} physics-controlled ship(s), camera now follows ship", shipCount);
+        lastShipCount = shipCount;
+    }
 }
 
 void Engine::renderPlayerEntities() {
@@ -480,6 +532,15 @@ void Engine::render() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, width, height);
     
+    // PRIORITY 1 FIX: Read ship position from ECS/Jolt instead of using _cameraPos directly
+    auto& world = ECS::getWorld();
+    auto q = world.query_builder<ECS::Transform, ECS::IsLocalPlayer, ECS::JoltBodyId>().build();
+    
+    glm::vec3 shipWorldPos = _cameraPos; // Fallback to camera position
+    q.each([&shipWorldPos](ECS::Transform& transform, ECS::IsLocalPlayer&, ECS::JoltBodyId&) {
+        shipWorldPos = transform.position; // Position updated by SyncJoltToECS
+    });
+    
     // Calculate camera position (BEHIND the player for third-person view)
     glm::vec3 camForward;
     camForward.x = sin(_cameraYaw) * cos(_cameraPitch);
@@ -488,7 +549,8 @@ void Engine::render() {
     camForward = glm::normalize(camForward);
     
     // Camera is 250 units behind ship (ship size 50 units, world radius 650,000)
-    glm::vec3 cameraViewPos = _cameraPos - camForward * 250.0f;
+    // FIX: Use ship position from ECS, not _cameraPos
+    glm::vec3 cameraViewPos = shipWorldPos - camForward * 250.0f;
     _camera.setPosition(cameraViewPos);
     _camera.setRotation(_cameraYaw, _cameraPitch);
     

@@ -117,6 +117,15 @@ void JoltPhysicsModule::init() {
     _initialized = true;
     _accumulator = 0.0f;
 
+    // PRIORITY 3 FIX: Create persistent allocator and job system (one-time allocation)
+    _tempAllocator = std::make_unique<JPH::TempAllocatorImpl>(10 * 1024 * 1024);
+    _jobSystem = std::make_unique<JPH::JobSystemThreadPool>(
+        MAX_PHYSICS_JOBS,
+        MAX_PHYSICS_BARRIERS,
+        std::max(1, static_cast<int>(std::thread::hardware_concurrency()) - 1)
+    );
+    CE_LOG_INFO("JoltPhysicsModule: Created persistent TempAllocator (10MB) and JobSystemThreadPool");
+
     CE_LOG_INFO("JoltPhysicsModule: Jolt Physics initialized successfully!");
 }
 
@@ -162,6 +171,10 @@ void JoltPhysicsModule::shutdown() {
     delete JPH::Factory::sInstance;
     JPH::Factory::sInstance = nullptr;
 
+    // PRIORITY 3 FIX: Release persistent allocator and job system
+    _jobSystem.reset();
+    _tempAllocator.reset();
+
     _initialized = false;
     CE_LOG_INFO("JoltPhysicsModule: Jolt Physics shutdown complete");
 }
@@ -174,14 +187,8 @@ void JoltPhysicsModule::update(float deltaTime) {
     _accumulator += deltaTime;
 
     while (_accumulator >= FIXED_DELTA_TIME) {
-        JPH::TempAllocatorImpl tempAllocator(10 * 1024 * 1024);
-        JPH::JobSystemThreadPool jobSystem(
-            MAX_PHYSICS_JOBS,
-            MAX_PHYSICS_BARRIERS,
-            std::max(1, static_cast<int>(std::thread::hardware_concurrency()) - 1)
-        );
-
-        _physicsSystem->Update(FIXED_DELTA_TIME, COLLISION_STEPS, &tempAllocator, &jobSystem);
+        // PRIORITY 3 FIX: Use persistent allocator and job system (reused every frame)
+        _physicsSystem->Update(FIXED_DELTA_TIME, COLLISION_STEPS, _tempAllocator.get(), _jobSystem.get());
         _accumulator -= FIXED_DELTA_TIME;
     }
 }
@@ -337,9 +344,10 @@ void registerSystems(flecs::world& world) {
         .kind(flecs::OnUpdate)
         .iter([](flecs::iter& it) {
             JoltPhysicsModule& module = JoltPhysicsModule::get();
+            // Jolt is now initialized in ECS::init() before LocalPlayer is created
             if (!module.isInitialized()) {
-                module.init();
-                CE_LOG_INFO("JoltPhysicsModule: Lazy initialization complete");
+                CE_LOG_ERROR("JoltPhysicsModule: NOT initialized! This should not happen.");
+                return;
             }
             module.update(1.0f / 60.0f);
         });

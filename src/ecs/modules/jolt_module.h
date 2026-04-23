@@ -66,6 +66,10 @@ private:
     JPH::ObjectVsBroadPhaseLayerFilterMask* _objectVsBroadPhaseLayerFilter = nullptr;
     JPH::ObjectLayerPairFilterMask* _objectLayerPairFilter = nullptr;
     float _accumulator = 0.0f;
+    
+    // PRIORITY 3 FIX: Persistent allocator and job system (created once, reused every frame)
+    std::unique_ptr<JPH::TempAllocatorImpl> _tempAllocator;
+    std::unique_ptr<JPH::JobSystemThreadPool> _jobSystem;
 };
 
 // =============================================================================
@@ -77,6 +81,48 @@ struct JoltBodyId {
     JoltBodyId() : id() {}
     explicit JoltBodyId(JPH::BodyID bodyId) : id(bodyId) {}
 };
+
+// =============================================================================
+// Body Creation Functions (declared in header for external use)
+// =============================================================================
+
+JPH::BodyID createBoxBody(
+    JoltPhysicsModule& module,
+    const glm::dvec3& position,
+    const glm::vec3& halfExtents,
+    float mass,
+    uint32_t layer
+);
+
+JPH::BodyID createSphereBody(
+    JoltPhysicsModule& module,
+    const glm::dvec3& position,
+    float radius,
+    float mass,
+    uint32_t layer
+);
+
+JPH::BodyID createStaticBoxBody(
+    JoltPhysicsModule& module,
+    const glm::dvec3& position,
+    const glm::vec3& halfExtents,
+    const glm::quat& rotation,
+    uint32_t layer
+);
+
+void applyForce(
+    JoltPhysicsModule& module,
+    JPH::BodyID bodyId,
+    const glm::vec3& force,
+    JPH::EActivation activation
+);
+
+void applyTorque(
+    JoltPhysicsModule& module,
+    JPH::BodyID bodyId,
+    const glm::vec3& torque,
+    JPH::EActivation activation
+);
 
 // =============================================================================
 // Module Registration
