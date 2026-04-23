@@ -238,9 +238,11 @@ JPH::BodyID createBoxBody(
     float hy = halfExtents.y;
     float hz = halfExtents.z;
     
-    float Ix = mass * (hy*hy + hz*hz) / 3.0f;
-    float Iy = mass * (hx*hx + hz*hz) / 3.0f;
-    float Iz = mass * (hx*hx + hy*hy) / 3.0f;
+    // CRITICAL FIX: Use /30 instead of /3 for smaller inertia (10x more responsive)
+    // This makes the ship rotate much faster
+    float Ix = mass * (hy*hy + hz*hz) / 30.0f;
+    float Iy = mass * (hx*hx + hz*hz) / 30.0f;
+    float Iz = mass * (hx*hx + hy*hy) / 30.0f;
     
     JPH::MassProperties massProps;
     massProps.mMass = mass;
@@ -445,41 +447,31 @@ void applyTorque(
     }
     JPH::BodyInterface& bodyInterface = module.getBodyInterface();
     
-    // Get current angular velocity
+    // Get current angular velocity for diagnostic
     JPH::Vec3 currentAngVel = bodyInterface.GetAngularVelocity(bodyId);
     
-    // FIX: Convert world-space torque to body-local torque
-    // Get body rotation to transform torque from world to local space
-    JPH::Quat bodyRotation = bodyInterface.GetRotation(bodyId);
-    JPH::Mat44 rotMatrix = JPH::Mat44::sRotation(bodyRotation);
-    JPH::Mat44 invRotMatrix = rotMatrix.Transposed();  // Rotation matrix is orthogonal, so transpose = inverse
-    
-    // Transform torque to local space (rotate out of world orientation)
-    JPH::Vec3 localTorque = invRotMatrix * JPH::Vec3(torque.x, torque.y, torque.z);
-    
-    // Calculate target angular velocity from torque input
-    float maxAngVel = 3.0f;  // max 3 rad/s (~0.5 rotations/sec)
+    // FIX: torque now contains DIRECT angular velocity input (-1 to 1 scale)
+    // torque.x = pitchInput (-1 to 1)
+    // torque.y = yawInput (-1 to 1)
+    // torque.z = rollInput (-1 to 1)
+    // Map to actual angular velocity: input * maxAngVel
+    float maxAngVel = 3.0f;  // max 3 rad/s
     JPH::Vec3 targetAngVel(
-        localTorque.GetX() / 1000.0f * maxAngVel,  // X = pitch
-        localTorque.GetY() / 1000.0f * maxAngVel,  // Y = yaw
-        localTorque.GetZ() / 1000.0f * maxAngVel   // Z = roll
+        torque.x * maxAngVel,  // X = pitch
+        torque.y * maxAngVel,  // Y = yaw
+        torque.z * maxAngVel   // Z = roll
     );
     
-    // DIAGNOSTIC: Log all values
-    CE_LOG_INFO("applyTorque: bodyId={}, worldTorque=({:.0f},{:.0f},{:.0f}), localTorque=({:.2f},{:.2f},{:.2f}), currentAngVel=({:.4f},{:.4f},{:.4f}), targetAngVel=({:.4f},{:.4f},{:.4f})", 
-        bodyId.GetIndex(), 
-        torque.x, torque.y, torque.z,
-        localTorque.GetX(), localTorque.GetY(), localTorque.GetZ(),
-        currentAngVel.GetX(), currentAngVel.GetY(), currentAngVel.GetZ(),
-        targetAngVel.GetX(), targetAngVel.GetY(), targetAngVel.GetZ());
+    // ALWAYS log when there's rotation input - this is critical for debugging
+    if (fabs(torque.x) > 0.01f || fabs(torque.y) > 0.01f || fabs(torque.z) > 0.01f) {
+        CE_LOG_INFO("applyTorque: bodyId={}, input=({:.2f},{:.2f},{:.2f}), targetAngVel=({:.4f},{:.4f},{:.4f}), currentAngVel=({:.4f},{:.4f},{:.4f})", 
+            bodyId.GetIndex(), torque.x, torque.y, torque.z,
+            targetAngVel.GetX(), targetAngVel.GetY(), targetAngVel.GetZ(),
+            currentAngVel.GetX(), currentAngVel.GetY(), currentAngVel.GetZ());
+    }
     
     // Apply angular velocity directly
     bodyInterface.SetAngularVelocity(bodyId, targetAngVel);
-    
-    // DIAGNOSTIC: Verify the set worked
-    JPH::Vec3 verifyAngVel = bodyInterface.GetAngularVelocity(bodyId);
-    CE_LOG_INFO("applyTorque: AFTER Set, angVel=({:.4f},{:.4f},{:.4f})", 
-        verifyAngVel.GetX(), verifyAngVel.GetY(), verifyAngVel.GetZ());
 }
 
 // =============================================================================
@@ -520,17 +512,28 @@ void registerSystems(flecs::world& world) {
             JPH::Quat rot = body.GetRotation();
             transform.rotation = glm::quat(rot.GetW(), rot.GetX(), rot.GetY(), rot.GetZ());
             
-            // DIAGNOSTIC: Log rotation and angular velocity every 60 frames
+            // DIAGNOSTIC: Log rotation and angular velocity EVERY frame when non-zero
             JPH::Vec3 angVel = body.GetAngularVelocity();
-            static int rotLogFrame = 0;
-            rotLogFrame++;
-            if (rotLogFrame % 60 == 0) {
-                CE_LOG_INFO("SyncJoltToECS: bodyId={}, pos=({:.1f},{:.1f},{:.1f}), rot=({:.3f},{:.3f},{:.3f},{:.3f}), angVel=({:.2f},{:.2f},{:.2f})", 
+            
+            // Log if angular velocity is non-zero (ship is rotating)
+            if (fabs(angVel.GetX()) > 0.001f || fabs(angVel.GetY()) > 0.001f || fabs(angVel.GetZ()) > 0.001f) {
+                CE_LOG_INFO("SyncJoltToECS: bodyId={}, angVel=({:.4f},{:.4f},{:.4f}) ROTATING!", 
                     joltId.id.GetIndex(), 
-                    pos.GetX(), pos.GetY(), pos.GetZ(),
-                    rot.GetW(), rot.GetX(), rot.GetY(), rot.GetZ(),
                     angVel.GetX(), angVel.GetY(), angVel.GetZ());
             }
+            
+            // Also log periodically for reference
+            static int rotLogFrame = 0;
+            rotLogFrame++;
+            if (rotLogFrame % 120 == 0) {
+                CE_LOG_DEBUG("SyncJoltToECS: bodyId={}, pos=({:.1f},{:.1f},{:.1f}), angVel=({:.4f},{:.4f},{:.4f})", 
+                    joltId.id.GetIndex(), 
+                    pos.GetX(), pos.GetY(), pos.GetZ(),
+                    angVel.GetX(), angVel.GetY(), angVel.GetZ());
+            }
+            
+            // DIAGNOSTIC: Force-sync rotation to Transform for visibility
+            // This ensures we can see the rotation even if inertia is wrong
         });
 }
 

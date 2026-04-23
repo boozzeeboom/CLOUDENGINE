@@ -53,6 +53,36 @@ void main() {
 )";
 
 // ============================================================================
+// Direction Indicator Shader (emissive arrow/cone)
+// ============================================================================
+
+static const char* DIR_VERTEX_SHADER = R"(
+#version 330 core
+layout(location = 0) in vec3 aPosition;
+
+uniform mat4 uModelMatrix;
+uniform mat4 uViewMatrix;
+uniform mat4 uProjectionMatrix;
+
+void main() {
+    gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
+}
+)";
+
+static const char* DIR_FRAGMENT_SHADER = R"(
+#version 330 core
+
+uniform vec3 uColor;
+
+out vec4 fragColor;
+
+void main() {
+    // Emissive - no lighting
+    fragColor = vec4(uColor * 1.5, 1.0);  // Brighter for visibility
+}
+)";
+
+// ============================================================================
 // Shader Compilation Helper
 // ============================================================================
 
@@ -104,6 +134,7 @@ static unsigned int createShaderProgram(const char* vs, const char* fs) {
 
 PrimitiveMesh::PrimitiveMesh() {
     createShader();
+    createDirectionIndicator();
 }
 
 PrimitiveMesh::~PrimitiveMesh() {
@@ -120,6 +151,17 @@ void PrimitiveMesh::cleanup() {
     _vbo = 0;
     _ebo = 0;
     _shaderProgram = 0;
+    
+    // Cleanup direction indicator
+    if (_dirVao) glDeleteVertexArrays(1, &_dirVao);
+    if (_dirVbo) glDeleteBuffers(1, &_dirVbo);
+    if (_dirEbo) glDeleteBuffers(1, &_dirEbo);
+    if (_dirShaderProgram) glDeleteProgram(_dirShaderProgram);
+    
+    _dirVao = 0;
+    _dirVbo = 0;
+    _dirEbo = 0;
+    _dirShaderProgram = 0;
 }
 
 void PrimitiveMesh::createShader() {
@@ -131,6 +173,73 @@ void PrimitiveMesh::createShader() {
         _uColor = glGetUniformLocation(_shaderProgram, "uColor");
         RENDER_LOG_INFO("PrimitiveMesh shader created with view/projection uniforms");
     }
+}
+
+void PrimitiveMesh::createDirectionIndicator() {
+    // Create emissive shader for direction indicator
+    _dirShaderProgram = createShaderProgram(DIR_VERTEX_SHADER, DIR_FRAGMENT_SHADER);
+    if (_dirShaderProgram) {
+        _dirModelMatrix = glGetUniformLocation(_dirShaderProgram, "uModelMatrix");
+        _dirViewMatrix = glGetUniformLocation(_dirShaderProgram, "uViewMatrix");
+        _dirProjectionMatrix = glGetUniformLocation(_dirShaderProgram, "uProjectionMatrix");
+        _dirColor = glGetUniformLocation(_dirShaderProgram, "uColor");
+        RENDER_LOG_INFO("Direction indicator shader created");
+    }
+    
+    // Create cone pointing forward (+Z) - represents "ship forward direction"
+    // SIZE x100 for visibility (user feedback)
+    float coneLength = 80.0f;  // Length of cone (was 0.8f)
+    float coneRadius = 25.0f;  // Base radius (was 0.25f)
+    int coneSegments = 12;      // Number of sides (more segments = smoother)
+    
+    std::vector<float> vertices;
+    std::vector<unsigned int> indices;
+    
+    // Tip of cone at center offset
+    vertices.push_back(0.0f);
+    vertices.push_back(0.0f);
+    vertices.push_back(coneLength);  // Tip in +Z direction
+    
+    // Base vertices (ring)
+    for (int i = 0; i <= coneSegments; ++i) {
+        float angle = (float)i / (float)coneSegments * 2.0f * glm::pi<float>();
+        float x = cosf(angle) * coneRadius;
+        float y = sinf(angle) * coneRadius;
+        float z = 0.0f;
+        vertices.push_back(x);
+        vertices.push_back(y);
+        vertices.push_back(z);
+    }
+    
+    // Generate cone indices (triangles)
+    for (int i = 0; i < coneSegments; ++i) {
+        // Cone side triangles (tip to base edge)
+        indices.push_back(0);                    // Tip
+        indices.push_back(i + 1);                // Base vertex i
+        indices.push_back(i + 2);                // Base vertex i+1
+    }
+    
+    _dirIndexCount = static_cast<int>(indices.size());
+    
+    glGenVertexArrays(1, &_dirVao);
+    glGenBuffers(1, &_dirVbo);
+    glGenBuffers(1, &_dirEbo);
+    
+    glBindVertexArray(_dirVao);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, _dirVbo);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _dirEbo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+    
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    
+    glBindVertexArray(0);
+    
+    RENDER_LOG_INFO("Direction indicator created: cone length={}, radius={}, indices={}", 
+                    coneLength, coneRadius, _dirIndexCount);
 }
 
 void PrimitiveMesh::setCamera(const Camera* camera) {
@@ -369,6 +478,54 @@ void PrimitiveMesh::render(const glm::vec3& position, float scale, const glm::qu
     
     glDisable(GL_BLEND);
     glDepthMask(GL_TRUE);   // Re-enable depth writes for other rendering
+    
+    // ================================================================
+    // RENDER DIRECTION INDICATOR (Cone showing ship forward direction)
+    // ================================================================
+    if (_dirVao && _dirShaderProgram && _camera) {
+        // Get view and projection from Camera
+        int width = 1280, height = 720;
+        GLFWwindow* win = glfwGetCurrentContext();
+        if (win) {
+            glfwGetWindowSize(win, &width, &height);
+        }
+        float aspect = static_cast<float>(width) / static_cast<float>(height > 0 ? height : 1);
+        
+        glm::mat4 view = _camera->getViewMatrix();
+        glm::mat4 proj = _camera->getProjectionMatrix(aspect);
+        
+        // Use emissive shader for indicator
+        glUseProgram(_dirShaderProgram);
+        
+        // Position indicator slightly in front of sphere
+        // Cone points in +Z direction (forward)
+        // Offset x60 (was 0.6, but cone is x100 larger now)
+        glm::vec3 indicatorPos = position + glm::vec3(0.0f, 0.0f, scale * 60.0f);
+        
+        // Model matrix for indicator (follows sphere rotation)
+        // NO additional scale - cone geometry is already x100
+        glm::mat4 dirModel = glm::translate(glm::mat4(1.0f), indicatorPos);
+        dirModel = dirModel * glm::mat4_cast(rotation);
+        // Scale x0.01 to compensate for cone x100 geometry
+        dirModel = glm::scale(dirModel, glm::vec3(0.01f));
+        
+        // Set uniforms
+        glUniformMatrix4fv(_dirModelMatrix, 1, GL_FALSE, &dirModel[0][0]);
+        glUniformMatrix4fv(_dirViewMatrix, 1, GL_FALSE, &view[0][0]);
+        glUniformMatrix4fv(_dirProjectionMatrix, 1, GL_FALSE, &proj[0][0]);
+        
+        // Yellow indicator color (bright, easy to see)
+        glm::vec3 indicatorColor = glm::vec3(1.0f, 1.0f, 0.0f);  // Yellow
+        glUniform3fv(_dirColor, 1, &indicatorColor[0]);
+        
+        // Render indicator cone
+        glBindVertexArray(_dirVao);
+        glDrawElements(GL_TRIANGLES, _dirIndexCount, GL_UNSIGNED_INT, nullptr);
+        glBindVertexArray(0);
+        
+        RENDER_LOG_TRACE("Direction indicator rendered at pos=({:.1f},{:.1f},{:.1f})", 
+            indicatorPos.x, indicatorPos.y, indicatorPos.z);
+    }
 }
 
 // ============================================================================

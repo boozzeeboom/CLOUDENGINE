@@ -66,10 +66,22 @@ private:
     int _uProjectionMatrix = -1;
     int _uColor = -1;
 
+    // Direction indicator (cone pointing forward)
+    unsigned int _dirVao = 0;
+    unsigned int _dirVbo = 0;
+    unsigned int _dirEbo = 0;
+    int _dirIndexCount = 0;
+    unsigned int _dirShaderProgram = 0;
+    int _dirModelMatrix = -1;
+    int _dirViewMatrix = -1;
+    int _dirProjectionMatrix = -1;
+    int _dirColor = -1;
+
     // Camera pointer for view/projection
     const Camera* _camera = nullptr;
 
     void createShader();
+    void createDirectionIndicator();
     void cleanup();
     void updateMatrices();
 };

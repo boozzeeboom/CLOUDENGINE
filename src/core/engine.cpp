@@ -502,7 +502,7 @@ void Engine::renderPlayerEntities() {
         RENDER_LOG_DEBUG("PlayerEntity: rendering at pos=({:.1f},{:.1f},{:.1f}) size={} color=({:.1f},{:.1f},{:.1f})",
             transform.position.x, transform.position.y, transform.position.z,
             mesh.size, color.color.r, color.color.g, color.color.b);
-        primitives.render(transform.position, mesh.size, color.color);
+        primitives.render(transform.position, mesh.size, transform.rotation, color.color);
         count++;
     });
     

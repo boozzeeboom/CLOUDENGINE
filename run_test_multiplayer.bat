@@ -25,13 +25,13 @@ del /f /q test_multiplayer_host.txt 2>nul
 del /f /q test_multiplayer_client.txt 2>nul
 
 echo [TEST] Starting Host (log: test_multiplayer_host.txt)...
-start "CloudEngine_Host" cmd /c "build_test\Debug\CloudEngine.exe --host ^> test_multiplayer_host.txt 2^>^&1"
+start "CloudEngine_Host" cmd /c "build\Debug\CloudEngine.exe --host ^> test_multiplayer_host.txt 2^>^&1"
 
 echo [TEST] Waiting 3 seconds for host to initialize...
 timeout /t 3 /nobreak >nul
 
 echo [TEST] Starting Client (log: test_multiplayer_client.txt)...
-start "CloudEngine_Client" cmd /c "build_test\Debug\CloudEngine.exe --client ^> test_multiplayer_client.txt 2^>^&1"
+start "CloudEngine_Client" cmd /c "build\Debug\CloudEngine.exe --client ^> test_multiplayer_client.txt 2^>^&1"
 
 echo.
 echo ======================================

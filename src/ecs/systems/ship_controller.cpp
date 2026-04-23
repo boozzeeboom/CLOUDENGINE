@@ -72,22 +72,21 @@ void registerShipControllerSystem(flecs::world& world) {
                 }
                 lastRMBPressed = currentRMBPressed;
                 
-                // Skip input if cursor not captured
-                if (!cursorCaptured) {
-                    *input = ShipInput{};
-                    continue;
+                // Reset input
+                *input = ShipInput{};
+                
+                // Mouse look - ONLY when cursor is captured
+                if (cursorCaptured) {
+                    double mouseX, mouseY;
+                    Platform::Window::getMousePos(mouseX, mouseY);
+                    cameraYaw -= static_cast<float>(mouseX - lastMouseX) * mouseSensitivity;
+                    cameraPitch = glm::clamp(cameraPitch - static_cast<float>(mouseY - lastMouseY) * mouseSensitivity, -1.5f, 1.5f);
+                    lastMouseX = mouseX;
+                    lastMouseY = mouseY;
                 }
                 
-                // Mouse look
-                double mouseX, mouseY;
-                Platform::Window::getMousePos(mouseX, mouseY);
-                cameraYaw -= static_cast<float>(mouseX - lastMouseX) * mouseSensitivity;
-                cameraPitch = glm::clamp(cameraPitch - static_cast<float>(mouseY - lastMouseY) * mouseSensitivity, -1.5f, 1.5f);
-                lastMouseX = mouseX;
-                lastMouseY = mouseY;
-                
-                // Reset and read keyboard
-                *input = ShipInput{};
+                // Keyboard input - ALWAYS enabled (W/S/E/Q for thrust, A/D/C/V/Z/X for rotation)
+                // Don't require cursor capture for keyboard controls
                 
                 // === THRUST CONTROLS ===
                 // Forward/backward - W/S keys
@@ -134,6 +133,19 @@ void registerShipControllerSystem(flecs::world& world) {
                     input->pitchInput = 1.0f;
                 } else {
                     input->pitchInput = 0.0f;
+                }
+                
+                // DEBUG: Log rotation keys status every 60 frames
+                static int rotationKeyLogCounter = 0;
+                rotationKeyLogCounter++;
+                if (rotationKeyLogCounter % 60 == 0) {
+                    bool zKey = Platform::Window::isKeyPressed(GLFW_KEY_Z);
+                    bool xKey = Platform::Window::isKeyPressed(GLFW_KEY_X);
+                    bool cKey = Platform::Window::isKeyPressed(GLFW_KEY_C);
+                    bool vKey = Platform::Window::isKeyPressed(GLFW_KEY_V);
+                    if (zKey || xKey || cKey || vKey) {
+                        CE_LOG_INFO("ROTATION KEYS DEBUG: Z={}, X={}, C={}, V={}", zKey, xKey, cKey, vKey);
+                    }
                 }
                 
                 if (Platform::Window::isKeyPressed(GLFW_KEY_LEFT_SHIFT)) input->boost = true;
@@ -189,35 +201,57 @@ void registerShipControllerSystem(flecs::world& world) {
                     input->forwardThrust, input->verticalThrust, input->yawInput, input->pitchInput,
                     input->boost ? "yes" : "no");
                 
-                // Apply forward thrust
+                // FIX: Apply thrust in LOCAL SPACE (relative to body rotation)
+                JPH::BodyInterface& bodyInterface = JoltPhysicsModule::get().getBodyInterface();
+                JPH::Quat rotation = bodyInterface.GetRotation(joltId->id);
+                
+                // Apply forward/backward thrust (W/S) - in LOCAL space, +Z is forward
                 if (input->forwardThrust != 0.0f) {
                     float thrustMultiplier = physics->thrust * (input->boost ? 2.0f : 1.0f);
-                    glm::vec3 force(0.0f, 0.0f, input->forwardThrust * thrustMultiplier);
-                    CE_LOG_DEBUG("ShipController: fwd force=({:.1f},{:.1f},{:.1f}) bodyId={}", 
+                    // Local forward direction
+                    JPH::Vec3 localForce(0.0f, 0.0f, input->forwardThrust * thrustMultiplier);
+                    // Transform to world space using rotation quaternion
+                    JPH::Vec3 worldForce = rotation * localForce;
+                    glm::vec3 force(worldForce.GetX(), worldForce.GetY(), worldForce.GetZ());
+                    CE_LOG_DEBUG("ShipController: fwd LOCAL=({:.1f},{:.1f},{:.1f}) WORLD=({:.1f},{:.1f},{:.1f}) bodyId={}", 
+                        localForce.GetX(), localForce.GetY(), localForce.GetZ(),
                         force.x, force.y, force.z, joltId->id.GetIndex());
                     ::Core::ECS::applyForce(JoltPhysicsModule::get(), joltId->id, force, JPH::EActivation::Activate);
                 }
                 
-                // Apply vertical thrust (Space/E = up, Q = down)
+                // Apply vertical thrust (E/Q) - in LOCAL space, +Y is up
                 if (input->verticalThrust != 0.0f) {
-                    glm::vec3 force(0.0f, input->verticalThrust * physics->thrust * 2.0f, 0.0f);
-                    CE_LOG_DEBUG("ShipController: vert force=({:.1f},{:.1f},{:.1f}) bodyId={}", 
+                    // Local up direction
+                    JPH::Vec3 localForce(0.0f, input->verticalThrust * physics->thrust * 2.0f, 0.0f);
+                    // Transform to world space using rotation quaternion
+                    JPH::Vec3 worldForce = rotation * localForce;
+                    glm::vec3 force(worldForce.GetX(), worldForce.GetY(), worldForce.GetZ());
+                    CE_LOG_DEBUG("ShipController: vert LOCAL=({:.1f},{:.1f},{:.1f}) WORLD=({:.1f},{:.1f},{:.1f}) bodyId={}", 
+                        localForce.GetX(), localForce.GetY(), localForce.GetZ(),
                         force.x, force.y, force.z, joltId->id.GetIndex());
                     ::Core::ECS::applyForce(JoltPhysicsModule::get(), joltId->id, force, JPH::EActivation::Activate);
                 }
                 
-                // Apply torque for rotation (pitch, yaw, roll)
-                // pitch = X, yaw = Y, roll = Z (Jolt convention)
-                // FIX: Increased multiplier from 50 to 500 to 50000 for much better responsiveness
+                // Apply angular velocity for rotation (pitch, yaw, roll)
+                // FIX: Pass direct input values (-1 to 1), applyTorque maps to angular velocity
                 if (input->yawInput != 0.0f || input->pitchInput != 0.0f || input->rollInput != 0.0f) {
-                    glm::vec3 torque(
-                        physics->mass * 50000.0f * input->pitchInput,  // pitch around X (50,000,000 N*m for mass=1000)
-                        physics->mass * 50000.0f * input->yawInput,    // yaw around Y
-                        physics->mass * 50000.0f * input->rollInput     // roll around Z
+                    glm::vec3 angVelInput(
+                        input->pitchInput,  // X = pitch (-1 to 1)
+                        input->yawInput,     // Y = yaw (-1 to 1)
+                        input->rollInput     // Z = roll (-1 to 1)
                     );
-                    CE_LOG_DEBUG("ShipController: torque=({:.1f},{:.1f},{:.1f}) bodyId={}", 
-                        torque.x, torque.y, torque.z, joltId->id.GetIndex());
-                    ::Core::ECS::applyTorque(JoltPhysicsModule::get(), joltId->id, torque, JPH::EActivation::Activate);
+                    // CRITICAL DIAGNOSTIC: Always log when there's rotation input
+                    CE_LOG_INFO("ShipController: ROTATION INPUT - angVelInput=({:.2f},{:.2f},{:.2f}) bodyId={}", 
+                        angVelInput.x, angVelInput.y, angVelInput.z, joltId->id.GetIndex());
+                    ::Core::ECS::applyTorque(JoltPhysicsModule::get(), joltId->id, angVelInput, JPH::EActivation::Activate);
+                } else {
+                    // Periodic log to show system is running
+                    static int noInputCounter = 0;
+                    noInputCounter++;
+                    if (noInputCounter % 120 == 0) {
+                        CE_LOG_DEBUG("ShipController: No rotation input, yawInput={:.2f}, pitchInput={:.2f}, rollInput={:.2f}", 
+                            input->yawInput, input->pitchInput, input->rollInput);
+                    }
                 }
             }
         });
