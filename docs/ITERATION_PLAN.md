@@ -1,8 +1,9 @@
 # CLOUDENGINE — Iteration Plan
 
-> **Версия плана**: 3.3 (обновлён 2026-04-20 вечером)  
-> **Статус проекта**: ✅ **Iteration 0-3 ЗАВЕРШЁН**, Iteration 4.1 ЗАВЕРШЁН  
-> **Следующий шаг**: Iteration 4.2 — ECS Network Integration
+> **Версия плана**: 4.0 (обновлён 2026-04-24)  
+> **Статус проекта**: ✅ **Iteration 0-5 ЗАВЕРШЁН**, Iteration 6 В ПРОЦЕССЕ  
+> **Следующий шаг**: Iteration 6 — Airship Physics (завершить yaw/rotation)
+
 
 ---
 
@@ -166,51 +167,49 @@ CloudEngine.exe --client  # Client (localhost:12345)
 
 ---
 
-## ITERATION 6 — Airship Physics (3–4 недели)
+## ITERATION 6 — Airship Physics (3–4 недели) 🔄 IN PROGRESS
 
 **Цель**: Базовые физика и управление воздушными судами.
+**Статус**: Jolt Physics работает, управление частично реализовано
+**Дата последнего обновления**: 2026-04-23
+
+### 6.1 Jolt Physics Integration ✅
+- [x] Jolt Physics library integrated
+- [x] PhysicsSystem initialization fixed (JobSystem nullptr crash)
+- [x] TempAllocator/JobSystemThreadPool as persistent members
+- [x] Body creation for player entity
+- [x] Physics sync (Jolt → ECS Transform)
+
+### 6.2 Ship Controller ✅
+- [x] `ShipInput` component with fields: yawInput, pitchInput, rollInput, forwardThrust, verticalThrust, boost
+- [x] `ShipController` system — applies forces/torque to Jolt rigidbody
+- [x] Cursor capture toggle (RMB press, not hold)
+- [x] ShipPhysics component (mass, thrust)
+
+### 6.3 Ship Controls ✅
+| Key | Action | Status |
+|-----|--------|--------|
+| W/S | Forward/backward thrust | ✅ Working |
+| A/D | Yaw rotation (turn left/right) | ⚠️ Weak |
+| Q/E | Up/down thrust | ✅ Working |
+| Space | Up thrust | ✅ Working |
+| Z/X | Roll rotation | ✅ Code implemented |
+| C/V | Pitch rotation (backup) | ✅ Code implemented |
+| Shift | Boost | ✅ Working |
+| Mouse | Pitch/yaw camera | ✅ Working |
+
+### 6.4 Physics System ✅
+- [x] Fixed delta time physics integration
+- [x] applyForce() for linear movement
+- [x] applyTorque() for rotation
+- [x] SyncJoltToECS system for position sync
+
+### Known Issues
+- A/D yaw rotation is weak — needs more torque
+- Rotation not visible on primitive sphere (needs 3D model)
 
 ---
 
-## ITERATION 5 — Airship Physics (3–4 недели)
-
-**Цель**: Базовые физика и управление воздушными судами.
-
-### 5.1 Physics Components
-- [ ] `Rigidbody` компонент (mass, velocity, angularVelocity, drag)  
-- [ ] `AerodynamicsParams` (lift, thrust, drag coefficients)  
-- [ ] `PhysicsSystem` в фазе Physics — интеграция Verlet/RK4
-
-### 5.2 Airship Controller
-- [ ] `ShipInput` компонент — целевые значения от игрока  
-- [ ] `ShipController` система — применяет силы к rigidbody  
-- [ ] Инерционная физика (медленное ускорение/замедление)  
-- [ ] Управление: тяга (W/S), поворот (A/D), подъём/спуск (Q/E)
-
----
-
-## ITERATION 6 — Multiplayer Foundation (4–6 недель)
-
-**Цель**: Базовый сетевой стек. 2 игрока в одном мире.
-
-### 6.1 Transport Layer
-- [ ] Custom UDP socket (Windows: WinSock2, Linux: POSIX)  
-- [ ] Packet struct с sequence number + timestamp  
-- [ ] Надёжная доставка (ACK-based) для критичных пакетов  
-- [ ] Unreliable для позиций (UDP без гарантии)
-
-### 6.2 Network State
-- [ ] `NetworkId` компонент  
-- [ ] `RemotePlayer` tag компонент  
-- [ ] Сериализация Position/Velocity в бинарный формат  
-- [ ] Десериализация + interpolation на клиенте
-
-### 6.3 Session
-- [ ] Host/Client режимы  
-- [ ] Join по IP:PORT  
-- [ ] Обработка дисконнекта (удаление RemotePlayer entities)
-
----
 
 ## ITERATION 7 — Asset System & Content (3–4 недели)
 
@@ -226,14 +225,16 @@ CloudEngine.exe --client  # Client (localhost:12345)
 
 ## Метрики успеха по итерациям
 
-| Итерация | Метрика |
-|----------|---------|
-| 0 | exe запускается, окно открывается |
-| 1 | Лог по подсистемам, ECS пайплайн, 60 FPS |
-| 2 | Облака через ECS, камера управляется |
-| 3 | Полный ввод через InputSystem |
-| 4 | 100,000 unit radius без артефактов |
-| 5 | Корабль летит с физикой инерции |
-| 6 | 2 игрока онлайн |
-| 7 | 3D модели корабля в сцене |
-| 8 | Ghibli визуал — скриншот в портфолио |
+| Итерация | Метрика | Статус |
+|----------|---------|--------|
+| 0 | exe запускается, окно открывается | ✅ |
+| 1 | Лог по подсистемам, ECS пайплайн, 60 FPS | ✅ |
+| 2 | Облака через ECS, камера управляется | ✅ |
+| 3 | Полный ввод через InputSystem | ✅ |
+| 4 | 100,000 unit radius без артефактов | ✅ |
+| 5 | Корабль летит с физикой инерции | ✅ |
+| 6 | 2 игрока онлайн | 🔄 |
+| 7 | 3D модели корабля в сцене | ⏳ |
+| 8 | Ghibli визуал — скриншот в портфолио | ⏳ |
+
+
