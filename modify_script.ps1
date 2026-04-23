@@ -1,0 +1,1 @@
+\$content = Get-Content -Path "src/core/engine.cpp" -Raw -Encoding UTF8; Write-Host "Read"; if (\$content -match "void Engine::run") { Write-Host "Found" } else { Write-Host "Not found" }

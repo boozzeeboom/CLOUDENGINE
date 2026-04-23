@@ -226,7 +226,8 @@ JPH::BodyID createBoxBody(
         JPH::EMotionType::Dynamic,
         layer
     );
-    settings.mMassPropertiesOverride.mMass = mass;
+    // FIX: Set mass directly using mMass property
+    settings.mMassPropertiesOverride.SetMass(mass);
     settings.mAllowDynamicOrKinematic = true;
 
     JPH::BodyID bodyId = bodyInterface.CreateAndAddBody(settings, JPH::EActivation::Activate);

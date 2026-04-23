@@ -130,7 +130,8 @@ void registerShipControllerSystem(flecs::world& world) {
                 
                 // Apply vertical thrust
                 if (input->verticalThrust != 0.0f) {
-                    glm::vec3 force(0.0f, input->verticalThrust * physics->thrust * 0.5f, 0.0f);
+                    // FIX: Increased multiplier from 0.5 to 2.0 for stronger upward lift
+                    glm::vec3 force(0.0f, input->verticalThrust * physics->thrust * 2.0f, 0.0f);
                     CE_LOG_DEBUG("ShipController: vert force=({:.1f},{:.1f},{:.1f}) bodyId={}", 
                         force.x, force.y, force.z, joltId->id.GetIndex());
                     ::Core::ECS::applyForce(JoltPhysicsModule::get(), joltId->id, force, JPH::EActivation::Activate);
