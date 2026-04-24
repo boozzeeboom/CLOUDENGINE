@@ -28,6 +28,7 @@ Output/
 .idea/
 .vs/
 .vscode/
+.opencode/
 *.suo
 *.user
 *.userprefs
@@ -80,6 +81,19 @@ logs/
 # Editor cache
 .cache/
 .editor/
+
+# ===========================================
+# Graphify Knowledge Graph (generated)
+# ===========================================
+graphify-out/
+src/graphify-out/
+.graphify_*
+.graphify_python
+
+# ===========================================
+# MCP Config (local settings)
+# ===========================================
+.mcp.json
 
 # ===========================================
 # Unity Migration (source reference only)
