@@ -29,6 +29,7 @@ void NetworkManager::shutdown() {
     _players.clear();
     _connected  = false;
     _isHost     = false;
+    _connectionRequestSent = false;
 
     enet_deinitialize();
     NETWORK_LOG_INFO("Network shutdown complete");

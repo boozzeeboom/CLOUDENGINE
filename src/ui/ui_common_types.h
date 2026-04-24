@@ -1,5 +1,7 @@
 #pragma once
 #include <cstdint>
+#include <string>
+#include <glm/vec2.hpp>
 
 namespace UI {
 
@@ -45,6 +47,19 @@ enum class UIAlign : uint8_t {
     Left = 0,
     Center = 1,
     Right = 2
+};
+
+// ============================================================================
+// BUTTON — Common button structure for UI screens
+// ============================================================================
+
+struct Button {
+    std::string text;
+    glm::vec2 position;
+    glm::vec2 size;
+    bool hovered = false;
+    bool pressed = false;
+    bool clicked = false;
 };
 
 } // namespace UI

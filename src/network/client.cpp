@@ -31,7 +31,7 @@ bool Client::connect(const char* host, int port, const char* playerName) {
 
     _isHost = false;
 
-    // Wait for ENET_EVENT_TYPE_CONNECT (up to 5 seconds)
+    // Wait for ENET_EVENT_TYPE_CONNECT (up to 5 seconds) - BLOCKING like c559674
     ENetEvent event;
     if (enet_host_service(_host, &event, 5000) > 0 &&
         event.type == ENET_EVENT_TYPE_CONNECT) {

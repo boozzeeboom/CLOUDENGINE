@@ -81,6 +81,11 @@ protected:
     uint32_t _nextPlayerId  = 2;        // auto-increment, starts at 2 (host is always 1)
     bool     _connected     = false;
     bool     _isHost        = false;
+
+    std::string _connectionHostname;
+    int _connectionPort = 0;
+    char _playerName[32] = {0};
+    bool _connectionRequestSent = false;
 };
 
 } // namespace Network

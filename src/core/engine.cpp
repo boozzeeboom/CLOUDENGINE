@@ -22,6 +22,8 @@
 #include <ui/ui_manager.h>
 #include <ui/screens/main_menu_screen.h>
 #include <ui/screens/loading_screen.h>
+#include <ui/screens/join_client_screen.h>
+#include <ui/screens/settings_screen.h>
 #include <chrono>
 #include <iostream>
 
@@ -300,13 +302,20 @@ void Engine::update(float dt) {
     if (_showMainMenu) {
         // Set cursor to normal so user can click menu buttons
         Platform::Window::setCursorCapture(false);
-        
+
+        // Allow network to update even with menu shown (for async connection handshake)
+        if (_client) {
+            _client->update(dt);
+        }
+        if (_server) {
+            _server->update(dt);
+        }
+
         // DON'T run ECS systems - game is paused
         // DON'T sync camera - keep it fixed
-        // DON'T update network
         // DON'T run flight controls
         // DON'T update world
-        
+
         // Just run minimal UI-related updates and return
         CE_LOG_TRACE("Engine::update() - menu shown, skipping game logic");
         return;
@@ -674,11 +683,41 @@ void Engine::handleMenuAction(const std::string& action) {
     CE_LOG_INFO("Engine: Menu action '{}'", action);
     
     if (action == "start" || action == "host") {
+        // Create server first!
+        if (!_server) {
+            _server = new Network::Server();
+            if (!_server->init()) {
+                CE_LOG_ERROR("Server init failed");
+                delete _server;
+                _server = nullptr;
+                return;
+            }
+            _server->start(12345, 8);
+            CE_LOG_INFO("Server started on port 12345");
+
+            // Setup server callbacks for ECS integration (like in init())
+            _server->onPlayerConnected = [this](uint32_t playerId) {
+                auto& world = ECS::getWorld();
+                ECS::createRemotePlayer(world, playerId, glm::vec3(0.0f, 3000.0f, 0.0f));
+                CE_LOG_INFO("Server: Player {} connected, created RemotePlayer entity", playerId);
+            };
+            _server->onPlayerDisconnected = [this](uint32_t playerId) {
+                auto& world = ECS::getWorld();
+                ECS::removeRemotePlayer(world, playerId);
+                CE_LOG_INFO("Server: Player {} disconnected", playerId);
+            };
+
+            // Create LocalPlayer entity for host (player ID 1)
+            auto& world = ECS::getWorld();
+            ECS::createLocalPlayer(world, 1, glm::vec3(0.0f, 3000.0f, 0.0f));
+            CE_LOG_INFO("Host: Created LocalPlayer entity for self (id=1)");
+        }
+
         // Push loading screen before starting game
         if (_uiManager) {
             // Pop main menu and push loading screen
             _uiManager->popScreen();
-            
+
             // Create and push loading screen
             auto loadingScreen = std::make_unique<UI::LoadingScreen>();
             loadingScreen->setStatus("Loading world...");
@@ -695,11 +734,113 @@ void Engine::handleMenuAction(const std::string& action) {
         }
         CE_LOG_INFO("Engine: Transitioning to LoadingScreen");
     } else if (action == "join") {
-        // TODO: Show Join Client screen
-        CE_LOG_INFO("Engine: Join Client - not implemented yet");
+        CE_LOG_INFO("Engine: Showing Join Client screen");
+        if (_uiManager) {
+            auto joinScreen = std::make_unique<UI::JoinClientScreen>();
+            joinScreen->onConnect = [this](const std::string& ip, int port) {
+                CE_LOG_INFO("Connecting to {}:{}", ip, port);
+
+                // Initialize client if not already done
+                if (!_client) {
+                    _client = new Network::Client();
+                    if (!_client->init()) {
+                        CE_LOG_ERROR("Client init failed");
+                        delete _client;
+                        _client = nullptr;
+                        return;
+                    }
+                }
+
+                // Update mode to Client
+                _mode = AppMode::Client;
+
+                // Connect to server
+                if (!_client->connect(ip.c_str(), port, "Player")) {
+                    CE_LOG_ERROR("Failed to connect to {}:{}", ip, port);
+                } else {
+                    CE_LOG_INFO("Connection initiated to {}:{}", ip, port);
+
+                    // Setup client callbacks
+                    _client->onPlayerConnected = [this](uint32_t playerId) {
+                        CE_LOG_INFO("onPlayerConnected callback fired! playerId={}", playerId);
+                        auto& world = ECS::getWorld();
+                        uint32_t localId = _client->getLocalPlayerId();
+
+                        CE_LOG_INFO("Client onPlayerConnected: playerId={}, localId={}", playerId, localId);
+
+                        if (playerId == localId) {
+                            ECS::createLocalPlayer(world, playerId, glm::vec3(0.0f, 3000.0f, 0.0f));
+                            CE_LOG_INFO("Client: Created LocalPlayer entity for self (id={})", playerId);
+
+                            // CRITICAL: Only hide menu AFTER we got our player ID from server
+                            _showMainMenu = false;
+
+                            // Clear ALL UI screens - game is starting
+                            if (_uiManager) {
+                                _uiManager->clearStack();
+                            }
+                            CE_LOG_INFO("Game started - UI cleared, menu hidden");
+                        } else {
+                            ECS::createRemotePlayer(world, playerId, glm::vec3(0.0f, 3000.0f, 0.0f));
+                            CE_LOG_INFO("Client: Created RemotePlayer entity for id={}", playerId);
+                        }
+                    };
+
+                    _client->onPlayerDisconnected = [this](uint32_t playerId) {
+                        auto& world = ECS::getWorld();
+                        ECS::removeRemotePlayer(world, playerId);
+                        CE_LOG_INFO("Client: Player {} disconnected", playerId);
+                    };
+
+                    _client->onPositionReceived = [this](uint32_t playerId, const glm::vec3& position, float yaw, float pitch) {
+                        auto& world = ECS::getWorld();
+
+                        auto q = world.query_builder<ECS::NetworkId, ECS::RemotePlayer>().build();
+                        bool entityExists = false;
+
+                        q.each([playerId, &entityExists](ECS::NetworkId& nid, ECS::RemotePlayer&) {
+                            if (nid.id == playerId) {
+                                entityExists = true;
+                            }
+                        });
+
+                        if (!entityExists) {
+                            ECS::createRemotePlayer(world, playerId, position);
+                            CE_LOG_INFO("Client: Created RemotePlayer entity for id={}", playerId);
+                        }
+
+                        double timestamp = glfwGetTime();
+                        ECS::updateNetworkTransform(world, playerId, position, yaw, pitch, timestamp);
+                    };
+
+                    CE_LOG_INFO("Client callbacks set, waiting for server connection...");
+                }
+                // DON'T pop screen here - onPlayerConnected will do it when connection succeeds
+            };
+            joinScreen->onBack = [this]() {
+                if (_uiManager) {
+                    _uiManager->popScreen();
+                }
+            };
+            _uiManager->pushScreen(std::move(joinScreen));
+        }
     } else if (action == "settings") {
-        // TODO: Show Settings screen
-        CE_LOG_INFO("Engine: Settings - not implemented yet");
+        CE_LOG_INFO("Engine: Showing Settings screen");
+        if (_uiManager) {
+            auto settingsScreen = std::make_unique<UI::SettingsScreen>();
+            settingsScreen->onApply = [this]() {
+                CE_LOG_INFO("Settings applied");
+                if (_uiManager) {
+                    _uiManager->popScreen();
+                }
+            };
+            settingsScreen->onBack = [this]() {
+                if (_uiManager) {
+                    _uiManager->popScreen();
+                }
+            };
+            _uiManager->pushScreen(std::move(settingsScreen));
+        }
     } else if (action == "quit") {
         // Exit the game
         CE_LOG_INFO("Engine: Quit requested");
