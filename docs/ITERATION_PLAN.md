@@ -209,15 +209,85 @@ CloudEngine.exe --client  # Client (localhost:12345)
 **Session 6.2 Prompt:** `docs/CLOUDENGINE/Iterations/Iteration_6_2/SESSION_PROMPT_WIND_INTEGRATION.md`
 
 ### Known Issues
-- A/D yaw rotation was weak — increased torque (fixed)
-- Rotation not visible on primitive sphere (needs 3D model)
+- A/D yaw rotation was to strong (just for the test) — increased torque (fixed)
+- camera not sticked to the rear of the ship - not comfotable.
 
 ---
 
 
-## ITERATION 7 — Asset System & Content (3–4 недели)
+## ITERATION 7 — Asset System & UI System (3–4 недели)
 
-**Цель**: Загрузка 3D моделей, текстур, audio.
+**Цель**: Загрузка 3D моделей, текстур + UI система
+
+### 7.1 Asset System (Asset Loading) ✅ ПЛАНИРОВАНИЕ
+- [ ] AssetManager — загрузчик моделей/текстур
+- [ ] Assimp integration для glTF/FBX
+- [ ] Texture caching и streaming
+- [ ] Shader hot-reload для материалов
+
+### 7.2 UI System 🔄 ПЛАНИРОВАНИЕ
+- [ ] **Документация:** `docs/CLOUDENGINE/Iterations/Iteration_7/UI_SYSTEM_PLAN.md`
+
+#### UI Архитектура
+```
+Custom OpenGL UI (без внешних библиотек)
+├── ECS Integration (UI как компоненты)
+├── SDF Rendering (smooth edges)
+├── Screen Stack (MainMenu → Game → Pause)
+└── Zero external dependencies
+```
+
+#### UI Компоненты
+| Компонент | Описание |
+|-----------|----------|
+| UIPanel | Фон панели с border radius |
+| UIButton | Кнопка с hover/pressed states |
+| UILabel | Текстовая метка |
+| UIInputField | Поле ввода (IP/Port) |
+| UISlider | Слайдер настроек |
+| UIInventorySlot | Слот инвентаря |
+| UIFuelBar | Индикатор топлива |
+
+#### UI Экраны
+| Экран | Описание | Горячая клавиша |
+|-------|----------|----------------|
+| MainMenuScreen | Host/Client/Settings/Quit | — |
+| SettingsScreen | Graphics/Audio/Controls | — |
+| InventoryScreen | 10 типов предметов, 8x8 сетка | TAB |
+| NPCDialogScreen | Trade/Storage/Contract кнопки | E |
+| CharacterScreen | Координаты, скорость, топливо | C |
+| PauseMenuScreen | Resume/Settings/Quit | ESC |
+
+#### Item Types (10 типов)
+```cpp
+enum class ItemType {
+    Resource = 0,      // Crafting materials
+    Equipment = 1,    // Ship upgrades
+    Consumable = 2,    // Food, medicine
+    Quest = 3,         // Quest items
+    Treasure = 4,      // Valuables
+    Key = 5,           // Door keys
+    Currency = 6,      // Credits
+    Misc = 7,          // Everything else
+    Cargo = 8,         // Trade goods
+    Ammo = 9           // Weapons
+};
+```
+
+#### Key Features
+- **TAB** — открывает инвентарь (персонаж или корабль)
+- **F** — взаимодействие с NPC
+- **O** — экран персонажа/корабля
+- **ESC** — пауза
+
+#### Sub-Iterations
+| Sub-Iter | Фокус | Длительность |
+|----------|-------|--------------|
+| 7.1 | Core UI Framework | 3-4 дня |
+| 7.2 | Main Menu + Settings | 2 дня |
+| 7.3 | Inventory System | 2-3 дня |
+| 7.4 | NPC Interaction | 2 дня |
+| 7.5 | Character HUD | 1-2 дня |
 
 ---
 
@@ -237,7 +307,7 @@ CloudEngine.exe --client  # Client (localhost:12345)
 | 3 | Полный ввод через InputSystem | ✅ |
 | 4 | 100,000 unit radius без артефактов | ✅ |
 | 5 | Корабль летит с физикой инерции | ✅ |
-| 6 | 2 игрока онлайн | 🔄 |
+| 6 | 2 игрока онлайн | ✅ |
 | 7 | 3D модели корабля в сцене | ⏳ |
 | 8 | Ghibli визуал — скриншот в портфолио | ⏳ |
 
