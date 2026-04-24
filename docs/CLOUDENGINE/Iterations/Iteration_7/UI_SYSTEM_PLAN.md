@@ -1,8 +1,8 @@
 # UI System Design — Iteration 7
 
-**Project:** CLOUDENGINE  
-**Date:** 2026-04-24  
-**Status:** Analysis & Planning  
+**Project:** CLOUDENGINE
+**Date:** 2026-04-24
+**Status:** In Progress (Iteration 7.2 Complete)
 **Iteration:** 7 (Asset System + UI)
 
 ---
@@ -635,11 +635,11 @@ public:
 ## 8. Acceptance Criteria
 
 ### 8.1 Main Menu
-- [ ] Start Game button launches singleplayer
-- [ ] Host Server button starts server and enters game
-- [ ] Join Client shows IP/Port input fields
-- [ ] Settings screen has working sliders
-- [ ] Quit button closes application
+- [x] Start Game button launches singleplayer
+- [x] Host Server button starts server and enters game
+- [x] Join Client shows IP/Port input fields
+- [x] Settings screen has working sliders
+- [x] Quit button closes application
 
 ### 8.2 Inventory
 - [ ] TAB opens/closes inventory
@@ -660,9 +660,9 @@ public:
 - [ ] Fuel/Hull bars functional
 
 ### 8.5 Technical
-- [ ] Zero allocations in UI render loop
-- [ ] 60 FPS with UI visible
-- [ ] All UI through ECS (no immediate mode)
+- [x] Zero allocations in UI render loop
+- [x] 60 FPS with UI visible
+- [x] All UI through ECS (no immediate mode)
 
 ---
 
@@ -688,5 +688,40 @@ public:
 
 ---
 
-**Document Version:** 1.0  
-**Status:** Ready for implementation (pending user approval)
+**Document Version:** 1.0
+**Status:** Iteration 7.2 (Main Menu) Complete - Ready for 7.3 (Inventory)
+
+---
+
+## Session Completion Notes (2026-04-25)
+
+### Completed in Session:
+- [x] JoinClientScreen implementation (IP/Port input, CONNECT, BACK buttons)
+- [x] SettingsScreen implementation (Graphics/Audio/Controls sections with sliders)
+- [x] Network multiplayer fixes:
+  - Host server callbacks properly create RemotePlayer entities on client connect
+  - Client menu properly hides after ConnectionAccept (onPlayerConnected callback)
+  - LocalPlayer entity created for host on "host" action
+  - UI stack properly cleared when game starts
+- [x] UI button states (hover/press) working correctly
+
+### Files Created/Modified:
+- `src/ui/screens/join_client_screen.cpp` (NEW)
+- `src/ui/screens/join_client_screen.h` (NEW)
+- `src/ui/screens/settings_screen.cpp` (NEW)
+- `src/ui/screens/settings_screen.h` (NEW)
+- `src/core/engine.cpp` (modified - menu actions, network callbacks)
+- `src/network/client.cpp` (modified - blocking connect)
+- `src/network/network_manager.cpp/h` (modified - connection state reset)
+
+### Remaining Work:
+- [ ] Inventory System (Iteration 7.3)
+- [ ] NPC Interaction (Iteration 7.4)
+- [ ] Character HUD (Iteration 7.5)
+- [ ] MainMenuScreen visual polish (background, animations)
+
+### Key Technical Details:
+- Host creates Server + LocalPlayer on "host" action, then LoadingScreen
+- Client callbacks set BEFORE connect(), UI cleared in onPlayerConnected when localId matches
+- `_uiManager->clearStack()` used instead of loop with `popScreen()`
+- Client connect() is blocking with 5s timeout (like c559674)
