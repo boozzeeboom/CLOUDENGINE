@@ -35,7 +35,7 @@ private:
     std::vector<MenuButton> _buttons;
     
     void initButtons();
-    bool isPointInRect(int x, int y, float posX, float posY, float w, float h) const;
+    bool isPointInRect(float normX, float normY, float posX, float posY, float w, float h) const;
     void handleClick(const std::string& action);
 };
 

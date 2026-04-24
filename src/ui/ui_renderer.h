@@ -3,12 +3,25 @@
 #include <flecs.h>
 #include <glm/glm.hpp>
 #include <string>
+#include <vector>
+#include <unordered_map>
 
 namespace UI {
 
 // ============================================================================
+// Font character info for texture atlas
+// ============================================================================
+struct CharInfo {
+    float u0, v0;  // UV top-left
+    float u1, v1;  // UV bottom-right
+    float width;
+    float height;
+    float xoff;    // Horizontal offset to next char (advance)
+    int bitmap_top; // Vertical position from baseline (stb_truetype bitmap_top)
+};
+
+// ============================================================================
 // UIRenderer — OpenGL rendering for UI elements
-// Uses SDF (Signed Distance Field) for smooth edges
 // ============================================================================
 
 class UIRenderer {
@@ -65,13 +78,36 @@ public:
     
     // Draw inventory slot
     void drawInventorySlot(const glm::vec2& position,
-                            const glm::vec2& size,
-                            bool occupied,
-                            bool selected,
-                            bool hovered,
-                            const glm::vec4& emptyColor,
-                            const glm::vec4& occupiedColor,
-                            const glm::vec4& selectedColor);
+                          const glm::vec2& size,
+                          bool occupied,
+                          bool selected,
+                          bool hovered,
+                          const glm::vec4& emptyColor,
+                          const glm::vec4& occupiedColor,
+                          const glm::vec4& selectedColor);
+    
+    // Draw inventory grid
+    void drawInventoryGrid(const glm::vec2& position,
+                         const glm::vec2& cellSize,
+                         int columns,
+                         int rows,
+                         const std::vector<bool>& occupied,
+                         int selectedIndex,
+                         int hoveredIndex,
+                         const glm::vec4& gridColor);
+    
+    // Draw inventory wheel
+    void drawInventoryWheel(const glm::vec2& center,
+                          float radius,
+                          int slotCount,
+                          int selectedSlot,
+                          const glm::vec4& normalColor,
+                          const glm::vec4& selectedColor);
+    
+    // Draw textured quad
+    void drawTexturedQuad(const glm::vec2& position,
+                         const glm::vec2& size,
+                         unsigned int textureId);
     
     // Convert screen coordinates to normalized UV (0-1)
     glm::vec2 screenToUV(int screenX, int screenY) const {
@@ -97,6 +133,8 @@ private:
     // OpenGL resources
     unsigned int _quadVAO = 0;
     unsigned int _quadVBO = 0;
+    unsigned int _textVAO = 0;    // For text rendering
+    unsigned int _textVBO = 0;    // For text rendering
     unsigned int _shaderProgram = 0;
     
     // Font atlas texture (for text rendering)
@@ -114,14 +152,23 @@ private:
     int _uPosition = -1;     // Vertex shader: position uniform
     int _uSize = -1;         // Vertex shader: size uniform
     int _uTextColor = -1;    // Fragment shader: text color
+    int _uFontTexture = -1;  // Fragment shader: font texture sampler
+    int _uIsText = -1;       // Text mode flag
+    
+    // Font atlas info
+    int _atlasWidth = 512;
+    int _atlasHeight = 512;
+    float _fontScale = 1.0f;
+    std::unordered_map<int, CharInfo> _charInfos;
     
     // Internal helpers
     void renderQuad(const glm::vec2& pos, const glm::vec2& size);
     void createQuadGeometry();
     void createFontTexture();
     bool loadFontAtlas();
-    int compileShader(unsigned int type, const char* source);
-    int linkProgram(unsigned int vertShader, unsigned int fragShader);
+    bool createShaders();
+    int compileShader(int type, const char* source);
+    int linkProgram(int vertShader, int fragShader);
 };
 
 // ============================================================================

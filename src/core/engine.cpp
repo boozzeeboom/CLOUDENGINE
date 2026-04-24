@@ -21,6 +21,7 @@
 #include <network/client.h>
 #include <ui/ui_manager.h>
 #include <ui/screens/main_menu_screen.h>
+#include <ui/screens/loading_screen.h>
 #include <chrono>
 #include <iostream>
 
@@ -85,6 +86,20 @@ bool Engine::init() {
         return false;
     }
     CE_LOG_INFO("UI system initialized");
+    
+    // Setup mouse callbacks to forward to UIManager
+    int screenW = 1280, screenH = 720;
+    Platform::Window::setMouseMoveCallback([this](double x, double y) {
+        if (_uiManager) {
+            _uiManager->onMouseMove(static_cast<int>(x), static_cast<int>(y));
+        }
+    });
+    Platform::Window::setMouseButtonCallback([this](int button, int action) {
+        if (_uiManager) {
+            _uiManager->onMouseButton(button, action);
+        }
+    });
+    CE_LOG_INFO("Mouse callbacks registered for UI");
     
     // Setup UI action callback
     _uiManager->onScreenAction = [this](UI::ScreenType type) {
@@ -281,7 +296,23 @@ void Engine::update(float dt) {
         td->time = _time;
     }
 
-    // Run ECS systems
+    // FIX: Block ALL game updates when main menu is shown
+    if (_showMainMenu) {
+        // Set cursor to normal so user can click menu buttons
+        Platform::Window::setCursorCapture(false);
+        
+        // DON'T run ECS systems - game is paused
+        // DON'T sync camera - keep it fixed
+        // DON'T update network
+        // DON'T run flight controls
+        // DON'T update world
+        
+        // Just run minimal UI-related updates and return
+        CE_LOG_TRACE("Engine::update() - menu shown, skipping game logic");
+        return;
+    }
+
+    // Run ECS systems (game is running)
     ECS::update(dt);
 
     // Sync camera position to LocalPlayer Transform
@@ -290,19 +321,14 @@ void Engine::update(float dt) {
     // Update network
     updateNetwork(dt);
 
-    // PRIORITY 2 FIX: Skip updateFlightControls() for physics-controlled ships
-    // updateFlightControls() moves _cameraPos directly, conflicting with ShipControllerSystem
-    // Only call if there are NO physics-controlled local players
-    {
-        auto& world = ECS::getWorld();
-        auto q = world.query_builder<ECS::IsLocalPlayer, ECS::JoltBodyId>().build();
-        int physicsShipCount = 0;
-        q.each([&physicsShipCount](ECS::IsLocalPlayer&, ECS::JoltBodyId&) {
-            physicsShipCount++;
-        });
-        if (physicsShipCount == 0) {
-            updateFlightControls(dt);
-        }
+    // Update flight controls (player can fly)
+    auto q = world.query_builder<ECS::IsLocalPlayer, ECS::JoltBodyId>().build();
+    int physicsShipCount = 0;
+    q.each([&physicsShipCount](ECS::IsLocalPlayer&, ECS::JoltBodyId&) {
+        physicsShipCount++;
+    });
+    if (physicsShipCount == 0) {
+        updateFlightControls(dt);
     }
 
     // Update circular world system (chunk streaming, position wrapping)
@@ -622,14 +648,17 @@ void Engine::render() {
     // FIX: Use ECS render system instead of manual sphere rendering
     // The RenderRemotePlayersSystem in render_module.cpp handles all player entities
     renderPlayerEntities();
-
-    Rendering::Renderer::endFrame();
     
-    // Render UI on top (after game rendering)
+    // ========================================================================
+    // PASS 3: UI OVERLAY - Render UI BEFORE buffer swap
+    // ========================================================================
+    
     if (_uiManager) {
         _uiManager->update(_deltaTime);
         _uiManager->render();
     }
+    
+    Rendering::Renderer::endFrame();
 }
 
 // ============================================================================
@@ -645,11 +674,26 @@ void Engine::handleMenuAction(const std::string& action) {
     CE_LOG_INFO("Engine: Menu action '{}'", action);
     
     if (action == "start" || action == "host") {
-        // Start singleplayer or host mode - hide menu, game runs
+        // Push loading screen before starting game
         if (_uiManager) {
+            // Pop main menu and push loading screen
             _uiManager->popScreen();
+            
+            // Create and push loading screen
+            auto loadingScreen = std::make_unique<UI::LoadingScreen>();
+            loadingScreen->setStatus("Loading world...");
+            loadingScreen->onComplete = [this]() {
+                CE_LOG_INFO("LoadingScreen: onComplete callback fired");
+                // Start the game
+                _showMainMenu = false;
+                // Pop loading screen
+                if (_uiManager) {
+                    _uiManager->popScreen();
+                }
+            };
+            _uiManager->pushScreen(std::move(loadingScreen));
         }
-        _showMainMenu = false;
+        CE_LOG_INFO("Engine: Transitioning to LoadingScreen");
     } else if (action == "join") {
         // TODO: Show Join Client screen
         CE_LOG_INFO("Engine: Join Client - not implemented yet");

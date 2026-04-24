@@ -11,12 +11,13 @@ layout(location = 1) in vec2 aUV;
 uniform vec2 uPosition = vec2(0.0, 0.0);  // Center position
 uniform vec2 uSize = vec2(1.0, 1.0);     // Width, Height in screen space
 
+// Varyings (outputs to fragment shader)
 out vec2 vUV;
-out vec2 vPosition;
+out vec2 vLocalPos;
 
 void main() {
     vUV = aUV;
-    vPosition = aPosition;
+    vLocalPos = aPosition;  // 0-1 local position within quad
     
     // Calculate actual vertex position from UV
     vec2 worldPos = uPosition + (aPosition * uSize);

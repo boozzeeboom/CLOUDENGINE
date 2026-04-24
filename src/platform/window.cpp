@@ -9,6 +9,25 @@ namespace Core { namespace Platform {
 int Window::_width = 0;
 int Window::_height = 0;
 
+// Mouse callback function pointers - using std::function for lambdas
+#include <functional>
+static std::function<void(double, double)> g_mouseMoveCallback;
+static std::function<void(int, int)> g_mouseButtonCallback;
+
+// Internal GLFW callbacks that forward to registered handlers
+void Window::mouseMoveCallback(GLFWwindow* window, double xpos, double ypos) {
+    if (g_mouseMoveCallback) {
+        g_mouseMoveCallback(xpos, ypos);
+    }
+}
+
+void Window::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+    CE_LOG_TRACE("Window::mouseButtonCallback button={} action={} mods={}", button, action, mods);
+    if (g_mouseButtonCallback) {
+        g_mouseButtonCallback(button, action);
+    }
+}
+
 bool Window::init(int width, int height, const char* title) {
     CE_LOG_INFO("Window::init() - START ({}x{}, title={})", width, height, title);
     _width = width;
@@ -86,6 +105,20 @@ void Window::setCursorCapture(bool capture) {
 
 bool Window::isMouseButtonPressed(int button) {
     return glfwGetMouseButton(_window, button) == GLFW_PRESS;
+}
+
+void Window::setMouseMoveCallback(std::function<void(double, double)> callback) {
+    g_mouseMoveCallback = callback;
+    if (_window) {
+        glfwSetCursorPosCallback(_window, mouseMoveCallback);
+    }
+}
+
+void Window::setMouseButtonCallback(std::function<void(int, int)> callback) {
+    g_mouseButtonCallback = callback;
+    if (_window) {
+        glfwSetMouseButtonCallback(_window, mouseButtonCallback);
+    }
 }
 
 }} // namespace Core::Platform

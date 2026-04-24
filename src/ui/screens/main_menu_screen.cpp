@@ -15,11 +15,12 @@ MainMenuScreen::MainMenuScreen() : Screen(ScreenType::MainMenu) {
 
 void MainMenuScreen::initButtons() {
     // Button layout: centered vertically, stacked
+    // Note: sizes are in UV (0-1 normalized), 0.08 = 8% of screen
     float centerX = 0.5f;
-    float startY = 0.45f;
-    float spacing = 0.08f;
-    float buttonW = 0.25f;
-    float buttonH = 0.06f;
+    float startY = 0.55f;  // Start near center, buttons go down
+    float spacing = 0.08f; // Vertical spacing between buttons
+    float buttonW = 0.35f;  // 35% of screen width (about 448px on 1280px)
+    float buttonH = 0.06f;  // 6% of screen height (about 43px on 720px)
     
     _buttons = {
         {"> START GAME", glm::vec2(centerX - buttonW/2, startY), glm::vec2(buttonW, buttonH)},
@@ -95,6 +96,10 @@ bool MainMenuScreen::onMouseMove(int x, int y) {
         if (btn.hovered) handled = true;
     }
     
+    if (handled) {
+        CE_LOG_TRACE("MainMenuScreen: mouse at ({}, {}) -> normalized ({:.3f}, {:.3f})", x, y, normX, normY);
+    }
+    
     return handled;
 }
 
@@ -141,9 +146,8 @@ bool MainMenuScreen::onKey(int key, int action) {
     return false;
 }
 
-bool MainMenuScreen::isPointInRect(int x, int y, float posX, float posY, float w, float h) const {
-    float normX = static_cast<float>(x) / 1280.0f;
-    float normY = 1.0f - static_cast<float>(y) / 720.0f;
+bool MainMenuScreen::isPointInRect(float normX, float normY, float posX, float posY, float w, float h) const {
+    // Coordinates are already normalized (0-1)
     return normX >= posX && normX <= posX + w && normY >= posY && normY <= posY + h;
 }
 

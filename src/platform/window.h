@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GLFW/glfw3.h>
+#include <functional>
 
 namespace Core { namespace Platform {
 
@@ -21,10 +22,18 @@ public:
     static void setCursorCapture(bool capture);
     static bool isMouseButtonPressed(int button);
     
+    // Mouse callback setters for UI integration (using std::function to support lambdas)
+    static void setMouseMoveCallback(std::function<void(double, double)> callback);
+    static void setMouseButtonCallback(std::function<void(int, int)> callback);
+    
 private:
     static GLFWwindow* _window;
     static int _width;
     static int _height;
+    
+    // Internal callbacks
+    static void mouseMoveCallback(GLFWwindow* window, double xpos, double ypos);
+    static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 };
 
 }} // namespace Core::Platform

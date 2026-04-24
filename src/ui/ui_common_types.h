@@ -27,13 +27,14 @@ enum class ItemType : uint8_t {
 enum class ScreenType : uint8_t {
     None = 0,
     MainMenu = 1,
-    JoinClient = 2,
-    Settings = 3,
-    Game = 4,
-    PauseMenu = 5,
-    Inventory = 6,
-    NPCDialog = 7,
-    Character = 8
+    LoadingScreen = 2,
+    JoinClient = 3,
+    Settings = 4,
+    Game = 5,
+    PauseMenu = 6,
+    Inventory = 7,
+    NPCDialog = 8,
+    Character = 9
 };
 
 // ============================================================================

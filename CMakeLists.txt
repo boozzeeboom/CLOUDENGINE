@@ -1,8 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
 
 # =============================================================================
-# CLOUDENGINE вЂ” Custom Game Engine for Project C: The Clouds
+# CLOUDENGINE — Custom Game Engine for Project C: The Clouds
 # =============================================================================
+
+# Find OpenGL (required for glad)
+find_package(OpenGL REQUIRED)
 
 # =============================================================================
 # Jolt Physics Configuration вЂ” MUST be set BEFORE add_subdirectory
@@ -87,11 +90,14 @@ target_include_directories(CloudEngine PRIVATE
     ${CMAKE_SOURCE_DIR}/libs/enet-1.3.18/include    # ENet headers
     ${CMAKE_SOURCE_DIR}/libs/jolt/                   # Jolt headers root (for #include <Jolt/...>)
     ${CMAKE_SOURCE_DIR}/libs/jolt/TestFramework/     # Jolt test framework
+    ${CMAKE_SOURCE_DIR}/libs                        # stb_truetype.h
 )
 
-# Copy shaders to build directory (works for both build/ and build/Debug/)
+# Copy shaders and fonts to build directory (works for both build/ and build/Debug/)
 file(COPY "${CMAKE_SOURCE_DIR}/shaders/" DESTINATION "${CMAKE_BINARY_DIR}/shaders/")
 file(COPY "${CMAKE_SOURCE_DIR}/shaders/" DESTINATION "${CMAKE_BINARY_DIR}/Debug/shaders/")
+file(COPY "${CMAKE_SOURCE_DIR}/data/fonts/" DESTINATION "${CMAKE_BINARY_DIR}/data/fonts/")
+file(COPY "${CMAKE_SOURCE_DIR}/data/fonts/" DESTINATION "${CMAKE_BINARY_DIR}/Debug/data/fonts/")
 
 # GLFW build (static library)
 add_subdirectory(libs/glfw)
