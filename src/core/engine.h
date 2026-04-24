@@ -1,5 +1,7 @@
 #pragma once
 #include <cstdint>
+#include <memory>
+#include <string>
 #include <glm/glm.hpp>
 #include <rendering/camera.h>
 
@@ -10,6 +12,11 @@ namespace World {
 namespace Network {
     class Server;
     class Client;
+}
+
+namespace UI {
+    class UIManager;
+    enum class ScreenType : uint8_t;
 }
 
 namespace Core {
@@ -84,6 +91,14 @@ private:
 
     // Rendering camera
     Rendering::Camera _camera;
+    
+    // UI System (Iteration 7)
+    UI::UIManager* _uiManager = nullptr;
+    bool _showMainMenu = true;  // Show main menu on startup
+    
+    // UI handler methods (Iteration 7)
+    void handleUIScreenAction(UI::ScreenType type);
+    void handleMenuAction(const std::string& action);
 };
 
 } // namespace Core

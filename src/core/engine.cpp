@@ -19,6 +19,8 @@
 #include <world/world_components.h>
 #include <network/server.h>
 #include <network/client.h>
+#include <ui/ui_manager.h>
+#include <ui/screens/main_menu_screen.h>
 #include <chrono>
 #include <iostream>
 
@@ -75,6 +77,26 @@ bool Engine::init() {
     _chunkManager = new World::ChunkManager();
     CE_LOG_INFO("World system initialized (Circular World, {} chunks loaded)",
                 _chunkManager->getLoadedCount());
+    
+    // Initialize UI System (Iteration 7)
+    _uiManager = new UI::UIManager();
+    if (!_uiManager->init(1280, 720)) {
+        CE_LOG_ERROR("UIManager init failed");
+        return false;
+    }
+    CE_LOG_INFO("UI system initialized");
+    
+    // Setup UI action callback
+    _uiManager->onScreenAction = [this](UI::ScreenType type) {
+        handleUIScreenAction(type);
+    };
+    
+    // Push main menu screen on startup
+    auto mainMenu = std::make_unique<UI::MainMenuScreen>();
+    mainMenu->onAction = [this](const std::string& action) {
+        handleMenuAction(action);
+    };
+    _uiManager->pushScreen(std::move(mainMenu));
 
     // Initialize network
     switch (_mode) {
@@ -602,6 +624,43 @@ void Engine::render() {
     renderPlayerEntities();
 
     Rendering::Renderer::endFrame();
+    
+    // Render UI on top (after game rendering)
+    if (_uiManager) {
+        _uiManager->update(_deltaTime);
+        _uiManager->render();
+    }
+}
+
+// ============================================================================
+// UI Handler Methods (Iteration 7)
+// ============================================================================
+
+void Engine::handleUIScreenAction(UI::ScreenType type) {
+    CE_LOG_INFO("Engine: UI screen action {}", (int)type);
+    // Future: create screens based on type
+}
+
+void Engine::handleMenuAction(const std::string& action) {
+    CE_LOG_INFO("Engine: Menu action '{}'", action);
+    
+    if (action == "start" || action == "host") {
+        // Start singleplayer or host mode - hide menu, game runs
+        if (_uiManager) {
+            _uiManager->popScreen();
+        }
+        _showMainMenu = false;
+    } else if (action == "join") {
+        // TODO: Show Join Client screen
+        CE_LOG_INFO("Engine: Join Client - not implemented yet");
+    } else if (action == "settings") {
+        // TODO: Show Settings screen
+        CE_LOG_INFO("Engine: Settings - not implemented yet");
+    } else if (action == "quit") {
+        // Exit the game
+        CE_LOG_INFO("Engine: Quit requested");
+        _running = false;
+    }
 }
 
 } // namespace Core
