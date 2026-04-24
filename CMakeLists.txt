@@ -99,6 +99,9 @@ file(COPY "${CMAKE_SOURCE_DIR}/shaders/" DESTINATION "${CMAKE_BINARY_DIR}/Debug/
 file(COPY "${CMAKE_SOURCE_DIR}/data/fonts/" DESTINATION "${CMAKE_BINARY_DIR}/data/fonts/")
 file(COPY "${CMAKE_SOURCE_DIR}/data/fonts/" DESTINATION "${CMAKE_BINARY_DIR}/Debug/data/fonts/")
 
+# Unit tests (Catch2)
+add_subdirectory(tests)
+
 # GLFW build (static library)
 add_subdirectory(libs/glfw)
 
