@@ -110,20 +110,27 @@ if (uIsText > 0.5) {
 
 ## Current Issues
 
-### Issue 1: Character Jitter
+### Issue 1: Y-Flip Problem (FIXED 2026-04-27)
+**Symptoms**: Text rendering upside-down
+**Root Cause**: stb_truetype bitmap Y-origin is top-left, but OpenGL UV origin is bottom-left
+**Fix Applied**: Swapped V coordinates in drawLabel() - quadBottomN now maps to v1 (atlas TOP)
+```cpp
+// Fixed UV mapping (ui_renderer.cpp:586-595)
+{ quadLeft, quadBottomN, u0, v1, 0.0f, 1.0f },      // bottom-left -> atlas TOP
+{ quadLeft + charWidthN, quadBottomN, u1, v1, 1.0f, 1.0f },  // bottom-right -> atlas TOP
+{ quadLeft + charWidthN, quadTopN, u1, v0, 1.0f, 0.0f },      // top-right -> atlas BOTTOM
+```
+**Status**: ✅ FIXED
+
+### Issue 2: Character Jitter
 **Symptoms**: Characters appear to jump/shift slightly when rendered
 **Root Cause**: bitmap_top not properly applied, causing vertical misalignment
 **Status**: ⚠️ May still occur with certain font sizes
 
-### Issue 2: Garbled/Missing Characters
+### Issue 3: Garbled/Missing Characters
 **Symptoms**: Wrong characters displayed or blank squares
 **Root Cause**: Character not in atlas OR incorrect UV mapping
 **Status**: ⚠️ Still observed - some characters show wrong glyphs
-
-### Issue 3: UV Coordinate Handling
-**Symptoms**: Text appears flipped or shifted
-**Root Cause**: Atlas stores bitmap top-to-bottom, but UV may be applied incorrectly
-**Status**: ⚠️ Known issue - needs verification
 
 ## Investigation Plan
 
