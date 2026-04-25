@@ -148,7 +148,20 @@ void UIManager::onKey(int key, int action) {
         toggleScreen(ScreenType::Inventory);
         return;
     }
-    
+
+    // Handle C for character screen
+    if (key == 67 && action == 1) {  // GLFW_KEY_C
+        toggleScreen(ScreenType::Character);
+        return;
+    }
+
+    // Handle E for NPC interaction
+    if (key == 69 && action == 1) {  // GLFW_KEY_E
+        CE_LOG_INFO("UIManager: E key pressed - NPC interaction");
+        toggleScreen(ScreenType::NPCDialog);
+        return;
+    }
+
     for (auto& screen : _screenStack) {
         if (screen->onKey(key, action)) {
             break;

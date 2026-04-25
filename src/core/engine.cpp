@@ -26,6 +26,8 @@
 #include <ui/screens/settings_screen.h>
 #include <ui/screens/inventory_screen.h>
 #include <ui/screens/pause_menu_screen.h>
+#include <ui/screens/npc_dialog_screen.h>
+#include <ui/screens/character_screen.h>
 #include <chrono>
 #include <iostream>
 
@@ -703,6 +705,40 @@ void Engine::handleUIScreenAction(UI::ScreenType type) {
                     handleMenuAction(action);
                 };
                 _uiManager->pushScreen(std::move(pauseMenu));
+            }
+            break;
+        case UI::ScreenType::Character:
+            {
+                auto characterScreen = std::make_unique<UI::CharacterScreen>();
+                characterScreen->onAction = [this](const std::string& action) {
+                    if (action == "close") {
+                        CE_LOG_INFO("CharacterScreen: close requested");
+                        if (_uiManager) {
+                            _uiManager->popScreen();
+                        }
+                    }
+                };
+                _uiManager->pushScreen(std::move(characterScreen));
+            }
+            break;
+        case UI::ScreenType::NPCDialog:
+            {
+                auto npcDialog = std::make_unique<UI::NPCDialogScreen>();
+                npcDialog->onAction = [this](const std::string& action) {
+                    CE_LOG_INFO("NPCDialogScreen: action '{}'", action);
+                    if (action == "farewell") {
+                        if (_uiManager) {
+                            _uiManager->popScreen();
+                        }
+                    } else if (action == "trade") {
+                        CE_LOG_INFO("NPCDialog: Trade screen would open here");
+                    } else if (action == "storage") {
+                        CE_LOG_INFO("NPCDialog: Storage screen would open here");
+                    } else if (action == "contract") {
+                        CE_LOG_INFO("NPCDialog: Contract screen would open here");
+                    }
+                };
+                _uiManager->pushScreen(std::move(npcDialog));
             }
             break;
         default:
