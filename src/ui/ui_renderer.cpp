@@ -583,16 +583,15 @@ void UIRenderer::drawLabel(const glm::vec2& position,
         float v1 = ci.v1;  // atlas TOP
         
         // 6 vertices for quad (2 triangles)
-// UV mapping: quadTopN (screen) -> v1 (atlas TOP), quadBottomN (screen) -> v0 (atlas BOTTOM)
         float verts[6][6] = {
             // Triangle 1: bottom-left, bottom-right, top-right
-            { quadLeft, quadBottomN, u0, v1, 0.0f, 1.0f },      // bottom-left -> atlas TOP
-            { quadLeft + charWidthN, quadBottomN, u1, v1, 1.0f, 1.0f },  // bottom-right -> atlas TOP
-            { quadLeft + charWidthN, quadTopN, u1, v0, 1.0f, 0.0f },      // top-right -> atlas BOTTOM
+            { quadLeft, quadBottomN, u0, v0, 0.0f, 0.0f },      // bottom-left
+            { quadLeft + charWidthN, quadBottomN, u1, v0, 1.0f, 0.0f },  // bottom-right
+            { quadLeft + charWidthN, quadTopN, u1, v1, 1.0f, 1.0f },      // top-right
             // Triangle 2: bottom-left, top-right, top-left
-            { quadLeft, quadBottomN, u0, v1, 0.0f, 1.0f },      // bottom-left -> atlas TOP
-            { quadLeft + charWidthN, quadTopN, u1, v0, 1.0f, 0.0f },      // top-right -> atlas BOTTOM
-            { quadLeft, quadTopN, u0, v0, 0.0f, 0.0f }          // top-left -> atlas BOTTOM
+            { quadLeft, quadBottomN, u0, v0, 0.0f, 0.0f },      // bottom-left
+            { quadLeft + charWidthN, quadTopN, u1, v1, 1.0f, 1.0f },      // top-right
+            { quadLeft, quadTopN, u0, v1, 0.0f, 1.0f }          // top-left
         };
         
         for (int i = 0; i < 6; i++) {
