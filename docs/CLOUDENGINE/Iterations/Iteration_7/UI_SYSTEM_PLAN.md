@@ -697,8 +697,8 @@ public:
 
 ---
 
-**Document Version:** 1.1
-**Status:** Iteration 7.3 (Inventory) Complete - Ready for 7.4 (NPC Interaction)
+**Document Version:** 1.2
+**Status:** Iteration 7.5 (Character HUD) Complete - Ready for Text Improvements
 
 ---
 
@@ -780,3 +780,78 @@ When player is in game and presses ESC:
 - TODO: Add proper game pause state (freeze physics, show overlay)
 - TODO: Add "Resume Game" button to return to gameplay
 - TODO: Consider adding "Save Game" option before exit
+
+---
+
+## Session Completion Notes (2026-04-26-27)
+
+### Completed in Session (7.4-7.5):
+- [x] **NPCDialogScreen** - New screen with merchant greeting, TRADE/STORAGE/CONTRACT/FAREWELL buttons
+- [x] **CharacterScreen** - Ship/pilot status HUD with two-column layout, stat bars
+- [x] **E key handling** - Opens NPC dialog in game
+- [x] **C key handling** - Opens Character screen
+- [x] **Character screen integration** - Connected to `handleUIScreenAction()` in engine.cpp
+- [x] **NPC dialog integration** - Connected to `handleUIScreenAction()` in engine.cpp
+
+### Files Created:
+- `src/ui/screens/npc_dialog_screen.h` (NEW)
+- `src/ui/screens/npc_dialog_screen.cpp` (NEW)
+- `src/ui/screens/character_screen.h` (NEW)
+- `src/ui/screens/character_screen.cpp` (NEW)
+
+### Files Modified:
+- `src/core/engine.cpp`:
+  - Added includes for `npc_dialog_screen.h` and `character_screen.h`
+  - Added `ScreenType::Character` case in `handleUIScreenAction()`
+  - Added `ScreenType::NPCDialog` case in `handleUIScreenAction()`
+- `src/ui/ui_manager.cpp`:
+  - Added C key handling for CharacterScreen toggle
+  - Added E key handling for NPC dialog toggle
+
+### CharacterScreen Layout:
+```
+┌────────────────────────────────────────────────────────┐
+│                    CHARACTER INFO                        │
+│  ┌──────────┐  ┌─────────────────────────────────────┐│
+│  │  [SHIP]  │  │ Name: Captain Cloud                  ││
+│  │          │  │ Class: Medium Vessel                 ││
+│  └──────────┘  │ Level: 1                             ││
+│                 │ Position: (0, 3000, 0)              ││
+│  Speed: 0 m/s   │ Wind Dir: N  Wind Speed: 0 m/s      ││
+│  Altitude: 3000m│                                      ││
+│  Heading: 0deg   │ FUEL: ████████████ 100%             ││
+│                 │ HULL: ████████████ 100%             ││
+│                 │ CARGO: ████░░░░░░░ 0%               ││
+│                 └─────────────────────────────────────┘│
+│                      Press C or ESC to close           │
+└────────────────────────────────────────────────────────┘
+```
+
+### NPCDialogScreen Layout:
+```
+┌────────────────────────────────────────────────────────┐
+│                      Merchant                            │
+│  "Welcome, traveler! I have goods to sell..."           │
+│                                                          │
+│    ┌─────────┐ ┌─────────┐ ┌─────────┐                 │
+│    │  TRADE  │ │ STORAGE │ │CONTRACT │                 │
+│    └─────────┘ └─────────┘ └─────────┘                 │
+│                                                          │
+│              ┌────────────────────┐                     │
+│              │      FAREWELL      │                     │
+│              └────────────────────┘                     │
+└────────────────────────────────────────────────────────┘
+```
+
+### Key Bindings:
+- **ESC** - Open/close PauseMenu
+- **TAB** - Open/close Inventory
+- **C** - Open/close Character screen
+- **E** - Open NPC dialog (placeholder - triggers without proximity check)
+
+### Remaining Work:
+- [ ] Text readability improvements (font sizes, contrast)
+- [ ] Game pause state (freeze physics when paused)
+- [ ] Add "Resume Game" button to pause menu
+- [ ] NPC proximity detection for E key
+- [ ] CharacterScreen data connection to ECS (currently uses mock data)
