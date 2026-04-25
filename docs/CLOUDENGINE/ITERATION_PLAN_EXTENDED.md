@@ -40,6 +40,7 @@
 | 4.2 | ECS Network Integration | ✅ | NetworkId, RemotePlayer, NetworkTransform |
 | 4.3 | Player Sync | ✅ | Position interpolation, Yaw/Pitch sync |
 | 5 | Network Sync (Priority) | ✅ | Position buffer, full transform sync, remote player rendering |
+| 7 | UI Text & Settings | ✅ Partially | Text baseline, Settings sliders, Scroll fix, Game started flag |
 
 ### Текущие проблемы (Tech Debt)
 
@@ -49,7 +50,9 @@
 | 2 | Hardcoded values — 1000.0f для camera offset | engine.cpp:492 | 🔴 HIGH |
 | 3 | No Ship Physics — только free flight | engine.cpp (updateFlightControls) | 🟡 MEDIUM |
 | 4 | No Asset Loading — нет загрузки моделей | N/A | 🟡 MEDIUM |
-| 5 | No UI System | N/A | 🟡 MEDIUM |
+| 5 | UI Text Rendering — сжатый текст (UV vs quad mismatch) | ui_renderer.cpp:569-606 | 🟡 MEDIUM |
+| 6 | UI Settings crash — lambda capture issue | engine.cpp:906-920 | 🟡 MEDIUM |
+| 7 | UI Scroll direction — инвертировано | settings_screen.cpp:292 | 🟡 MEDIUM |
 
 ### Что работает
 
@@ -419,6 +422,23 @@ PauseMenu
 ├── Settings
 └── Quit to MainMenu
 ```
+
+#### 8.4 Iteration 7 Status (2026-04-25)
+
+**COMPLETED:**
+- ✅ UIRenderer with OpenGL rendering
+- ✅ Screen base class + UIManager
+- ✅ All screens implemented (MainMenu, Settings, Inventory, Character, NPCDialog, etc.)
+- ✅ Text baseline stability (fixed top edge waviness)
+- ✅ Text settings sliders (font size 12-96, line/letter spacing)
+- ✅ Scroll callback infrastructure
+- ✅ Game started flag (ESC/TAB/C/E gated)
+
+**ISSUES REMAINING:**
+- ❌ Text compressed vertically (UV vs quad height mismatch) - `ui_renderer.cpp:569-606`
+- ❌ Text settings crash - FIXED but not tested - `engine.cpp:906-920`
+- ❌ Scroll direction fix - FIXED but not tested - `settings_screen.cpp:292`
+- ⚠️ Hardcoded 1280x720 in SettingsScreen - TODO
 
 ---
 
