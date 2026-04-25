@@ -6,6 +6,7 @@
 #include "modules/render_module.h"
 #include "modules/jolt_module.h"
 #include "components/mesh_components.h"
+#include "components/player_character_components.h"
 #include "systems/ship_controller.h"
 #include "../core/logger.h"
 
@@ -61,7 +62,11 @@ void init() {
     // Note: components registered inside registerShipControllerSystem()
     registerShipControllerSystem(s_world);
     CE_LOG_INFO("ECS: Ship controller system registered");
-    
+
+    // Register PlayerCharacter components (for pedestrian mode)
+    registerPlayerCharacterComponents(s_world);
+    CE_LOG_INFO("ECS: PlayerCharacter components registered");
+
     CE_LOG_INFO("ECS World initialized with pipeline, network and render modules");
 }
 
