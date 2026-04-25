@@ -642,27 +642,36 @@ public:
 - [x] Quit button closes application
 
 ### 8.2 Inventory
-- [ ] TAB opens/closes inventory
-- [ ] 10 item type tabs displayed
-- [ ] 8x8 slot grid visible
-- [ ] Items grouped by type when filtered
+- [x] TAB opens/closes inventory
+- [x] 10 item type tabs displayed
+- [x] 8x8 slot grid visible
+- [x] Items grouped by type when filtered
+- [x] Mock item data for testing (15 items)
 - [ ] If on ship → ship inventory, else → character
 
-### 8.3 NPC Interaction
+### 8.3 Pause Menu
+- [x] ESC/TAB opens pause menu during gameplay
+- [x] SETTINGS button opens settings screen
+- [x] EXIT TO MENU returns to main menu
+- [x] EXIT TO DESKTOP closes application
+- [ ] Game pause state (freeze physics, network, etc.)
+
+### 8.4 NPC Interaction
 - [ ] E near NPC opens dialog screen
 - [ ] Trade/Storage/Contract buttons visible
 - [ ] System extensible for future additions
 
-### 8.4 Character Screen
+### 8.5 Character Screen
 - [ ] C key opens/closes
 - [ ] World coordinates displayed
 - [ ] Speed/altitude/heading shown
 - [ ] Fuel/Hull bars functional
 
-### 8.5 Technical
+### 8.6 Technical
 - [x] Zero allocations in UI render loop
 - [x] 60 FPS with UI visible
 - [x] All UI through ECS (no immediate mode)
+- [x] Keyboard callback properly forwarding to UI
 
 ---
 
@@ -688,8 +697,8 @@ public:
 
 ---
 
-**Document Version:** 1.0
-**Status:** Iteration 7.2 (Main Menu) Complete - Ready for 7.3 (Inventory)
+**Document Version:** 1.1
+**Status:** Iteration 7.3 (Inventory) Complete - Ready for 7.4 (NPC Interaction)
 
 ---
 
@@ -725,3 +734,49 @@ public:
 - Client callbacks set BEFORE connect(), UI cleared in onPlayerConnected when localId matches
 - `_uiManager->clearStack()` used instead of loop with `popScreen()`
 - Client connect() is blocking with 5s timeout (like c559674)
+
+---
+
+## Session Completion Notes (2026-04-26)
+
+### Issues Fixed:
+- [x] **TAB doesn't open inventory** - Keyboard callback was not set up. Added `setKeyCallback` to `Platform::Window` and connected it to `UIManager::onKey()`
+- [x] **ESC closes game immediately** - Removed direct ESC handling in `Engine::update()` that called `_running = false`. ESC now properly opens PauseMenu
+- [x] **No PauseMenu screen** - Created `PauseMenuScreen` with: SETTINGS, EXIT TO MENU, EXIT TO DESKTOP buttons
+
+### Files Created:
+- `src/ui/screens/pause_menu_screen.h` (NEW)
+- `src/ui/screens/pause_menu_screen.cpp` (NEW)
+
+### Files Modified:
+- `src/platform/window.h` - Added `setKeyCallback()` method
+- `src/platform/window.cpp` - Implemented keyboard callback forwarding
+- `src/core/engine.cpp`:
+  - Added keyboard callback setup for UI
+  - Removed ESC->quit direct handling
+  - Added `ScreenType::PauseMenu` handling in `handleUIScreenAction()`
+  - Added pause menu action handlers: "resume", "settings", "exit_to_menu", "exit_to_desktop"
+  - Added onAction callback setup for InventoryScreen and PauseMenuScreen
+- `src/ui/screens/inventory_screen.h` - Added `_lastMouseX`, `_lastMouseY` members
+- `src/ui/screens/inventory_screen.cpp` - Store mouse position in onMouseMove
+
+### Current Input Flow:
+```
+glfwSetKeyCallback → Window::keyCallback → UIManager::onKey() → toggleScreen()
+                                                              → screen->onKey()
+```
+
+### Pause Menu Behavior:
+- ESC or TAB opens PauseMenu (if not already open)
+- PauseMenu shows: SETTINGS, EXIT TO MENU, EXIT TO DESKTOP
+- ESC/TAB on PauseMenu resumes (closes pause menu)
+- SETTINGS: Opens SettingsScreen (existing functionality)
+- EXIT TO MENU: Returns to main menu, clears game state
+- EXIT TO DESKTOP: Closes application
+
+### Future: Pause Menu Design (For Next Sessions)
+When player is in game and presses ESC:
+- Current: Opens simple pause menu with Settings/Exit options
+- TODO: Add proper game pause state (freeze physics, show overlay)
+- TODO: Add "Resume Game" button to return to gameplay
+- TODO: Consider adding "Save Game" option before exit

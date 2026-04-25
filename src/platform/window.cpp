@@ -13,6 +13,7 @@ int Window::_height = 0;
 #include <functional>
 static std::function<void(double, double)> g_mouseMoveCallback;
 static std::function<void(int, int)> g_mouseButtonCallback;
+static std::function<void(int, int)> g_keyCallback;
 
 // Internal GLFW callbacks that forward to registered handlers
 void Window::mouseMoveCallback(GLFWwindow* window, double xpos, double ypos) {
@@ -25,6 +26,13 @@ void Window::mouseButtonCallback(GLFWwindow* window, int button, int action, int
     CE_LOG_TRACE("Window::mouseButtonCallback button={} action={} mods={}", button, action, mods);
     if (g_mouseButtonCallback) {
         g_mouseButtonCallback(button, action);
+    }
+}
+
+void Window::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    CE_LOG_TRACE("Window::keyCallback key={} scancode={} action={} mods={}", key, scancode, action, mods);
+    if (g_keyCallback) {
+        g_keyCallback(key, action);
     }
 }
 
@@ -118,6 +126,13 @@ void Window::setMouseButtonCallback(std::function<void(int, int)> callback) {
     g_mouseButtonCallback = callback;
     if (_window) {
         glfwSetMouseButtonCallback(_window, mouseButtonCallback);
+    }
+}
+
+void Window::setKeyCallback(std::function<void(int, int)> callback) {
+    g_keyCallback = callback;
+    if (_window) {
+        glfwSetKeyCallback(_window, keyCallback);
     }
 }
 

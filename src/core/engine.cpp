@@ -24,6 +24,8 @@
 #include <ui/screens/loading_screen.h>
 #include <ui/screens/join_client_screen.h>
 #include <ui/screens/settings_screen.h>
+#include <ui/screens/inventory_screen.h>
+#include <ui/screens/pause_menu_screen.h>
 #include <chrono>
 #include <iostream>
 
@@ -102,6 +104,14 @@ bool Engine::init() {
         }
     });
     CE_LOG_INFO("Mouse callbacks registered for UI");
+    
+    // Setup keyboard callback to forward to UIManager
+    Platform::Window::setKeyCallback([this](int key, int action) {
+        if (_uiManager) {
+            _uiManager->onKey(key, action);
+        }
+    });
+    CE_LOG_INFO("Keyboard callback registered for UI");
     
     // Setup UI action callback
     _uiManager->onScreenAction = [this](UI::ScreenType type) {
@@ -342,12 +352,6 @@ void Engine::update(float dt) {
 
     // Update circular world system (chunk streaming, position wrapping)
     updateWorldSystem(dt);
-
-    // Exit on Escape
-    if (Platform::Window::isKeyPressed(GLFW_KEY_ESCAPE)) {
-        CE_LOG_INFO("ESC pressed, setting _running = false");
-        _running = false;
-    }
 
     // Update FPS logging every ~0.5 seconds
     static float lastTitleUpdate = 0.0f;
@@ -676,7 +680,36 @@ void Engine::render() {
 
 void Engine::handleUIScreenAction(UI::ScreenType type) {
     CE_LOG_INFO("Engine: UI screen action {}", (int)type);
-    // Future: create screens based on type
+    
+    switch (type) {
+        case UI::ScreenType::Inventory:
+            {
+                auto inventoryScreen = std::make_unique<UI::InventoryScreen>();
+                inventoryScreen->onAction = [this](const std::string& action, int slotIndex) {
+                    if (action == "close") {
+                        CE_LOG_INFO("InventoryScreen: close requested");
+                        if (_uiManager) {
+                            _uiManager->popScreen();
+                        }
+                    }
+                };
+                _uiManager->pushScreen(std::move(inventoryScreen));
+            }
+            break;
+        case UI::ScreenType::PauseMenu:
+            {
+                auto pauseMenu = std::make_unique<UI::PauseMenuScreen>();
+                pauseMenu->onAction = [this](const std::string& action) {
+                    handleMenuAction(action);
+                };
+                _uiManager->pushScreen(std::move(pauseMenu));
+            }
+            break;
+        default:
+            // Future: create other screens based on type
+            CE_LOG_WARN("Engine: Unknown screen type {}", (int)type);
+            break;
+    }
 }
 
 void Engine::handleMenuAction(const std::string& action) {
@@ -844,6 +877,27 @@ void Engine::handleMenuAction(const std::string& action) {
     } else if (action == "quit") {
         // Exit the game
         CE_LOG_INFO("Engine: Quit requested");
+        _running = false;
+    } else if (action == "resume") {
+        // Close pause menu
+        if (_uiManager) {
+            _uiManager->popScreen();
+        }
+    } else if (action == "exit_to_menu") {
+        // Return to main menu and shutdown game
+        CE_LOG_INFO("Engine: Exit to menu requested");
+        if (_uiManager) {
+            _uiManager->clearStack();
+            // Push main menu
+            auto mainMenu = std::make_unique<UI::MainMenuScreen>();
+            mainMenu->onAction = [this](const std::string& action) {
+                handleMenuAction(action);
+            };
+            _uiManager->pushScreen(std::move(mainMenu));
+        }
+    } else if (action == "exit_to_desktop") {
+        // Exit to desktop - close application
+        CE_LOG_INFO("Engine: Exit to desktop requested");
         _running = false;
     }
 }
