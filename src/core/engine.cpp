@@ -10,7 +10,10 @@
 #include <ecs/world.h>
 #include <ecs/modules/network_module.h>
 #include <ecs/modules/render_module.h>
+#include <ecs/modules/jolt_module.h>
 #include <ecs/components/mesh_components.h>
+#include <ecs/components/player_character_components.h>
+#include <ecs/components.h>
 #include <rendering/renderer.h>
 #include <rendering/primitive_mesh.h>
 #include <rendering/camera.h>
@@ -757,7 +760,7 @@ void Engine::handleUIScreenAction(UI::ScreenType type) {
 
 void Engine::handleMenuAction(const std::string& action) {
     CE_LOG_INFO("Engine: Menu action '{}'", action);
-    
+
     if (action == "start" || action == "host") {
         // Create server first!
         if (!_server) {
@@ -780,13 +783,17 @@ void Engine::handleMenuAction(const std::string& action) {
             _server->onPlayerDisconnected = [this](uint32_t playerId) {
                 auto& world = ECS::getWorld();
                 ECS::removeRemotePlayer(world, playerId);
-                CE_LOG_INFO("Server: Player {} disconnected", playerId);
+                CE_LOG_INFO("Server: Player {} disconnected, removed RemotePlayer entity", playerId);
             };
 
             // Create LocalPlayer entity for host (player ID 1)
             auto& world = ECS::getWorld();
             ECS::createLocalPlayer(world, 1, glm::vec3(0.0f, 3000.0f, 0.0f));
             CE_LOG_INFO("Host: Created LocalPlayer entity for self (id=1)");
+
+// Create platform and test ships
+            createPlatform(world);
+            spawnTestShips(world);
         }
 
         // Push loading screen before starting game
@@ -954,6 +961,101 @@ void Engine::handleMenuAction(const std::string& action) {
         // Exit to desktop - close application
         CE_LOG_INFO("Engine: Exit to desktop requested");
         _running = false;
+    }
+}
+
+void Engine::createPlatform(::flecs::world& world) {
+    CE_LOG_INFO("Creating start pod platform...");
+
+    ECS::JoltPhysicsModule& module = ECS::JoltPhysicsModule::get();
+    if (!module.isInitialized()) {
+        CE_LOG_ERROR("Cannot create platform - Jolt not initialized!");
+        return;
+    }
+
+    glm::dvec3 platformPos(0.0, 2500.0, 0.0);
+    glm::vec3 platformHalfExtents(100.0f, 2.0f, 100.0f);
+    glm::quat platformRotation(1.0f, 0.0f, 0.0f, 0.0f);
+
+    JPH::BodyID platformBody = ECS::createStaticBoxBody(
+        module,
+        platformPos,
+        platformHalfExtents,
+        platformRotation,
+        ECS::ObjectLayer::TERRAIN
+    );
+
+    if (platformBody == JPH::BodyID()) {
+        CE_LOG_ERROR("Failed to create platform body!");
+        return;
+    }
+
+    JPH::BodyInterface& bodyInterface = module.getBodyInterface();
+    bodyInterface.SetFriction(platformBody, 0.05f);
+    bodyInterface.SetRestitution(platformBody, 0.1f);
+
+    auto platformEntity = world.entity("StartPodPlatform");
+    platformEntity.set<ECS::Transform>({{0.0f, 2500.0f, 0.0f}, glm::quat_identity<float, glm::packed_highp>(), glm::vec3(1.0f, 1.0f, 1.0f)});
+    platformEntity.set<ECS::RenderMesh>({ECS::MeshType::Cube, 200.0f});
+    ECS::PlayerColor platformColor;
+    platformColor.color = glm::vec3(0.7f, 0.8f, 0.9f);
+    platformEntity.set<ECS::PlayerColor>(platformColor);
+    platformEntity.add<ECS::PlatformTag>();
+
+    CE_LOG_INFO("Platform created successfully at (0, 2500, 0)");
+}
+
+void Engine::spawnTestShips(::flecs::world& world) {
+    CE_LOG_INFO("Spawning test ships...");
+
+    ECS::JoltPhysicsModule& module = ECS::JoltPhysicsModule::get();
+    if (!module.isInitialized()) {
+        CE_LOG_ERROR("Cannot spawn ships - Jolt not initialized!");
+        return;
+    }
+
+    struct ShipConfig {
+        const char* name;
+        glm::vec3 halfExtents;
+        float mass;
+        glm::vec3 offset;
+        glm::vec3 color;
+    };
+
+    ShipConfig ships[] = {
+        {"Scout",      {5.0f, 2.5f, 5.0f},  500.0f, {0.0f, 2502.5f, 0.0f},     {0.2f, 0.8f, 1.0f}},
+        {"Freighter",  {15.0f, 5.0f, 20.0f}, 2000.0f, {40.0f, 2505.0f, 0.0f},    {0.8f, 0.3f, 0.2f}},
+        {"Carrier",    {25.0f, 8.0f, 40.0f}, 5000.0f, {-50.0f, 2508.0f, 30.0f},   {0.5f, 0.5f, 0.6f}},
+        {"Interceptor", {3.0f, 1.5f, 6.0f},  300.0f, {20.0f, 2501.5f, -40.0f},  {1.0f, 0.6f, 0.1f}},
+    };
+
+    for (const auto& config : ships) {
+        JPH::BodyID bodyId = ECS::createBoxBody(
+            module,
+            glm::dvec3(config.offset),
+            config.halfExtents,
+            config.mass,
+            ECS::ObjectLayer::SHIP
+        );
+
+        if (bodyId == JPH::BodyID()) {
+            CE_LOG_ERROR("Failed to create ship: {}", config.name);
+            continue;
+        }
+
+        module.getBodyInterface().SetGravityFactor(bodyId, 0.0f);
+
+        auto entity = world.entity(config.name);
+        entity.set<ECS::Transform>({{config.offset.x, config.offset.y, config.offset.z}, glm::quat_identity<float, glm::packed_highp>(), glm::vec3(1.0f, 1.0f, 1.0f)});
+        entity.set<ECS::RenderMesh>({ECS::MeshType::Cube, config.halfExtents.x * 2.0f});
+        ECS::PlayerColor shipColor;
+    shipColor.color = glm::vec3(config.color.r, config.color.g, config.color.b);
+    entity.set<ECS::PlayerColor>(shipColor);
+        entity.set<ECS::JoltBodyId>(ECS::JoltBodyId(bodyId));
+        entity.add<ECS::TestShipTag>();
+
+        CE_LOG_INFO("Spawned test ship: {} at ({:.1f}, {:.1f}, {:.1f})",
+            config.name, config.offset.x, config.offset.y, config.offset.z);
     }
 }
 

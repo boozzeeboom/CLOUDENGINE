@@ -62,6 +62,9 @@ struct ShipProximity {
     bool playerInRange = false;
 };
 
+struct TestShipTag {};
+struct PlatformTag {};
+
 void registerPlayerCharacterComponents(flecs::world& world);
 
 }} // namespace Core::ECS

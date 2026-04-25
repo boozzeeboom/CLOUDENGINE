@@ -1,8 +1,9 @@
 # MASTER PROMPT — Iteration 8: StartPod
 
-**Версия:** 1.0  
-**Дата:** 2026-04-25  
+**Версия:** 1.1
+**Дата:** 2026-04-25
 **Цель:** Мастер-промт для перезапуска сессий Iteration 8
+**Статус:** Phase 1 COMPLETE, Phase 2 COMPLETE → Phase 3 pending
 
 ---
 
@@ -347,6 +348,35 @@ cmake --build . --config Debug 2>&1 | findstr /i "error"
 [ ] HUD mode indicator работает
 [ ] Другие экраны не сломаны
 ```
+
+---
+
+### Phase 3.2: Test Ships Spawning
+Implementation location: `src/core/engine.cpp::spawnTestShips()`
+
+**Files created/modified:**
+- `src/core/engine.h` - Added `createPlatform()` and `spawnTestShips()` declarations
+- `src/core/engine.cpp` - Implementation of platform and ship creation
+- `src/ecs/components/player_character_components.h` - Added TestShipTag, PlatformTag
+- `src/ecs/components/player_character_components.cpp` - Updated registration
+
+**Test ships configuration:**
+| Ship | Position | Size (halfExtents) | Mass | Color |
+|------|----------|---------------------|------|-------|
+| Scout | (0, 2502.5, 0) | (5, 2.5, 5) | 500kg | Cyan (0.2, 0.8, 1.0) |
+| Freighter | (40, 2505, 0) | (15, 5, 20) | 2000kg | Red (0.8, 0.3, 0.2) |
+| Carrier | (-50, 2508, 30) | (25, 8, 40) | 5000kg | Grey (0.5, 0.5, 0.6) |
+| Interceptor | (20, 2501.5, -40) | (3, 1.5, 6) | 300kg | Orange (1.0, 0.6, 0.1) |
+
+**Integration points:**
+- Platform created at (0, 2500, 0) with 200x200x4 dimensions
+- Low friction (0.05) for ice-deck feel
+- Ships use ObjectLayer::SHIP and have zero gravity factor
+- Platform uses ObjectLayer::TERRAIN
+
+**Known issues:**
+- Player spawns as ship (PILOTING mode), not pedestrian on platform
+- Phase 3 required for pedestrian movement implementation
 
 ---
 

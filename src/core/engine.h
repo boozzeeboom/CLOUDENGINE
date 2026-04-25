@@ -4,6 +4,7 @@
 #include <string>
 #include <glm/glm.hpp>
 #include <rendering/camera.h>
+#include <flecs.h>
 
 namespace World {
     class ChunkManager;
@@ -20,6 +21,15 @@ namespace UI {
 }
 
 namespace Core {
+namespace ECS {
+class JoltPhysicsModule;
+struct Transform;
+struct RenderMesh;
+struct PlayerColor;
+struct JoltBodyId;
+struct TestShipTag;
+struct PlatformTag;
+}
 
 /// @brief Application mode
 enum class AppMode : uint8_t {
@@ -61,10 +71,10 @@ private:
 
     // Network update tick
     void updateNetwork(float dt);
-    
+
     // Sync camera position to LocalPlayer entity
     void syncCameraToLocalPlayer();
-    
+
     // Render player entities (spheres/billboards)
     void renderPlayerEntities();
 
@@ -91,14 +101,17 @@ private:
 
     // Rendering camera
     Rendering::Camera _camera;
-    
+
     // UI System (Iteration 7)
     UI::UIManager* _uiManager = nullptr;
     bool _showMainMenu = true;  // Show main menu on startup
-    
+
     // UI handler methods (Iteration 7)
     void handleUIScreenAction(UI::ScreenType type);
     void handleMenuAction(const std::string& action);
+
+    void createPlatform(::flecs::world& world);
+    void spawnTestShips(::flecs::world& world);
 };
 
 } // namespace Core
