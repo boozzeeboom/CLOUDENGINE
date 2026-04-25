@@ -565,11 +565,10 @@ void UIRenderer::drawLabel(const glm::vec2& position,
         // Character dimensions in normalized units
         float charWidthN = (ci.width * scaleFactor) / _screenWidth;
         float charHeightN = (ci.height * scaleFactor) / _screenHeight;
-        
-        // bitmap_top = pixels from baseline to TOP of bitmap
-        // For screen (Y=0 at top): top edge is baseline - bitmap_top
-        float quadTopN = yBaseline - (ci.bitmap_top * scaleFactor) / _screenHeight;
-        float quadBottomN = quadTopN + charHeightN;
+
+        // Position quad uniformly - ignore bitmap_top to prevent wavy baseline
+        float quadTopN = yBaseline - charHeightN;  // top of character
+        float quadBottomN = yBaseline;  // bottom at baseline
         
         float quadLeft = x;
         
