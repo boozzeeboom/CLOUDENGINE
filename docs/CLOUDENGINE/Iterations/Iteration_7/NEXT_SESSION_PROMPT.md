@@ -5,8 +5,8 @@ You are continuing work on CLOUDENGINE, a 3D multiplayer space game with custom 
 
 ## Current State
 - **Branch:** `Plan-rework_1`
-- **Last Commit:** `19dc4109` - "Menu UI system: Join Client and Settings screens, network multiplayer fixes"
-- **UI System Status:** Iteration 7.3 COMPLETE (Inventory + PauseMenu + Keyboard Input Fix)
+- **Last Commit:** `6a9536db` - "UI: Add NPCDialog and Character screens (7.4-7.5), C/E key support"
+- **UI System Status:** Iteration 7.5 COMPLETE (NPCDialog + CharacterScreen)
 
 ## What's Done (Iteration 7.2)
 - Main menu with Host/Join/Settings/Quit buttons
@@ -29,6 +29,25 @@ You are continuing work on CLOUDENGINE, a 3D multiplayer space game with custom 
 - PauseMenuScreen with: SETTINGS, EXIT TO MENU, EXIT TO DESKTOP
 - Proper screen action callbacks for all screens
 
+## What's Done (Iteration 7.4)
+### NPC Dialog Screen
+- NPCDialogScreen with merchant greeting panel
+- TRADE, STORAGE, CONTRACT buttons (top row)
+- FAREWELL button (closes dialog)
+- ESC key closes dialog
+- E key toggles NPC dialog in game
+
+## What's Done (Iteration 7.5)
+### Character HUD Screen
+- CharacterScreen with two-column layout
+- Ship image placeholder (left)
+- Stats display: Name, Class, Level, Position, Wind Dir/Speed
+- Speed, Altitude, Heading display
+- Fuel/Hull/Cargo bars with percentage
+- Low fuel warning (red bar when <25%)
+- C key toggles character screen
+- ESC also closes
+
 ## What's Planned Next
 
 ### High Priority (Next Sessions)
@@ -38,31 +57,31 @@ You are continuing work on CLOUDENGINE, a 3D multiplayer space game with custom 
    - Font texture quality improvements
    - Consider bitmap font with higher resolution
 
-2. **NPC Interaction (7.4)**
-   - NPCDialogScreen
-   - Trade/Storage/Contract buttons
-   - E key trigger for NPC interaction
-
-3. **Character HUD (7.5)**
-   - CharacterScreen (C key)
-   - World position, speed, altitude, heading
-   - Fuel/Hull bars
-
-### Medium Priority
-4. **Visual Polish**
-   - MainMenuScreen background/animation
-   - LoadingScreen improvements
-
-5. **Game Pause State**
+2. **Game Pause State**
    - Freeze physics when paused
    - Pause network updates
    - Add "RESUME GAME" button to pause menu
 
+3. **Visual Polish**
+   - MainMenuScreen background/animation
+   - LoadingScreen improvements
+
+### Medium Priority
+4. **NPC Enhancements** (future)
+   - Trade/Storage/Contract screen implementations
+   - NPC proximity detection (E key only works near NPCs)
+   - NPC dialog tree system
+
+5. **Inventory Enhancements** (future)
+   - Inventory item pickup system integration
+   - Inventory persistence (save/load)
+
+6. **Character Screen Enhancements** (future)
+   - Connect to real ECS data (Transform, Velocity, etc.)
+   - Ship image replacement
+   - Full character stats display
+
 ### Backlog (Later Sessions)
-- Inventory item pickup system integration
-- Inventory persistence (save/load)
-- NPC dialog tree system
-- Full character stats display
 - Ship status HUD (cargo capacity, fuel consumption)
 - Settings persistence
 - Sound/audio integration
