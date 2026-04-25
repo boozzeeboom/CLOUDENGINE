@@ -22,6 +22,9 @@ void SettingsScreen::initUI() {
         {"Music Volume", glm::vec2(centerX + 0.05f, startY - spacing), glm::vec2(sliderW, 0.03f), musicVolume, &musicVolume},
         {"SFX Volume", glm::vec2(centerX + 0.05f, startY - spacing * 2), glm::vec2(sliderW, 0.03f), sfxVolume, &sfxVolume},
         {"Mouse Sensitivity", glm::vec2(centerX + 0.05f, startY - spacing * 3.5f), glm::vec2(sliderW, 0.03f), mouseSensitivity, &mouseSensitivity},
+        {"Font Size", glm::vec2(centerX + 0.05f, startY - spacing * 5.5f), glm::vec2(sliderW, 0.03f), textFontSize / 96.0f, &textFontSize},
+        {"Line Spacing", glm::vec2(centerX + 0.05f, startY - spacing * 6.5f), glm::vec2(sliderW, 0.03f), (textLineSpacing - 0.5f) / 2.5f, &textLineSpacing},
+        {"Letter Spacing", glm::vec2(centerX + 0.05f, startY - spacing * 7.5f), glm::vec2(sliderW, 0.03f), (textLetterSpacing - 0.5f) / 1.5f, &textLetterSpacing},
     };
 
     // Toggles
@@ -41,6 +44,8 @@ void SettingsScreen::initUI() {
 
 void SettingsScreen::onEnter() {
     CE_LOG_INFO("SettingsScreen: onEnter()");
+    _mouseNormX = 0.0f;
+    _mouseNormY = 1.0f;
 }
 
 void SettingsScreen::onRender(UIRenderer& renderer) {
@@ -54,7 +59,7 @@ void SettingsScreen::onRender(UIRenderer& renderer) {
 
     // Title
     renderer.drawLabel(
-        glm::vec2(0.5f, 0.82f),
+        glm::vec2(0.5f, 0.82f - _scrollOffset),
         "SETTINGS",
         glm::vec4(0.7f, 0.85f, 1.0f, 1.0f),
         20.0f, 1
@@ -62,17 +67,26 @@ void SettingsScreen::onRender(UIRenderer& renderer) {
 
     // Audio section
     renderer.drawLabel(
-        glm::vec2(0.3f, 0.7f),
+        glm::vec2(0.3f, 0.7f - _scrollOffset),
         "Audio",
+        glm::vec4(0.5f, 0.6f, 0.7f, 1.0f),
+        12.0f, 0
+    );
+
+    // Text section
+    renderer.drawLabel(
+        glm::vec2(0.3f, 0.7f - 0.4f - _scrollOffset),
+        "Text",
         glm::vec4(0.5f, 0.6f, 0.7f, 1.0f),
         12.0f, 0
     );
 
     // Sliders
     for (auto& slider : _sliders) {
+        float yPos = slider.position.y - _scrollOffset;
         // Label
         renderer.drawLabel(
-            glm::vec2(slider.position.x - 0.15f, slider.position.y + 0.01f),
+            glm::vec2(slider.position.x - 0.15f, yPos + 0.01f),
             slider.label,
             glm::vec4(0.8f, 0.85f, 0.9f, 1.0f),
             12.0f, 0
@@ -80,7 +94,7 @@ void SettingsScreen::onRender(UIRenderer& renderer) {
 
         // Background track
         renderer.drawPanel(
-            slider.position, slider.size,
+            glm::vec2(slider.position.x, yPos), slider.size,
             glm::vec4(0.1f, 0.12f, 0.18f, 0.8f),
             glm::vec4(0.2f, 0.25f, 0.35f, 1.0f),
             2.0f, 0.5f
@@ -89,7 +103,7 @@ void SettingsScreen::onRender(UIRenderer& renderer) {
         // Fill (based on value)
         glm::vec2 fillSize(slider.size.x * slider.value, slider.size.y);
         renderer.drawPanel(
-            slider.position, fillSize,
+            glm::vec2(slider.position.x, yPos), fillSize,
             glm::vec4(0.3f, 0.6f, 0.9f, 0.9f),
             glm::vec4(0.0f),
             2.0f, 0.0f
@@ -98,33 +112,17 @@ void SettingsScreen::onRender(UIRenderer& renderer) {
         // Thumb/handle
         float thumbX = slider.position.x + slider.size.x * slider.value - 0.005f;
         renderer.drawPanel(
-            glm::vec2(thumbX, slider.position.y - 0.005f), glm::vec2(0.01f, slider.size.y + 0.01f),
-            glm::vec4(0.9f, 0.9f, 0.95f, 1.0f),
-            glm::vec4(0.3f, 0.35f, 0.45f, 1.0f),
+            glm::vec2(thumbX, yPos - 0.005f),
+            glm::vec2(0.01f, slider.size.y + 0.01f),
+            glm::vec4(0.6f, 0.75f, 0.95f, 1.0f),
+            glm::vec4(0.3f, 0.5f, 0.7f, 1.0f),
             2.0f, 0.5f
-        );
-
-        // Value percentage
-        char percent[8];
-        snprintf(percent, sizeof(percent), "%d%%", static_cast<int>(slider.value * 100.0f));
-        renderer.drawLabel(
-            glm::vec2(slider.position.x + slider.size.x + 0.03f, slider.position.y + 0.01f),
-            percent,
-            glm::vec4(0.6f, 0.65f, 0.7f, 1.0f),
-            10.0f, 0
         );
     }
 
-    // Controls section
-    renderer.drawLabel(
-        glm::vec2(0.3f, 0.38f),
-        "Controls",
-        glm::vec4(0.5f, 0.6f, 0.7f, 1.0f),
-        12.0f, 0
-    );
-
     // Toggles
     for (auto& toggle : _toggles) {
+        float yPos = toggle.position.y - _scrollOffset;
         // Label
         renderer.drawLabel(
             glm::vec2(toggle.position.x - 0.12f, toggle.position.y + 0.005f),
@@ -181,36 +179,51 @@ void SettingsScreen::onRender(UIRenderer& renderer) {
 }
 
 bool SettingsScreen::onMouseMove(int x, int y) {
-    float normX = static_cast<float>(x) / 1280.0f;
-    float normY = 1.0f - static_cast<float>(y) / 720.0f;
+    _screenWidth = 1280;
+    _screenHeight = 720;
+    _mouseNormX = static_cast<float>(x) / static_cast<float>(_screenWidth);
+    _mouseNormY = 1.0f - static_cast<float>(y) / static_cast<float>(_screenHeight);
 
     bool handled = false;
 
     // Check sliders
     for (auto& slider : _sliders) {
-        slider.hovered = isPointInRect(normX, normY, slider.position.x - 0.01f, slider.position.y - 0.01f,
+        float yPos = slider.position.y - _scrollOffset;
+        slider.hovered = isPointInRect(_mouseNormX, _mouseNormY, slider.position.x - 0.01f, yPos - 0.01f,
                                        slider.size.x + 0.02f, slider.size.y + 0.02f);
         if (slider.hovered || slider.dragging) {
             handled = true;
         }
         if (slider.dragging) {
             // Update slider value based on mouse X
-            float relativeX = normX - slider.position.x;
+            float relativeX = _mouseNormX - slider.position.x;
             slider.value = std::max(0.0f, std::min(1.0f, relativeX / slider.size.x));
-            *slider.targetValue = slider.value;
+
+            // Map slider.value (0-1) to actual target range
+            if (slider.targetValue == &textFontSize) {
+                *slider.targetValue = 12.0f + slider.value * 84.0f; // 12-96
+            } else if (slider.targetValue == &textLineSpacing) {
+                *slider.targetValue = 0.5f + slider.value * 2.5f; // 0.5-3.0
+            } else if (slider.targetValue == &textLetterSpacing) {
+                *slider.targetValue = 0.5f + slider.value * 1.5f; // 0.5-2.0
+            } else {
+                *slider.targetValue = slider.value;
+            }
         }
     }
 
     // Check toggles
     for (auto& toggle : _toggles) {
-        toggle.hovered = isPointInRect(normX, normY, toggle.position.x, toggle.position.y,
+        float yPos = toggle.position.y - _scrollOffset;
+        toggle.hovered = isPointInRect(_mouseNormX, _mouseNormY, toggle.position.x, yPos,
                                        toggle.size.x, toggle.size.y);
         if (toggle.hovered) handled = true;
     }
 
     // Check buttons
     for (auto& btn : _buttons) {
-        btn.hovered = isPointInRect(normX, normY, btn.position.x, btn.position.y, btn.size.x, btn.size.y);
+        float yPos = btn.position.y - _scrollOffset;
+        btn.hovered = isPointInRect(_mouseNormX, _mouseNormY, btn.position.x, yPos, btn.size.x, btn.size.y);
         if (btn.hovered) handled = true;
     }
 
@@ -220,8 +233,8 @@ bool SettingsScreen::onMouseMove(int x, int y) {
 bool SettingsScreen::onMouseButton(int button, int action) {
     if (button != 0) return false;
 
-    float normX = static_cast<float>(0) / 1280.0f;
-    float normY = 1.0f - static_cast<float>(0) / 720.0f;
+    float normX = _mouseNormX;
+    float normY = _mouseNormY;
 
     if (action == 1) {
         // Check toggles
@@ -274,6 +287,12 @@ bool SettingsScreen::onKey(int key, int action) {
         return true;
     }
     return false;
+}
+
+bool SettingsScreen::onScroll(float dx, float dy) {
+    _scrollOffset -= dy * 0.02f;
+    _scrollOffset = std::max(0.0f, std::min(0.5f, _scrollOffset));
+    return true;
 }
 
 bool SettingsScreen::isPointInRect(float normX, float normY, float posX, float posY, float w, float h) const {

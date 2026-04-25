@@ -25,6 +25,7 @@ public:
     virtual bool onMouseMove(int x, int y) { return false; }
     virtual bool onMouseButton(int button, int action) { return false; }
     virtual bool onKey(int key, int action) { return false; }
+    virtual bool onScroll(float dx, float dy) { return false; }
     
     // Check if screen blocks input to game
     virtual bool blocksGameInput() const { return true; }
@@ -73,6 +74,7 @@ public:
     void onMouseMove(int x, int y);
     void onMouseButton(int button, int action);
     void onKey(int key, int action);
+    void onScroll(float dx, float dy);
     
     // Toggle screens by type
     void toggleScreen(ScreenType type);
@@ -83,7 +85,13 @@ public:
     // Screen dimensions
     int getScreenWidth() const { return _screenWidth; }
     int getScreenHeight() const { return _screenHeight; }
-    
+
+    UIRenderer& getRenderer() { return _renderer; }
+
+    // Game state tracking
+    void setGameStarted(bool started) { _gameStarted = started; }
+    bool isGameStarted() const { return _gameStarted; }
+
     // Callbacks for screen actions
     std::function<void(ScreenType)> onScreenAction;
 
@@ -93,6 +101,7 @@ private:
     UIInputState _inputState;
     int _screenWidth = 1280;
     int _screenHeight = 720;
+    bool _gameStarted = false;
     
     void updateHoverStates(int mouseX, int mouseY);
     Screen* findScreenByType(ScreenType type);

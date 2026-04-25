@@ -106,7 +106,14 @@ bool Engine::init() {
         }
     });
     CE_LOG_INFO("Mouse callbacks registered for UI");
-    
+
+    Platform::Window::setScrollCallback([this](double dx, double dy) {
+        if (_uiManager) {
+            _uiManager->onScroll(static_cast<float>(dx), static_cast<float>(dy));
+        }
+    });
+    CE_LOG_INFO("Scroll callback registered for UI");
+
     // Setup keyboard callback to forward to UIManager
     Platform::Window::setKeyCallback([this](int key, int action) {
         if (_uiManager) {
@@ -794,8 +801,8 @@ void Engine::handleMenuAction(const std::string& action) {
                 CE_LOG_INFO("LoadingScreen: onComplete callback fired");
                 // Start the game
                 _showMainMenu = false;
-                // Pop loading screen
                 if (_uiManager) {
+                    _uiManager->setGameStarted(true);
                     _uiManager->popScreen();
                 }
             };
@@ -897,14 +904,26 @@ void Engine::handleMenuAction(const std::string& action) {
         CE_LOG_INFO("Engine: Showing Settings screen");
         if (_uiManager) {
             auto settingsScreen = std::make_unique<UI::SettingsScreen>();
-            settingsScreen->onApply = [this]() {
-                CE_LOG_INFO("Settings applied");
+
+            settingsScreen->onBack = [this]() {
                 if (_uiManager) {
                     _uiManager->popScreen();
                 }
             };
-            settingsScreen->onBack = [this]() {
+
+            // Store settings values in local variables BEFORE creating lambda
+            // because the lambda will be called AFTER settingsScreen is moved
+            float textFontSizeVal = settingsScreen->textFontSize;
+            float textLineSpacingVal = settingsScreen->textLineSpacing;
+            float textLetterSpacingVal = settingsScreen->textLetterSpacing;
+
+            settingsScreen->onApply = [this, textFontSizeVal, textLineSpacingVal, textLetterSpacingVal]() {
+                CE_LOG_INFO("Settings applied");
                 if (_uiManager) {
+                    auto& renderer = _uiManager->getRenderer();
+                    renderer.setTextFontSize(textFontSizeVal);
+                    renderer.setTextLineSpacing(textLineSpacingVal);
+                    renderer.setTextLetterSpacing(textLetterSpacingVal);
                     _uiManager->popScreen();
                 }
             };

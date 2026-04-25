@@ -26,7 +26,8 @@ public:
     static void setMouseMoveCallback(std::function<void(double, double)> callback);
     static void setMouseButtonCallback(std::function<void(int, int)> callback);
     static void setKeyCallback(std::function<void(int, int)> callback);
-    
+    static void setScrollCallback(std::function<void(double, double)> callback);
+
 private:
     static GLFWwindow* _window;
     static int _width;
@@ -36,6 +37,7 @@ private:
     static void mouseMoveCallback(GLFWwindow* window, double xpos, double ypos);
     static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
     static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+    static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 };
 
 }} // namespace Core::Platform

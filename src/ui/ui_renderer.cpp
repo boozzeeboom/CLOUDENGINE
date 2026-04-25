@@ -566,9 +566,13 @@ void UIRenderer::drawLabel(const glm::vec2& position,
         float charWidthN = (ci.width * scaleFactor) / _screenWidth;
         float charHeightN = (ci.height * scaleFactor) / _screenHeight;
 
-        // Position quad uniformly - ignore bitmap_top to prevent wavy baseline
-        float quadTopN = yBaseline - charHeightN;  // top of character
-        float quadBottomN = yBaseline;  // bottom at baseline
+        // Position quad uniformly - use FIXED height based on fontSize to prevent wavy baseline
+        // fontSize is the nominal font size in pixels (e.g., 48.0f)
+        // Scale this to normalized units - this is our FIXED baseline-to-top height
+        float fixedCharHeightN = (fontSize * scaleFactor) / _screenHeight * 2.0f;
+        
+        float quadTopN = yBaseline - fixedCharHeightN;  // top of character (fixed)
+        float quadBottomN = yBaseline;  // bottom at baseline (fixed)
         
         float quadLeft = x;
         
@@ -599,7 +603,7 @@ void UIRenderer::drawLabel(const glm::vec2& position,
         
         // Advance to next character (normalize from pixels to 0-1 range)
         float advance = (ci.xoff * scaleFactor) / _screenWidth;
-        x += advance;
+        x += advance * _textLetterSpacing;
     }
     
     // Upload dynamic vertex data

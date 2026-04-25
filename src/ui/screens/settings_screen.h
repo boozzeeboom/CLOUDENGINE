@@ -35,6 +35,9 @@ public:
     bool onMouseMove(int x, int y) override;
     bool onMouseButton(int button, int action) override;
     bool onKey(int key, int action) override;
+    bool onScroll(float dx, float dy) override;
+
+    void setScreenSize(int w, int h) { _screenWidth = w; _screenHeight = h; }
 
     std::function<void()> onApply;
     std::function<void()> onBack;
@@ -47,6 +50,11 @@ public:
     bool vsyncEnabled = true;
     bool invertY = false;
 
+    // Text settings
+    float textFontSize = 48.0f;
+    float textLineSpacing = 1.2f;
+    float textLetterSpacing = 1.0f;
+
 private:
     void initUI();
     bool isPointInRect(float normX, float normY, float posX, float posY, float w, float h) const;
@@ -55,6 +63,13 @@ private:
     std::vector<Slider> _sliders;
     std::vector<Toggle> _toggles;
     std::vector<Button> _buttons;
+
+    int _screenWidth = 1280;
+    int _screenHeight = 720;
+
+    float _mouseNormX = 0.0f;
+    float _mouseNormY = 0.0f;
+    float _scrollOffset = 0.0f;
 };
 
 } // namespace UI

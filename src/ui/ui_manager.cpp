@@ -137,35 +137,44 @@ void UIManager::onKey(int key, int action) {
     CE_LOG_TRACE("UIManager: key {} action {}", key, action);
     
     // Handle ESC for pause menu
-    if (key == 256 && action == 1) {  // GLFW_KEY_ESCAPE
-        // Toggle pause menu
-        toggleScreen(ScreenType::PauseMenu);
-        return;
-    }
-    
-    // Handle TAB for inventory
-    if (key == 258 && action == 1) {  // GLFW_KEY_TAB
-        toggleScreen(ScreenType::Inventory);
-        return;
-    }
+    // Only handle game-specific keys when game has started
+    if (_gameStarted) {
+        if (key == 256 && action == 1) {  // GLFW_KEY_ESCAPE
+            // Toggle pause menu
+            toggleScreen(ScreenType::PauseMenu);
+            return;
+        }
 
-    // Handle C for character screen
-    if (key == 67 && action == 1) {  // GLFW_KEY_C
-        toggleScreen(ScreenType::Character);
-        return;
-    }
+        // Handle TAB for inventory
+        if (key == 258 && action == 1) {  // GLFW_KEY_TAB
+            toggleScreen(ScreenType::Inventory);
+            return;
+        }
 
-    // Handle E for NPC interaction
-    if (key == 69 && action == 1) {  // GLFW_KEY_E
-        CE_LOG_INFO("UIManager: E key pressed - NPC interaction");
-        toggleScreen(ScreenType::NPCDialog);
-        return;
+        // Handle C for character screen
+        if (key == 67 && action == 1) {  // GLFW_KEY_C
+            toggleScreen(ScreenType::Character);
+            return;
+        }
+
+        // Handle E for NPC interaction
+        if (key == 69 && action == 1) {  // GLFW_KEY_E
+            CE_LOG_INFO("UIManager: E key pressed - NPC interaction");
+            toggleScreen(ScreenType::NPCDialog);
+            return;
+        }
     }
 
     for (auto& screen : _screenStack) {
         if (screen->onKey(key, action)) {
             break;
         }
+    }
+}
+
+void UIManager::onScroll(float dx, float dy) {
+    if (!_screenStack.empty()) {
+        _screenStack.back()->onScroll(dx, dy);
     }
 }
 

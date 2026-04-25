@@ -129,6 +129,14 @@ public:
     int getScreenWidth() const { return _screenWidth; }
     int getScreenHeight() const { return _screenHeight; }
 
+    // Text settings getters/setters
+    float getTextFontSize() const { return _textFontSize; }
+    float getTextLineSpacing() const { return _textLineSpacing; }
+    float getTextLetterSpacing() const { return _textLetterSpacing; }
+    void setTextFontSize(float size) { _textFontSize = std::max(12.0f, std::min(96.0f, size)); }
+    void setTextLineSpacing(float spacing) { _textLineSpacing = std::max(0.5f, std::min(3.0f, spacing)); }
+    void setTextLetterSpacing(float spacing) { _textLetterSpacing = std::max(0.5f, std::min(2.0f, spacing)); }
+
 private:
     // OpenGL resources
     unsigned int _quadVAO = 0;
@@ -160,6 +168,11 @@ private:
     int _atlasHeight = 512;
     float _fontScale = 1.0f;
     std::unordered_map<int, CharInfo> _charInfos;
+
+    // Text rendering settings (can be overridden per-call)
+    float _textFontSize = 48.0f;       // Base font size in pixels
+    float _textLineSpacing = 1.2f;      // Line height multiplier
+    float _textLetterSpacing = 1.0f;    // Letter spacing multiplier
     
     // Internal helpers
     void renderQuad(const glm::vec2& pos, const glm::vec2& size);
