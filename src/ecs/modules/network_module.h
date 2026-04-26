@@ -2,6 +2,7 @@
 #include "../components.h"
 #include "../components/mesh_components.h"
 #include "../components/ship_components.h"
+#include "../components/player_character_components.h"
 #include "jolt_module.h"
 #include <deque>
 
@@ -87,68 +88,33 @@ inline flecs::entity createLocalPlayer(flecs::world& world, uint32_t playerId, c
     PlayerColor playerColor = PlayerColor::fromId(playerId);
     CE_LOG_INFO("createLocalPlayer: PlayerColor created");
     
-    // Ensure Jolt is initialized before creating body
-    if (!JoltPhysicsModule::get().isInitialized()) {
-        CE_LOG_WARN("createLocalPlayer: JoltPhysicsModule not initialized yet, will create body later");
-    }
+    constexpr float PLATFORM_Y = 2500.0f;
+    constexpr float PLATFORM_TOP = PLATFORM_Y + 2.0f;
+    constexpr float PEDESTRIAN_HEIGHT = 1.8f;
+    glm::vec3 spawnPos = initialPosition;
+    spawnPos.x = 0.0f;
+    spawnPos.y = PLATFORM_TOP + PEDESTRIAN_HEIGHT;
+    spawnPos.z = 400.0f;
     
-    // Create Jolt body for the ship
-    JPH::BodyID shipBodyId;
-    bool bodyCreated = false;
-    
-    // Check if Jolt is initialized
-    if (JoltPhysicsModule::get().isInitialized()) {
-        CE_LOG_INFO("createLocalPlayer: Creating Jolt body...");
-        glm::dvec3 joltPos(initialPosition.x, initialPosition.y, initialPosition.z);
-        glm::vec3 halfExtents(5.0f, 5.0f, 5.0f); // Size 10x10x10
-        
-        shipBodyId = createBoxBody(JoltPhysicsModule::get(), joltPos, halfExtents, 1000.0f, ObjectLayer::MOVING);
-        
-        if (shipBodyId != JPH::BodyID()) {
-            CE_LOG_INFO("createLocalPlayer: Jolt body created, id={}", shipBodyId.GetIndex());
-            bodyCreated = true;
-        } else {
-            CE_LOG_WARN("createLocalPlayer: Jolt body creation FAILED");
-        }
-    } else {
-        CE_LOG_WARN("createLocalPlayer: JoltPhysicsModule not initialized, skipping body creation");
-    }
+    CE_LOG_INFO("createLocalPlayer: Spawn position adjusted to platform level: ({:.1f},{:.1f},{:.1f})",
+                spawnPos.x, spawnPos.y, spawnPos.z);
     
     CE_LOG_INFO("createLocalPlayer: About to create ECS entity...");
     flecs::entity e = world.entity("LocalPlayer")
         .set<NetworkId>({playerId})
         .add<IsLocalPlayer>()
-        .add<IsPlayerShip>()
-        .set<Transform>({initialPosition, glm::quat_identity<float, glm::packed_highp>(), glm::vec3(1.0f)})
-        .set<RenderMesh>({MeshType::Sphere, 5.0f})
-        .set<PlayerColor>(playerColor);
+        .set<Transform>({spawnPos, glm::quat_identity<float, glm::packed_highp>(), glm::vec3(1.0f)})
+        .set<RenderMesh>({MeshType::Capsule, 3.0f})
+        .set<PlayerColor>(playerColor)
+        .add<PlayerCharacter>()
+        .set<PlayerState>({PlayerMode::PEDESTRIAN})
+        .set<GroundedPhysics>({80.0f, 5.0f, 10.0f, 8.0f, 9.81f, 0.8f, 25.0f, 0.3f})
+        .set<PedestrianInput>({});
     
-    CE_LOG_INFO("createLocalPlayer: ECS entity created (base components), adding physics components...");
+    CE_LOG_INFO("createLocalPlayer: PEDESTRIAN mode components ADDED");
     
-    // Only add JoltBodyId component if body was successfully created
-    if (bodyCreated) {
-        CE_LOG_INFO("createLocalPlayer: Adding JoltBodyId...");
-        e.set<JoltBodyId>(JoltBodyId(shipBodyId));
-        CE_LOG_INFO("createLocalPlayer: JoltBodyId ADDED OK");
-    } else {
-        CE_LOG_INFO("createLocalPlayer: Skipping JoltBodyId component (no body created)");
-    }
-    
-    CE_LOG_INFO("createLocalPlayer: Adding ShipPhysics...");
-    e.set<ShipPhysics>({1000.0f, 50000000.0f});  // mass=1000kg, thrust=50000000N (TEST: x1000)
-    CE_LOG_INFO("createLocalPlayer: ShipPhysics ADDED OK");
-    
-    CE_LOG_INFO("createLocalPlayer: Adding ShipInput...");
-    e.set<ShipInput>({});  // default input values
-    CE_LOG_INFO("createLocalPlayer: ShipInput ADDED OK");
-    
-    CE_LOG_INFO("createLocalPlayer: Adding Aerodynamics...");
-    e.set<Aerodynamics>({});  // default aerodynamics
-    CE_LOG_INFO("createLocalPlayer: Aerodynamics ADDED OK");
-    
-    CE_LOG_INFO("createLocalPlayer: COMPLETE - id={}, pos=({},{},{}), JoltBodyId={}", 
-                playerId, initialPosition.x, initialPosition.y, initialPosition.z,
-                shipBodyId.GetIndex());
+    CE_LOG_INFO("createLocalPlayer: COMPLETE - id={}, pos=({},{},{}), mode=PEDESTRIAN", 
+                playerId, spawnPos.x, spawnPos.y, spawnPos.z);
     return e;
 }
 

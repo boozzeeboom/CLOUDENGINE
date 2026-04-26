@@ -62,11 +62,7 @@ AppMode Engine::parseArgs(int argc, char* argv[]) {
     return AppMode::Client;
 }
 
-Engine* Engine::s_instance = nullptr;
-
-Engine::Engine(AppMode mode) : _mode(mode) {
-    s_instance = this;
-}
+Engine::Engine(AppMode mode) : _mode(mode) {}
 Engine::~Engine() {}
 
 bool Engine::init() {
@@ -502,34 +498,43 @@ void Engine::updateFlightControls(float dt) {
 }
 
 void Engine::syncCameraToLocalPlayer() {
+    // Find the local player entity and update its Transform to follow camera
+    // IMPORTANT: Skip entities that have JoltBodyId - those use physics, not camera sync
     auto& world = ECS::getWorld();
-
-    auto pedestrianQ = world.query_builder<ECS::Transform, ECS::IsLocalPlayer, ECS::PlayerState>()
-        .without<ECS::JoltBodyId>()
+    
+    // Query for entities with IsLocalPlayer tag but WITHOUT JoltBodyId
+    // (entities with JoltBodyId are controlled by ShipControllerSystem via physics)
+    auto q = world.query_builder<ECS::Transform, ECS::IsLocalPlayer>()
+        .without<ECS::JoltBodyId>()  // Skip physics-controlled entities
         .build();
-
-    static int lastPedestrianCount = 0;
-    int pedestrianCount = 0;
-    pedestrianQ.each([this, &pedestrianCount](ECS::Transform& transform, ECS::IsLocalPlayer&, ECS::PlayerState& state) {
-        if (state.mode == ECS::PlayerMode::PEDESTRIAN) {
-            glm::vec3 forward;
-            forward.x = sin(_cameraYaw) * cos(_cameraPitch);
-            forward.y = sin(_cameraPitch);
-            forward.z = cos(_cameraYaw) * cos(_cameraPitch);
-            forward = glm::normalize(forward);
-
-            _cameraPos = transform.position - forward * 40.0f + glm::vec3(0.0f, 8.0f, 0.0f);
-            pedestrianCount++;
-        }
+    
+    int count = 0;
+    q.each([this, &count](ECS::Transform& transform, ECS::IsLocalPlayer&) {
+        // Calculate forward direction from camera rotation
+        glm::vec3 forward;
+        forward.x = sin(_cameraYaw) * cos(_cameraPitch);
+        forward.y = sin(_cameraPitch);
+        forward.z = cos(_cameraYaw) * cos(_cameraPitch);
+        forward = glm::normalize(forward);
+        
+        // Calculate RIGHT vector for horizontal "behind" direction
+        glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
+        glm::vec3 right = glm::normalize(glm::cross(forward, worldUp));
+        
+        // Player is at camera position (tiny forward offset for visibility)
+        glm::vec3 adjustedPos = _cameraPos + forward * 1.0f;
+        transform.position = adjustedPos;
+        count++;
     });
-
-    if (pedestrianCount > 0 && pedestrianCount != lastPedestrianCount) {
-        CE_LOG_INFO("syncCameraToLocalPlayer: {} pedestrian(s), camera follows player", pedestrianCount);
-        lastPedestrianCount = pedestrianCount;
+    
+    if (count > 0) {
+        CE_LOG_TRACE("syncCameraToLocalPlayer: synced {} non-physics entities to camera", count);
     }
-
+    
+    // NEW: For physics-controlled ships, sync CAMERA to ship instead of ship to camera
+    // This makes the camera follow the ship
     auto shipQ = world.query_builder<ECS::Transform, ECS::IsLocalPlayer, ECS::IsPlayerShip>()
-        .with<ECS::JoltBodyId>()
+        .with<ECS::JoltBodyId>()  // Only physics-controlled ships
         .build();
     
     static int lastShipCount = 0;
@@ -1052,10 +1057,6 @@ void Engine::spawnTestShips(::flecs::world& world) {
         CE_LOG_INFO("Spawned test ship: {} at ({:.1f}, {:.1f}, {:.1f})",
             config.name, config.offset.x, config.offset.y, config.offset.z);
     }
-}
-
-float getEngineCameraYaw() {
-    return Core::Engine::getInstance() ? Core::Engine::getInstance()->getCameraYawForExternal() : 0.0f;
 }
 
 } // namespace Core

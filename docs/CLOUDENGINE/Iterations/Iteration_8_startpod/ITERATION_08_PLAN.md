@@ -95,6 +95,9 @@ spawnTestShips(world);
 
 **Файлы:**
 - `src/ecs/systems/pedestrian_controller.cpp` (NEW)
+- `src/core/engine.cpp` (MODIFY - third-person camera)
+- `src/core/engine.h` (MODIFY - singleton for camera access)
+- `src/rendering/camera.cpp` (MODIFY - camera class)
 
 **State Machine:**
 ```
@@ -104,11 +107,68 @@ PEDESTRIAN <---> BOARDING ---> PILOTING
      +----(E key)--+
 ```
 
+**Third-Person Camera Architecture:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    CAMERA SYSTEM FLOW                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Mouse Move → updateFlightControls() → _cameraYaw/_pitch    │
+│                           │                                  │
+│                           ▼                                  │
+│              syncCameraToLocalPlayer()                       │
+│                           │                                  │
+│        ┌──────────────────┼──────────────────┐              │
+│        │                  │                  │              │
+│        ▼                  ▼                  ▼              │
+│   PEDESTRIAN          BOARDING           PILOTING            │
+│   cameraPos =         (disabled)        cameraPos =          │
+│   playerPos -         movement          shipPos -             │
+│   forward*40 +        blocked          forward*250           │
+│   vec3(0,8,0)                                           │
+│        │                                              │      │
+│        └──────────────────┬───────────────────────────┘      │
+│                           ▼                                  │
+│              render() → Camera positioned                    │
+│                           │                                  │
+│                           ▼                                  │
+│              WASD Movement (camera-relative)                 │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Camera Parameters:**
+- Distance: 40 units behind player (ships: 250 units)
+- Height: 8 units above player
+- Mouse freely rotates camera yaw/pitch
+- Camera always follows player position
+
+**Engine Singleton Pattern:**
+```cpp
+// engine.h
+static Engine* s_instance;
+static Engine* getInstance();
+float getCameraYawForExternal() const;
+
+// Usage from pedestrian_controller.cpp
+float cameraYaw = getEngineCameraYaw();
+```
+
+**WASD Movement (camera-relative):**
+```cpp
+// Forward/right calculated from camera yaw
+forward.x = sin(cameraYaw);
+forward.z = -cos(cameraYaw);  // negative = forward in camera space
+right.x = cos(cameraYaw);
+right.z = sin(cameraYaw);
+
+// Movement: velocity = (forward * moveZ + right * moveX) * speed
+```
+
 **Логика PEDESTRIAN:**
-- WASD движение (5 m/s)
+- WASD движение (5 m/s) - относительно направления камеры
 - Space прыжок
 - Shift бег (10 m/s)
-- Gравитация применяется
 - F показывает подсказку у корабля
 
 **Логика BOARDING:**
@@ -126,6 +186,34 @@ PEDESTRIAN <---> BOARDING ---> PILOTING
 3.3 StateTransition система (OnUpdate)
 3.4 Boarding логика
 3.5 Тест: ходьба, прыжок, подход к кораблю
+3.6 Third-person camera fix (Phase 3.5)
+
+**Camera Fix (Phase 3.5 - Critical):**
+- Original issue: Camera too close (5 units), brown sphere filling 2/3 screen
+- Fix: Camera at 40 units behind, 8 units above player
+- WASD movement relative to camera direction (proper third-person)
+
+---
+
+### Фаза 3.5: Third-Person Camera Fix
+
+**Проблема:** Камера была слишком близко (5 единиц), персонаж казался коричневой сферой на весь экран
+
+**Решение:**
+1. Увеличено расстояние камеры до 40 единиц
+2. Высота камеры увеличена до 8 единиц
+3. WASD движение теперь относительно направления камеры
+4. Добавлен singleton Engine для доступа к cameraYaw извне
+
+**Файлы:**
+- `src/core/engine.h` - singleton + getCameraYawForExternal()
+- `src/core/engine.cpp` - s_instance, getCameraYawForExternal(), camera position in sync
+- `src/ecs/systems/pedestrian_controller.cpp` - camera-relative movement
+
+**Результат:**
+- Камера на 40 единиц сзади, 8 сверху
+- Мышь свободно вращает камеру вокруг персонажа
+- WASD движется в направлении взгляда камеры
 
 ---
 

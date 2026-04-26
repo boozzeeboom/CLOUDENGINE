@@ -8,6 +8,7 @@
 #include "components/mesh_components.h"
 #include "components/player_character_components.h"
 #include "systems/ship_controller.h"
+#include "systems/pedestrian_controller.h"
 #include "../core/logger.h"
 
 namespace Core { namespace ECS {
@@ -66,6 +67,10 @@ void init() {
     // Register PlayerCharacter components (for pedestrian mode)
     registerPlayerCharacterComponents(s_world);
     CE_LOG_INFO("ECS: PlayerCharacter components registered");
+
+    // Register Pedestrian Controller System (Phase 3)
+    registerPedestrianControllerSystem(s_world);
+    CE_LOG_INFO("ECS: Pedestrian controller system registered");
 
     CE_LOG_INFO("ECS World initialized with pipeline, network and render modules");
 }

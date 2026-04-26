@@ -58,6 +58,9 @@ public:
     float getCameraYaw()   const { return _cameraYaw; }
     float getCameraPitch() const { return _cameraPitch; }
 
+    static Engine* getInstance() { return s_instance; }
+    float getCameraYawForExternal() const { return _cameraYaw; }
+
     AppMode getMode() const { return _mode; }
 
     /// @brief Get the camera instance (for rendering)
@@ -83,6 +86,7 @@ private:
     float _deltaTime = 0.016f;
     float _time = 0.0f;
     uint64_t _lastTime = 0;
+    static Engine* s_instance;
 
     // Network pointers (owned)
     Network::Server* _server = nullptr;
