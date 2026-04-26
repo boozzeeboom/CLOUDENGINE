@@ -51,6 +51,14 @@ public:
     /// @param rotation Quaternion rotation
     /// @param color RGB color
     void render(const glm::vec3& position, float scale, const glm::quat& rotation, const glm::vec3& color);
+
+    /// @brief Render the primitive with explicit mesh type
+    /// @param position World position
+    /// @param scale Uniform scale
+    /// @param rotation Quaternion rotation
+    /// @param color RGB color
+    /// @param meshType The mesh type (0=Sphere, 1=Cube) - CRITICAL for platform/ship rendering
+    void render(const glm::vec3& position, float scale, const glm::quat& rotation, const glm::vec3& color, int meshType);
     
     unsigned int createShaderProgram(const char* vs, const char* fs);
 

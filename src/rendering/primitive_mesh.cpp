@@ -1,5 +1,10 @@
 #include "primitive_mesh.h"
 #include "camera.h"
+#include <ecs/components/mesh_components.h>
+
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
 
 #define __gl_h_
 #include <glad/glad.h>
@@ -494,10 +499,19 @@ void PrimitiveMesh::render(const glm::vec3& position, float scale, const glm::ve
     render(position, scale, identity, color);
 }
 
-void PrimitiveMesh::render(const glm::vec3& position, float scale, const glm::quat& rotation, const glm::vec3& color) {
-    int idx = getTypeIndex(_currentType);
+void PrimitiveMesh::render(const glm::vec3& position, float scale, const glm::quat& identity, const glm::vec3& color) {
+    // Default to Sphere (type 0) for legacy callers (backward compatibility)
+    render(position, scale, identity, color, 0);
+}
+
+void PrimitiveMesh::render(const glm::vec3& position, float scale, const glm::quat& rotation, const glm::vec3& color, int meshType) {
+    // Map meshType int to PrimitiveType
+    // 0 = Sphere, 1 = Cube
+    PrimitiveType primType = (meshType == 1) ? PrimitiveType::Cube : PrimitiveType::Sphere;
+
+    int idx = getTypeIndex(primType);
     if (!_vao[idx] || !_shaderProgram) {
-        RENDER_LOG_ERROR("PrimitiveMesh::render - VAO={} or shaderProgram={} is 0!", _vao[idx], _shaderProgram);
+        RENDER_LOG_ERROR("PrimitiveMesh::render - VAO={} or shaderProgram={} is 0! meshType={}", _vao[idx], _shaderProgram, meshType);
         return;
     }
 
@@ -507,8 +521,8 @@ void PrimitiveMesh::render(const glm::vec3& position, float scale, const glm::qu
 
     GLint currentProgram;
     glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
-    RENDER_LOG_DEBUG("PrimitiveMesh::render - program={}, pos=({:.1f},{:.1f},{:.1f}) scale={}",
-        currentProgram, position.x, position.y, position.z, scale);
+    RENDER_LOG_DEBUG("PrimitiveMesh::render - program={}, pos=({:.1f},{:.1f},{:.1f}) scale={}, meshType={}",
+        currentProgram, position.x, position.y, position.z, scale, meshType);
 
     glm::mat4 model = glm::translate(glm::mat4(1.0f), position);
     model = model * glm::mat4_cast(rotation);
@@ -520,14 +534,16 @@ void PrimitiveMesh::render(const glm::vec3& position, float scale, const glm::qu
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LESS);
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // FIX: Don't enable blending for opaque geometry (platforms, ships)
+    // Only enable blending for transparent geometry if needed
+    // glEnable(GL_BLEND);
+    // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glBindVertexArray(_vao[idx]);
     glDrawElements(GL_TRIANGLES, _indexCount[idx], GL_UNSIGNED_INT, nullptr);
     glBindVertexArray(0);
 
-    glDisable(GL_BLEND);
+    // glDisable(GL_BLEND);
     glDepthMask(GL_TRUE);
     
     // ================================================================

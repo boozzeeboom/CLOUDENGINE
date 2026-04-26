@@ -1,3 +1,7 @@
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+
 #define __gl_h_
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -578,10 +582,12 @@ void Engine::renderPlayerEntities() {
     
     int count = 0;
     q.each([&count, &primitives](ECS::Transform& transform, ECS::RenderMesh& mesh, ECS::PlayerColor& color) {
-        RENDER_LOG_DEBUG("PlayerEntity: rendering at pos=({:.1f},{:.1f},{:.1f}) size={} color=({:.1f},{:.1f},{:.1f})",
+        RENDER_LOG_DEBUG("PlayerEntity: rendering at pos=({:.1f},{:.1f},{:.1f}) size={} color=({:.1f},{:.1f},{:.1f}) type={}",
             transform.position.x, transform.position.y, transform.position.z,
-            mesh.size, color.color.r, color.color.g, color.color.b);
-        primitives.render(transform.position, mesh.size, transform.rotation, color.color);
+            mesh.size, color.color.r, color.color.g, color.color.b, (int)mesh.type);
+        // FIX: Convert MeshType to int (Sphere=0, Cube=1) for PrimitiveMesh rendering
+        int meshTypeInt = (mesh.type == ECS::MeshType::Cube) ? 1 : 0;
+        primitives.render(transform.position, mesh.size, transform.rotation, color.color, meshTypeInt);
         count++;
     });
     

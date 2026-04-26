@@ -1,5 +1,9 @@
 #include "cloud_renderer.h"
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+
 #define __gl_h_
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>

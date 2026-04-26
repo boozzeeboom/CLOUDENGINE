@@ -7,6 +7,10 @@
 #include <fstream>
 #include <filesystem>
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+
 // GLAD must be included BEFORE GLFW
 #define __gl_h_
 #include <glad/glad.h>

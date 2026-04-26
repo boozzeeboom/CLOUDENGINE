@@ -5,6 +5,10 @@
 #include "asset_manager.h"
 #include "core/logger.h"
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+
 #define __gl_h_
 #include <glad/glad.h>
 
