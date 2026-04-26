@@ -34,8 +34,8 @@ set(CPP_RTTI_ENABLED OFF CACHE BOOL "Enable C++ RTTI" FORCE)
 # In Release, assertions are controlled by JPH_DEBUG define
 set(USE_ASSERTS ON CACHE BOOL "Enable asserts" FORCE)
 
-# Jolt build (local) вЂ” use Build subfolder AFTER configuration
-add_subdirectory(libs/jolt/Build)
+# tinygltf v3 — Header-only glTF 2.0 loader (headers only, no build)
+# Include path added below
 
 # =============================================================================
 # Project Definition
@@ -91,6 +91,7 @@ target_include_directories(CloudEngine PRIVATE
     ${CMAKE_SOURCE_DIR}/libs/jolt/                   # Jolt headers root (for #include <Jolt/...>)
     ${CMAKE_SOURCE_DIR}/libs/jolt/TestFramework/     # Jolt test framework
     ${CMAKE_SOURCE_DIR}/libs                        # stb_truetype.h
+    ${CMAKE_SOURCE_DIR}/libs/tinygltf               # tinygltf v3
 )
 
 # Copy shaders and fonts to build directory (works for both build/ and build/Debug/)
@@ -110,5 +111,5 @@ target_link_libraries(CloudEngine PRIVATE
     glfw
     ${OPENGL_gl_LIBRARY}
     winmm.lib   # ENet time functions
-    Jolt::Jolt  # Jolt Physics
+    C:/CLOUDPROJECT/CLOUDENGINE/build/libs/jolt/Build/Debug/Jolt.lib
 )

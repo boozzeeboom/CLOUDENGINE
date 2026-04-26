@@ -141,23 +141,32 @@ PrimitiveMesh::~PrimitiveMesh() {
     cleanup();
 }
 
+int PrimitiveMesh::getTypeIndex(PrimitiveType type) const {
+    switch (type) {
+        case PrimitiveType::Sphere:    return 0;
+        case PrimitiveType::Cube:      return 1;
+        case PrimitiveType::Billboard: return 2;
+        default:                       return 0;
+    }
+}
+
 void PrimitiveMesh::cleanup() {
-    if (_vao) glDeleteVertexArrays(1, &_vao);
-    if (_vbo) glDeleteBuffers(1, &_vbo);
-    if (_ebo) glDeleteBuffers(1, &_ebo);
+    for (int i = 0; i < PrimitiveTypeCount; ++i) {
+        if (_vao[i]) glDeleteVertexArrays(1, &_vao[i]);
+        if (_vbo[i]) glDeleteBuffers(1, &_vbo[i]);
+        if (_ebo[i]) glDeleteBuffers(1, &_ebo[i]);
+        _vao[i] = 0;
+        _vbo[i] = 0;
+        _ebo[i] = 0;
+        _indexCount[i] = 0;
+    }
     if (_shaderProgram) glDeleteProgram(_shaderProgram);
-    
-    _vao = 0;
-    _vbo = 0;
-    _ebo = 0;
     _shaderProgram = 0;
-    
-    // Cleanup direction indicator
+
     if (_dirVao) glDeleteVertexArrays(1, &_dirVao);
     if (_dirVbo) glDeleteBuffers(1, &_dirVbo);
     if (_dirEbo) glDeleteBuffers(1, &_dirEbo);
     if (_dirShaderProgram) glDeleteProgram(_dirShaderProgram);
-    
     _dirVao = 0;
     _dirVbo = 0;
     _dirEbo = 0;
@@ -267,78 +276,91 @@ void PrimitiveMesh::updateMatrices() {
 }
 
 void PrimitiveMesh::generateSphere(float radius, int segments) {
-    cleanup();
-    createShader();  // Re-create shader after cleanup!
-    _type = PrimitiveType::Sphere;
-    
+    _currentType = PrimitiveType::Sphere;
+    int idx = getTypeIndex(_currentType);
+
+    if (_vao[idx]) {
+        glDeleteVertexArrays(1, &_vao[idx]);
+        glDeleteBuffers(1, &_vbo[idx]);
+        glDeleteBuffers(1, &_ebo[idx]);
+        _vao[idx] = 0; _vbo[idx] = 0; _ebo[idx] = 0;
+    }
+
     std::vector<float> vertices;
     std::vector<unsigned int> indices;
-    
+
     for (int lat = 0; lat <= segments; ++lat) {
         float theta = lat * glm::pi<float>() / segments;
         float sinTheta = sinf(theta);
         float cosTheta = cosf(theta);
-        
+
         for (int lon = 0; lon <= segments; ++lon) {
             float phi = lon * 2.0f * glm::pi<float>() / segments;
             float sinPhi = sinf(phi);
             float cosPhi = cosf(phi);
-            
+
             float x = cosPhi * sinTheta;
             float y = cosTheta;
             float z = sinPhi * sinTheta;
-            
+
             vertices.push_back(x * radius);
             vertices.push_back(y * radius);
             vertices.push_back(z * radius);
         }
     }
-    
+
     for (int lat = 0; lat < segments; ++lat) {
         for (int lon = 0; lon < segments; ++lon) {
             int current = lat * (segments + 1) + lon;
             int next = current + segments + 1;
-            
+
             indices.push_back(current);
             indices.push_back(next);
             indices.push_back(current + 1);
-            
+
             indices.push_back(current + 1);
             indices.push_back(next);
             indices.push_back(next + 1);
         }
     }
-    
-    _indexCount = static_cast<int>(indices.size());
-    
-    glGenVertexArrays(1, &_vao);
-    glGenBuffers(1, &_vbo);
-    glGenBuffers(1, &_ebo);
-    
-    RENDER_LOG_DEBUG("PrimitiveMesh: VAO={}, VBO={}, EBO={}", _vao, _vbo, _ebo);
-    RENDER_LOG_DEBUG("PrimitiveMesh: vertices={}, indices={}, indexCount={}", vertices.size(), indices.size(), _indexCount);
-    
-    glBindVertexArray(_vao);
-    
-    glBindBuffer(GL_ARRAY_BUFFER, _vbo);
+
+    _indexCount[idx] = static_cast<int>(indices.size());
+
+    glGenVertexArrays(1, &_vao[idx]);
+    glGenBuffers(1, &_vbo[idx]);
+    glGenBuffers(1, &_ebo[idx]);
+
+    RENDER_LOG_DEBUG("PrimitiveMesh: VAO={}, VBO={}, EBO={}", _vao[idx], _vbo[idx], _ebo[idx]);
+    RENDER_LOG_DEBUG("PrimitiveMesh: vertices={}, indices={}, indexCount={}", vertices.size(), indices.size(), _indexCount[idx]);
+
+    glBindVertexArray(_vao[idx]);
+
+    glBindBuffer(GL_ARRAY_BUFFER, _vbo[idx]);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
-    
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _ebo);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _ebo[idx]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
-    
+
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    
+
     glBindVertexArray(0);
-    
-    RENDER_LOG_INFO("PrimitiveMesh: Generated sphere (radius={}, segments={}, indices={})", 
-                    radius, segments, _indexCount);
+
+    RENDER_LOG_INFO("PrimitiveMesh: Generated sphere (radius={}, segments={}, indices={})",
+                    radius, segments, _indexCount[idx]);
 }
 
 void PrimitiveMesh::generateCube(float halfExtent) {
-    cleanup();
-    _type = PrimitiveType::Cube;
-    
+    _currentType = PrimitiveType::Cube;
+    int idx = getTypeIndex(_currentType);
+
+    if (_vao[idx]) {
+        glDeleteVertexArrays(1, &_vao[idx]);
+        glDeleteBuffers(1, &_vbo[idx]);
+        glDeleteBuffers(1, &_ebo[idx]);
+        _vao[idx] = 0; _vbo[idx] = 0; _ebo[idx] = 0;
+    }
+
     float vertices[] = {
         -halfExtent, -halfExtent,  halfExtent,
          halfExtent, -halfExtent,  halfExtent,
@@ -365,7 +387,7 @@ void PrimitiveMesh::generateCube(float halfExtent) {
          halfExtent, -halfExtent,  halfExtent,
         -halfExtent, -halfExtent,  halfExtent,
     };
-    
+
     unsigned int indices[] = {
         0, 1, 2,  2, 3, 0,
         4, 5, 6,  6, 7, 4,
@@ -374,63 +396,70 @@ void PrimitiveMesh::generateCube(float halfExtent) {
         16, 17, 18,  18, 19, 16,
         20, 21, 22,  22, 23, 20
     };
-    
-    _indexCount = 36;
-    
-    glGenVertexArrays(1, &_vao);
-    glGenBuffers(1, &_vbo);
-    glGenBuffers(1, &_ebo);
-    
-    glBindVertexArray(_vao);
-    
-    glBindBuffer(GL_ARRAY_BUFFER, _vbo);
+
+    _indexCount[idx] = 36;
+
+    glGenVertexArrays(1, &_vao[idx]);
+    glGenBuffers(1, &_vbo[idx]);
+    glGenBuffers(1, &_ebo[idx]);
+
+    glBindVertexArray(_vao[idx]);
+
+    glBindBuffer(GL_ARRAY_BUFFER, _vbo[idx]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _ebo);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _ebo[idx]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-    
+
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    
+
     glBindVertexArray(0);
-    
+
     RENDER_LOG_INFO("PrimitiveMesh: Generated cube (halfExtent={})", halfExtent);
 }
 
 void PrimitiveMesh::generateBillboard(float width, float height) {
-    cleanup();
-    _type = PrimitiveType::Billboard;
-    
+    _currentType = PrimitiveType::Billboard;
+    int idx = getTypeIndex(_currentType);
+
+    if (_vao[idx]) {
+        glDeleteVertexArrays(1, &_vao[idx]);
+        glDeleteBuffers(1, &_vbo[idx]);
+        glDeleteBuffers(1, &_ebo[idx]);
+        _vao[idx] = 0; _vbo[idx] = 0; _ebo[idx] = 0;
+    }
+
     float halfW = width * 0.5f;
     float halfH = height * 0.5f;
-    
+
     float vertices[] = {
         -halfW, -halfH, 0.0f,
          halfW, -halfH, 0.0f,
          halfW,  halfH, 0.0f,
         -halfW,  halfH, 0.0f,
     };
-    
+
     unsigned int indices[] = { 0, 1, 2,  2, 3, 0 };
-    _indexCount = 6;
-    
-    glGenVertexArrays(1, &_vao);
-    glGenBuffers(1, &_vbo);
-    glGenBuffers(1, &_ebo);
-    
-    glBindVertexArray(_vao);
-    
-    glBindBuffer(GL_ARRAY_BUFFER, _vbo);
+    _indexCount[idx] = 6;
+
+    glGenVertexArrays(1, &_vao[idx]);
+    glGenBuffers(1, &_vbo[idx]);
+    glGenBuffers(1, &_ebo[idx]);
+
+    glBindVertexArray(_vao[idx]);
+
+    glBindBuffer(GL_ARRAY_BUFFER, _vbo[idx]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _ebo);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _ebo[idx]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-    
+
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    
+
     glBindVertexArray(0);
-    
+
     RENDER_LOG_INFO("PrimitiveMesh: Generated billboard ({}x{})", width, height);
 }
 
@@ -440,44 +469,40 @@ void PrimitiveMesh::render(const glm::vec3& position, float scale, const glm::ve
 }
 
 void PrimitiveMesh::render(const glm::vec3& position, float scale, const glm::quat& rotation, const glm::vec3& color) {
-    if (!_vao || !_shaderProgram) {
-        RENDER_LOG_ERROR("PrimitiveMesh::render - VAO={} or shaderProgram={} is 0!", _vao, _shaderProgram);
+    int idx = getTypeIndex(_currentType);
+    if (!_vao[idx] || !_shaderProgram) {
+        RENDER_LOG_ERROR("PrimitiveMesh::render - VAO={} or shaderProgram={} is 0!", _vao[idx], _shaderProgram);
         return;
     }
-    
-    // Update view/projection matrices from camera
+
     updateMatrices();
-    
+
     glUseProgram(_shaderProgram);
-    
-    // DEBUG: Check current program
+
     GLint currentProgram;
     glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
     RENDER_LOG_DEBUG("PrimitiveMesh::render - program={}, pos=({:.1f},{:.1f},{:.1f}) scale={}",
         currentProgram, position.x, position.y, position.z, scale);
-    
-    // Model matrix
+
     glm::mat4 model = glm::translate(glm::mat4(1.0f), position);
     model = model * glm::mat4_cast(rotation);
     model = glm::scale(model, glm::vec3(scale));
-    
+
     glUniformMatrix4fv(_uModelMatrix, 1, GL_FALSE, &model[0][0]);
     glUniform3fv(_uColor, 1, &color[0]);
-    
-    // FIXED: Enable depth write for sphere visibility
-    // Sphere must write to depth buffer to be visible
-    glDepthMask(GL_TRUE);   // Write to depth
-    glDepthFunc(GL_LESS);   // Normal depth test
-    
+
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
+
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    
-    glBindVertexArray(_vao);
-    glDrawElements(GL_TRIANGLES, _indexCount, GL_UNSIGNED_INT, nullptr);
+
+    glBindVertexArray(_vao[idx]);
+    glDrawElements(GL_TRIANGLES, _indexCount[idx], GL_UNSIGNED_INT, nullptr);
     glBindVertexArray(0);
-    
+
     glDisable(GL_BLEND);
-    glDepthMask(GL_TRUE);   // Re-enable depth writes for other rendering
+    glDepthMask(GL_TRUE);
     
     // ================================================================
     // RENDER DIRECTION INDICATOR (Cone showing ship forward direction)

@@ -53,11 +53,14 @@ public:
     void render(const glm::vec3& position, float scale, const glm::quat& rotation, const glm::vec3& color);
 
 private:
-    unsigned int _vao = 0;
-    unsigned int _vbo = 0;
-    unsigned int _ebo = 0;
-    int _indexCount = 0;
-    PrimitiveType _type = PrimitiveType::Sphere;
+    static constexpr int PrimitiveTypeCount = 3;
+    unsigned int _vao[PrimitiveTypeCount] = {0, 0, 0};
+    unsigned int _vbo[PrimitiveTypeCount] = {0, 0, 0};
+    unsigned int _ebo[PrimitiveTypeCount] = {0, 0, 0};
+    int _indexCount[PrimitiveTypeCount] = {0, 0, 0};
+    PrimitiveType _currentType = PrimitiveType::Sphere;
+
+    int getTypeIndex(PrimitiveType type) const;
 
     // Simple color shader for primitives
     unsigned int _shaderProgram = 0;

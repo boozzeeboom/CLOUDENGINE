@@ -26,6 +26,17 @@ struct RenderMesh {
     float size = 50.0f;  // Radius for sphere (ship ~50 units)
 };
 
+/// @brief ModelAsset component — references loaded glTF model
+struct ModelAsset {
+    std::string path;
+};
+
+/// @brief TextureAsset component — references loaded texture
+struct TextureAsset {
+    std::string path;
+    unsigned int textureId = 0;
+};
+
 /// @brief PlayerColor component — unique color for each player
 struct PlayerColor {
     glm::vec3 color{1.0f, 1.0f, 0.0f};  // Default yellow
@@ -60,8 +71,10 @@ struct PlayerColor {
 inline void registerMeshComponents(flecs::world& world) {
     world.component<RenderMesh>("RenderMesh");
     world.component<PlayerColor>("PlayerColor");
-    
-    CE_LOG_INFO("ECS Mesh components registered: RenderMesh, PlayerColor");
+    world.component<ModelAsset>("ModelAsset");
+    world.component<TextureAsset>("TextureAsset");
+
+    CE_LOG_INFO("ECS Mesh components registered: RenderMesh, PlayerColor, ModelAsset, TextureAsset");
 }
 
 }} // namespace Core::ECS
