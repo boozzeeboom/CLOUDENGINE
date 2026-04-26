@@ -569,17 +569,40 @@ void Engine::renderPlayerEntities() {
     // Query all entities with Transform, RenderMesh, and PlayerColor
     // but NOT ModelAsset (those are rendered by ECS glTF system)
     auto& world = ECS::getWorld();
-    
-    // Get camera position for frustum culling (future) and matrix calculation
-    // Camera is already set up in Engine::render() - use _camera member
+
+    // CRITICAL FIX: Set camera BEFORE calling primitives.render()
+    // PrimitiveMesh::updateMatrices() needs the camera to be set
     auto& primitives = Rendering::GetPrimitiveMesh();
     primitives.setCamera(&_camera);
     ECS::setRenderModuleCamera(static_cast<const Rendering::Camera*>(&_camera));
-    
+
+    // DEBUG: Count all potential entities first
+    auto allWithTransform = world.query_builder<ECS::Transform>().build();
+    int totalWithTransform = 0;
+    allWithTransform.each([&totalWithTransform](ECS::Transform&) { totalWithTransform++; });
+
+    auto allWithRenderMesh = world.query_builder<ECS::Transform, ECS::RenderMesh>().build();
+    int totalWithRenderMesh = 0;
+    allWithRenderMesh.each([&totalWithRenderMesh](ECS::Transform&, ECS::RenderMesh&) { totalWithRenderMesh++; });
+
+    auto allWithPlayerColor = world.query_builder<ECS::Transform, ECS::PlayerColor>().build();
+    int totalWithPlayerColor = 0;
+    allWithPlayerColor.each([&totalWithPlayerColor](ECS::Transform&, ECS::PlayerColor&) { totalWithPlayerColor++; });
+
+    // DEBUG: Query that should match for rendering
+    auto renderableQ = world.query_builder<ECS::Transform, ECS::RenderMesh, ECS::PlayerColor>()
+        .without<ECS::ModelAsset>()
+        .build();
+    int renderableCount = 0;
+    renderableQ.each([&renderableCount](ECS::Transform&, ECS::RenderMesh&, ECS::PlayerColor&) { renderableCount++; });
+
+    CE_LOG_INFO("Engine::renderPlayerEntities DIAG - entities: transform={}, renderMesh={}, playerColor={}, renderable={}",
+        totalWithTransform, totalWithRenderMesh, totalWithPlayerColor, renderableCount);
+
     auto q = world.query_builder<ECS::Transform, ECS::RenderMesh, ECS::PlayerColor>()
         .without<ECS::ModelAsset>()
         .build();
-    
+
     int count = 0;
     q.each([&count, &primitives](ECS::Transform& transform, ECS::RenderMesh& mesh, ECS::PlayerColor& color) {
         RENDER_LOG_DEBUG("PlayerEntity: rendering at pos=({:.1f},{:.1f},{:.1f}) size={} color=({:.1f},{:.1f},{:.1f}) type={}",
@@ -590,11 +613,16 @@ void Engine::renderPlayerEntities() {
         primitives.render(transform.position, mesh.size, transform.rotation, color.color, meshTypeInt);
         count++;
     });
-    
+
     static int lastCount = -1;
     if (count != lastCount) {
         CE_LOG_INFO("PlayerEntities: rendering {} entities", count);
         lastCount = count;
+    }
+
+    // DEBUG: Log if no entities rendered
+    if (count == 0) {
+        CE_LOG_WARN("Engine::renderPlayerEntities - NO entities rendered! Check entity creation.");
     }
 }
 
@@ -622,36 +650,48 @@ void Engine::updateWorldSystem(float dt) {
 
 void Engine::render() {
     CE_LOG_TRACE("Engine::render() - START");
-    
+
     // Get window size
     int width, height;
     glfwGetWindowSize(Platform::Window::getGLFWwindow(), &width, &height);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, width, height);
-    
+
     // PRIORITY 1 FIX: Read ship position from ECS/Jolt instead of using _cameraPos directly
     auto& world = ECS::getWorld();
     auto q = world.query_builder<ECS::Transform, ECS::IsLocalPlayer, ECS::JoltBodyId>().build();
-    
+
     glm::vec3 shipWorldPos = _cameraPos; // Fallback to camera position
     q.each([&shipWorldPos](ECS::Transform& transform, ECS::IsLocalPlayer&, ECS::JoltBodyId&) {
         shipWorldPos = transform.position; // Position updated by SyncJoltToECS
     });
-    
+
     // Calculate camera position (BEHIND the player for third-person view)
     glm::vec3 camForward;
     camForward.x = sin(_cameraYaw) * cos(_cameraPitch);
     camForward.y = sin(_cameraPitch);
     camForward.z = cos(_cameraYaw) * cos(_cameraPitch);
     camForward = glm::normalize(camForward);
-    
+
     // Camera is 250 units behind ship (ship size 50 units, world radius 650,000)
     // FIX: Use ship position from ECS, not _cameraPos
     glm::vec3 cameraViewPos = shipWorldPos - camForward * 250.0f;
     _camera.setPosition(cameraViewPos);
     _camera.setRotation(_cameraYaw, _cameraPitch);
-    
+
+    // DEBUG: Log camera state before rendering
+    CE_LOG_INFO("Engine::render DIAG - cameraViewPos=({:.1f},{:.1f},{:.1f}), shipWorldPos=({:.1f},{:.1f},{:.1f})",
+        cameraViewPos.x, cameraViewPos.y, cameraViewPos.z, shipWorldPos.x, shipWorldPos.y, shipWorldPos.z);
+    CE_LOG_INFO("Engine::render DIAG - camForward=({:.3f},{:.3f},{:.3f}), yaw={:.2f}, pitch={:.2f}",
+        camForward.x, camForward.y, camForward.z, _cameraYaw, _cameraPitch);
+
+    // DEBUG: Log camera matrices
+    glm::mat4 viewMat = _camera.getViewMatrix();
+    glm::mat4 projMat = _camera.getProjectionMatrix((float)width / (float)height);
+    CE_LOG_INFO("Engine::render DIAG - viewMat[3]=({:.2f},{:.2f},{:.2f},{:.2f}), proj[1][1]={:.2f}",
+        viewMat[3][0], viewMat[3][1], viewMat[3][2], viewMat[3][3], projMat[1][1]);
+
     // Set camera for cloud renderer (use adjusted camera position)
     Rendering::Renderer::setCamera(
         cameraViewPos,
@@ -670,7 +710,11 @@ void Engine::render() {
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
     Rendering::Renderer::renderClouds(_time, _deltaTime);
-    
+
+    // CRITICAL: Clear depth buffer after clouds - cloud shader may have written to it
+    glDepthMask(GL_TRUE);
+    glClear(GL_DEPTH_BUFFER_BIT);
+
     // ========================================================================
     // PASS 2: OPAQUE GEOMETRY - Render player entities via ECS system
     // ========================================================================
@@ -1069,13 +1113,14 @@ void Engine::spawnTestShips(::flecs::world& world) {
         auto entity = world.entity(config.name);
         entity.set<ECS::Transform>({{config.offset.x, config.offset.y, config.offset.z}, glm::quat_identity<float, glm::packed_highp>(), glm::vec3(1.0f, 1.0f, 1.0f)});
         
-        // Scout uses glTF model, other ships use primitive meshes
-        if (strcmp(config.name, "Scout") == 0) {
-            entity.set<ECS::ModelAsset>({"data/models/ship_3.glb"});
-            CE_LOG_INFO("Ship {} using glTF model", config.name);
-        } else {
-            entity.set<ECS::RenderMesh>({ECS::MeshType::Cube, config.halfExtents.x * 2.0f});
-        }
+        // Scout uses glTF model (TEMPORARY: fallback to cube until glTF loading is fixed)
+        // if (strcmp(config.name, "Scout") == 0) {
+        //     entity.set<ECS::ModelAsset>({"data/models/ship_3.glb"});
+        //     CE_LOG_INFO("Ship {} using glTF model", config.name);
+        // } else {
+        //     entity.set<ECS::RenderMesh>({ECS::MeshType::Cube, config.halfExtents.x * 2.0f});
+        // }
+        entity.set<ECS::RenderMesh>({ECS::MeshType::Cube, config.halfExtents.x * 2.0f});
         
         ECS::PlayerColor shipColor;
         shipColor.color = glm::vec3(config.color.r, config.color.g, config.color.b);

@@ -47,8 +47,8 @@ struct RenderModuleImpl {
         
         // FIX: Generate both Sphere and Cube VAOs
         // Platforms use Cube, remote players use Sphere
-        GetPrimitiveMesh().generateSphere(5.0f, 12);
-        GetPrimitiveMesh().generateCube(5.0f);
+        GetPrimitiveMesh().generateSphere(0.5f, 12);
+        GetPrimitiveMesh().generateCube(0.5f);
         
         _meshesInit = true;
         CE_LOG_INFO("RenderModule: Primitive meshes initialized (Sphere + Cube)");

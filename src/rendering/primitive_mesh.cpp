@@ -26,31 +26,36 @@ namespace Core { namespace Rendering {
 static const char* VERTEX_SHADER = R"(
 #version 330 core
 layout(location = 0) in vec3 aPosition;
+layout(location = 1) in vec3 aNormal;  // Surface normal per vertex
 
 uniform mat4 uModelMatrix;
 uniform mat4 uViewMatrix;
 uniform mat4 uProjectionMatrix;
 
-out vec3 vPosition;
+out vec3 vNormal;
+out vec3 vWorldPos;
 
 void main() {
-    vPosition = aPosition;
-    gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
+    vec4 worldPos = uModelMatrix * vec4(aPosition, 1.0);
+    vWorldPos = worldPos.xyz;
+    // Transform normal by model matrix - NOTE: must normalize after transform due to scale!
+    vNormal = normalize(mat3(uModelMatrix) * aNormal);
+    gl_Position = uProjectionMatrix * uViewMatrix * worldPos;
 }
 )";
 
 static const char* FRAGMENT_SHADER = R"(
 #version 330 core
-in vec3 vPosition;
+in vec3 vNormal;
+in vec3 vWorldPos;
 
 uniform vec3 uColor;
 
 out vec4 fragColor;
 
 void main() {
+    vec3 normal = normalize(vNormal);
     vec3 lightDir = normalize(vec3(0.5, 1.0, 0.3));
-    // Use normalized normal for lighting (vPosition is direction from center)
-    vec3 normal = normalize(vPosition);
     float diffuse = max(dot(normal, lightDir), 0.3);
     vec3 shaded = uColor * diffuse;
     fragColor = vec4(shaded, 1.0);  // Fully opaque
@@ -206,11 +211,14 @@ void PrimitiveMesh::cleanup() {
 
 void PrimitiveMesh::createShader() {
     _shaderProgram = createShaderProgram(VERTEX_SHADER, FRAGMENT_SHADER);
+    RENDER_LOG_DEBUG("PrimitiveMesh::createShader - shaderProgram={}", _shaderProgram);
     if (_shaderProgram) {
         _uModelMatrix = glGetUniformLocation(_shaderProgram, "uModelMatrix");
         _uViewMatrix = glGetUniformLocation(_shaderProgram, "uViewMatrix");
         _uProjectionMatrix = glGetUniformLocation(_shaderProgram, "uProjectionMatrix");
         _uColor = glGetUniformLocation(_shaderProgram, "uColor");
+        RENDER_LOG_DEBUG("PrimitiveMesh::createShader - uniforms: model={}, view={}, proj={}, color={}",
+            _uModelMatrix, _uViewMatrix, _uProjectionMatrix, _uColor);
         RENDER_LOG_INFO("PrimitiveMesh shader created with view/projection uniforms");
     }
 }
@@ -287,10 +295,15 @@ void PrimitiveMesh::setCamera(const Camera* camera) {
 }
 
 void PrimitiveMesh::updateMatrices() {
-    if (!_shaderProgram || !_camera) return;
-    
+    if (!_shaderProgram || !_camera) {
+        RENDER_LOG_WARN("PrimitiveMesh::updateMatrices - SKIPPED: shader={}, camera={}", _shaderProgram, (void*)_camera);
+        return;
+    }
+
+    RENDER_LOG_TRACE("PrimitiveMesh::updateMatrices - START");
+
     glUseProgram(_shaderProgram);
-    
+
     // Get view and projection from Camera class
     int width = 1280, height = 720;
     GLFWwindow* win = glfwGetCurrentContext();
@@ -298,12 +311,19 @@ void PrimitiveMesh::updateMatrices() {
         glfwGetWindowSize(win, &width, &height);
     }
     float aspect = static_cast<float>(width) / static_cast<float>(height > 0 ? height : 1);
-    
+
     glm::mat4 view = _camera->getViewMatrix();
     glm::mat4 proj = _camera->getProjectionMatrix(aspect);
-    
+
+    // DEBUG: Log view matrix row 3 (camera position)
+    RENDER_LOG_TRACE("PrimitiveMesh::updateMatrices - view[3]=({:.2f},{:.2f},{:.2f},{:.2f})",
+        view[3][0], view[3][1], view[3][2], view[3][3]);
+    RENDER_LOG_TRACE("PrimitiveMesh::updateMatrices - proj[1][1]={:.2f}", proj[1][1]);
+
     glUniformMatrix4fv(_uViewMatrix, 1, GL_FALSE, &view[0][0]);
     glUniformMatrix4fv(_uProjectionMatrix, 1, GL_FALSE, &proj[0][0]);
+
+    RENDER_LOG_TRACE("PrimitiveMesh::updateMatrices - uniforms set");
 }
 
 void PrimitiveMesh::generateSphere(float radius, int segments) {
@@ -317,6 +337,7 @@ void PrimitiveMesh::generateSphere(float radius, int segments) {
         _vao[idx] = 0; _vbo[idx] = 0; _ebo[idx] = 0;
     }
 
+    // Interleaved: position(3) + normal(3) = 6 floats per vertex
     std::vector<float> vertices;
     std::vector<unsigned int> indices;
 
@@ -330,13 +351,19 @@ void PrimitiveMesh::generateSphere(float radius, int segments) {
             float sinPhi = sinf(phi);
             float cosPhi = cosf(phi);
 
-            float x = cosPhi * sinTheta;
-            float y = cosTheta;
-            float z = sinPhi * sinTheta;
+            // Direction from center (unit sphere)
+            float nx = cosPhi * sinTheta;
+            float ny = cosTheta;
+            float nz = sinPhi * sinTheta;
 
-            vertices.push_back(x * radius);
-            vertices.push_back(y * radius);
-            vertices.push_back(z * radius);
+            // Vertex position
+            vertices.push_back(nx * radius);
+            vertices.push_back(ny * radius);
+            vertices.push_back(nz * radius);
+            // Normal (direction from center, same as unit sphere position)
+            vertices.push_back(nx);
+            vertices.push_back(ny);
+            vertices.push_back(nz);
         }
     }
 
@@ -362,7 +389,7 @@ void PrimitiveMesh::generateSphere(float radius, int segments) {
     glGenBuffers(1, &_ebo[idx]);
 
     RENDER_LOG_DEBUG("PrimitiveMesh: VAO={}, VBO={}, EBO={}", _vao[idx], _vbo[idx], _ebo[idx]);
-    RENDER_LOG_DEBUG("PrimitiveMesh: vertices={}, indices={}, indexCount={}", vertices.size(), indices.size(), _indexCount[idx]);
+    RENDER_LOG_DEBUG("PrimitiveMesh: vertices={}, indices={}, indexCount={}", vertices.size() / 6, indices.size(), _indexCount[idx]);
 
     glBindVertexArray(_vao[idx]);
 
@@ -372,8 +399,11 @@ void PrimitiveMesh::generateSphere(float radius, int segments) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _ebo[idx]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    // Interleaved: position(3) + normal(3), stride = 6 * sizeof(float)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     glBindVertexArray(0);
 
@@ -385,6 +415,8 @@ void PrimitiveMesh::generateCube(float halfExtent) {
     _currentType = PrimitiveType::Cube;
     int idx = getTypeIndex(_currentType);
 
+    RENDER_LOG_DEBUG("PrimitiveMesh::generateCube - START idx={}", idx);
+
     if (_vao[idx]) {
         glDeleteVertexArrays(1, &_vao[idx]);
         glDeleteBuffers(1, &_vbo[idx]);
@@ -392,40 +424,49 @@ void PrimitiveMesh::generateCube(float halfExtent) {
         _vao[idx] = 0; _vbo[idx] = 0; _ebo[idx] = 0;
     }
 
+    // Cube with per-face normals (6 faces * 4 vertices = 24 vertices)
+    // Each face has 3 position floats + 3 normal floats = 6 floats per vertex
+    // Interleaved: position(3) + normal(3)
     float vertices[] = {
-        -halfExtent, -halfExtent,  halfExtent,
-         halfExtent, -halfExtent,  halfExtent,
-         halfExtent,  halfExtent,  halfExtent,
-        -halfExtent,  halfExtent,  halfExtent,
-         halfExtent, -halfExtent, -halfExtent,
-        -halfExtent, -halfExtent, -halfExtent,
-        -halfExtent,  halfExtent, -halfExtent,
-         halfExtent,  halfExtent, -halfExtent,
-        -halfExtent, -halfExtent, -halfExtent,
-        -halfExtent, -halfExtent,  halfExtent,
-        -halfExtent,  halfExtent,  halfExtent,
-        -halfExtent,  halfExtent, -halfExtent,
-         halfExtent, -halfExtent,  halfExtent,
-         halfExtent, -halfExtent, -halfExtent,
-         halfExtent,  halfExtent, -halfExtent,
-         halfExtent,  halfExtent,  halfExtent,
-        -halfExtent,  halfExtent,  halfExtent,
-         halfExtent,  halfExtent,  halfExtent,
-         halfExtent,  halfExtent, -halfExtent,
-        -halfExtent,  halfExtent, -halfExtent,
-        -halfExtent, -halfExtent, -halfExtent,
-         halfExtent, -halfExtent, -halfExtent,
-         halfExtent, -halfExtent,  halfExtent,
-        -halfExtent, -halfExtent,  halfExtent,
+        // Front face (Z+)
+        -halfExtent, -halfExtent,  halfExtent,  0.0f,  0.0f,  1.0f,
+         halfExtent, -halfExtent,  halfExtent,  0.0f,  0.0f,  1.0f,
+         halfExtent,  halfExtent,  halfExtent,  0.0f,  0.0f,  1.0f,
+        -halfExtent,  halfExtent,  halfExtent,  0.0f,  0.0f,  1.0f,
+        // Back face (Z-)
+         halfExtent, -halfExtent, -halfExtent,  0.0f,  0.0f, -1.0f,
+        -halfExtent, -halfExtent, -halfExtent,  0.0f,  0.0f, -1.0f,
+        -halfExtent,  halfExtent, -halfExtent,  0.0f,  0.0f, -1.0f,
+         halfExtent,  halfExtent, -halfExtent,  0.0f,  0.0f, -1.0f,
+        // Bottom face (Y-)
+        -halfExtent, -halfExtent, -halfExtent,  0.0f, -1.0f,  0.0f,
+        -halfExtent, -halfExtent,  halfExtent,  0.0f, -1.0f,  0.0f,
+         halfExtent, -halfExtent,  halfExtent,  0.0f, -1.0f,  0.0f,
+         halfExtent, -halfExtent, -halfExtent,  0.0f, -1.0f,  0.0f,
+        // Top face (Y+)
+        -halfExtent,  halfExtent,  halfExtent,  0.0f,  1.0f,  0.0f,
+        -halfExtent,  halfExtent, -halfExtent,  0.0f,  1.0f,  0.0f,
+         halfExtent,  halfExtent, -halfExtent,  0.0f,  1.0f,  0.0f,
+         halfExtent,  halfExtent,  halfExtent,  0.0f,  1.0f,  0.0f,
+        // Left face (X-)
+        -halfExtent, -halfExtent, -halfExtent, -1.0f,  0.0f,  0.0f,
+        -halfExtent, -halfExtent,  halfExtent, -1.0f,  0.0f,  0.0f,
+        -halfExtent,  halfExtent,  halfExtent, -1.0f,  0.0f,  0.0f,
+        -halfExtent,  halfExtent, -halfExtent, -1.0f,  0.0f,  0.0f,
+        // Right face (X+)
+         halfExtent, -halfExtent,  halfExtent,  1.0f,  0.0f,  0.0f,
+         halfExtent, -halfExtent, -halfExtent,  1.0f,  0.0f,  0.0f,
+         halfExtent,  halfExtent, -halfExtent,  1.0f,  0.0f,  0.0f,
+         halfExtent,  halfExtent,  halfExtent,  1.0f,  0.0f,  0.0f,
     };
 
     unsigned int indices[] = {
-        0, 1, 2,  2, 3, 0,
-        4, 5, 6,  6, 7, 4,
-        8, 9, 10,  10, 11, 8,
-        12, 13, 14,  14, 15, 12,
-        16, 17, 18,  18, 19, 16,
-        20, 21, 22,  22, 23, 20
+        0, 1, 2,  2, 3, 0,       // Front
+        4, 5, 6,  6, 7, 4,       // Back
+        8, 9, 10,  10, 11, 8,     // Bottom
+        12, 13, 14,  14, 15, 12,   // Top
+        16, 17, 18,  18, 19, 16,   // Left
+        20, 21, 22,  22, 23, 20    // Right
     };
 
     _indexCount[idx] = 36;
@@ -433,6 +474,8 @@ void PrimitiveMesh::generateCube(float halfExtent) {
     glGenVertexArrays(1, &_vao[idx]);
     glGenBuffers(1, &_vbo[idx]);
     glGenBuffers(1, &_ebo[idx]);
+
+    RENDER_LOG_DEBUG("PrimitiveMesh::generateCube - Created VAO={}, VBO={}, EBO={}", _vao[idx], _vbo[idx], _ebo[idx]);
 
     glBindVertexArray(_vao[idx]);
 
@@ -442,10 +485,16 @@ void PrimitiveMesh::generateCube(float halfExtent) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _ebo[idx]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    // Interleaved: position(3) + normal(3), stride = 6 * sizeof(float)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     glBindVertexArray(0);
+
+    // DEBUG: Verify cube was created
+    RENDER_LOG_DEBUG("PrimitiveMesh::generateCube - FINISHED idxCount={}, VAO={}", _indexCount[idx], _vao[idx]);
 
     RENDER_LOG_INFO("PrimitiveMesh: Generated cube (halfExtent={})", halfExtent);
 }
@@ -464,11 +513,12 @@ void PrimitiveMesh::generateBillboard(float width, float height) {
     float halfW = width * 0.5f;
     float halfH = height * 0.5f;
 
+    // Billboard: face camera (+Z normal), interleaved: position(3) + normal(3)
     float vertices[] = {
-        -halfW, -halfH, 0.0f,
-         halfW, -halfH, 0.0f,
-         halfW,  halfH, 0.0f,
-        -halfW,  halfH, 0.0f,
+        -halfW, -halfH, 0.0f,  0.0f,  0.0f,  1.0f,
+         halfW, -halfH, 0.0f,  0.0f,  0.0f,  1.0f,
+         halfW,  halfH, 0.0f,  0.0f,  0.0f,  1.0f,
+        -halfW,  halfH, 0.0f,  0.0f,  0.0f,  1.0f,
     };
 
     unsigned int indices[] = { 0, 1, 2,  2, 3, 0 };
@@ -486,8 +536,11 @@ void PrimitiveMesh::generateBillboard(float width, float height) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _ebo[idx]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    // Interleaved: position(3) + normal(3), stride = 6 * sizeof(float)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     glBindVertexArray(0);
 
@@ -510,6 +563,17 @@ void PrimitiveMesh::render(const glm::vec3& position, float scale, const glm::qu
     PrimitiveType primType = (meshType == 1) ? PrimitiveType::Cube : PrimitiveType::Sphere;
 
     int idx = getTypeIndex(primType);
+
+    // DEBUG: Log all rendering state for diagnostics
+    GLboolean depthTestEnabled = glIsEnabled(GL_DEPTH_TEST);
+    GLint depthFunc = GL_LESS;
+    glGetIntegerv(GL_DEPTH_FUNC, &depthFunc);
+    GLint depthMask = GL_FALSE;
+    glGetIntegerv(GL_DEPTH_WRITEMASK, &depthMask);
+
+    RENDER_LOG_INFO("PrimitiveMesh::render DIAG - VAO_idx={}, VAO={}, shaderProgram={}, meshType={}, depthTest={}, depthFunc={}, depthMask={}",
+        idx, _vao[idx], _shaderProgram, meshType, depthTestEnabled, depthFunc, depthMask);
+
     if (!_vao[idx] || !_shaderProgram) {
         RENDER_LOG_ERROR("PrimitiveMesh::render - VAO={} or shaderProgram={} is 0! meshType={}", _vao[idx], _shaderProgram, meshType);
         return;
@@ -528,9 +592,16 @@ void PrimitiveMesh::render(const glm::vec3& position, float scale, const glm::qu
     model = model * glm::mat4_cast(rotation);
     model = glm::scale(model, glm::vec3(scale));
 
+    // DEBUG: Log model matrix values
+    RENDER_LOG_DEBUG("PrimitiveMesh model matrix: row0=({:.2f},{:.2f},{:.2f},{:.2f})",
+        model[0][0], model[0][1], model[0][2], model[0][3]);
+    RENDER_LOG_DEBUG("PrimitiveMesh model matrix: row3=({:.2f},{:.2f},{:.2f},{:.2f})",
+        model[3][0], model[3][1], model[3][2], model[3][3]);
+
     glUniformMatrix4fv(_uModelMatrix, 1, GL_FALSE, &model[0][0]);
     glUniform3fv(_uColor, 1, &color[0]);
 
+    // DEBUG: Verify depth state before draw
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LESS);
 
@@ -540,11 +611,27 @@ void PrimitiveMesh::render(const glm::vec3& position, float scale, const glm::qu
     // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glBindVertexArray(_vao[idx]);
+
+    // DEBUG: Log before draw call
+    RENDER_LOG_INFO("PrimitiveMesh::render - ABOUT TO glDrawElements(VAO={}, indices={})", _vao[idx], _indexCount[idx]);
+
     glDrawElements(GL_TRIANGLES, _indexCount[idx], GL_UNSIGNED_INT, nullptr);
+
+    // DEBUG: Check for GL errors after draw
+    GLenum glError = glGetError();
+    if (glError != GL_NO_ERROR) {
+        RENDER_LOG_ERROR("PrimitiveMesh::render - GL ERROR after draw: {}", glError);
+    } else {
+        RENDER_LOG_DEBUG("PrimitiveMesh::render - glDrawElements completed successfully");
+    }
+
     glBindVertexArray(0);
 
     // glDisable(GL_BLEND);
     glDepthMask(GL_TRUE);
+
+    // DEBUG: Confirm render completed
+    RENDER_LOG_DEBUG("PrimitiveMesh::render - FINISHED render for meshType={}", meshType);
     
     // ================================================================
     // RENDER DIRECTION INDICATOR (Cone showing ship forward direction)
