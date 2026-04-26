@@ -563,15 +563,18 @@ void Engine::syncCameraToLocalPlayer() {
 
 void Engine::renderPlayerEntities() {
     // Query all entities with Transform, RenderMesh, and PlayerColor
-    // and render them as primitives
+    // but NOT ModelAsset (those are rendered by ECS glTF system)
     auto& world = ECS::getWorld();
     
     // Get camera position for frustum culling (future) and matrix calculation
     // Camera is already set up in Engine::render() - use _camera member
     auto& primitives = Rendering::GetPrimitiveMesh();
     primitives.setCamera(&_camera);
+    ECS::setRenderModuleCamera(static_cast<const Rendering::Camera*>(&_camera));
     
-    auto q = world.query_builder<ECS::Transform, ECS::RenderMesh, ECS::PlayerColor>().build();
+    auto q = world.query_builder<ECS::Transform, ECS::RenderMesh, ECS::PlayerColor>()
+        .without<ECS::ModelAsset>()
+        .build();
     
     int count = 0;
     q.each([&count, &primitives](ECS::Transform& transform, ECS::RenderMesh& mesh, ECS::PlayerColor& color) {
@@ -1059,10 +1062,18 @@ void Engine::spawnTestShips(::flecs::world& world) {
 
         auto entity = world.entity(config.name);
         entity.set<ECS::Transform>({{config.offset.x, config.offset.y, config.offset.z}, glm::quat_identity<float, glm::packed_highp>(), glm::vec3(1.0f, 1.0f, 1.0f)});
-        entity.set<ECS::RenderMesh>({ECS::MeshType::Cube, config.halfExtents.x * 2.0f});
+        
+        // Scout uses glTF model, other ships use primitive meshes
+        if (strcmp(config.name, "Scout") == 0) {
+            entity.set<ECS::ModelAsset>({"data/models/ship_3.glb"});
+            CE_LOG_INFO("Ship {} using glTF model", config.name);
+        } else {
+            entity.set<ECS::RenderMesh>({ECS::MeshType::Cube, config.halfExtents.x * 2.0f});
+        }
+        
         ECS::PlayerColor shipColor;
-    shipColor.color = glm::vec3(config.color.r, config.color.g, config.color.b);
-    entity.set<ECS::PlayerColor>(shipColor);
+        shipColor.color = glm::vec3(config.color.r, config.color.g, config.color.b);
+        entity.set<ECS::PlayerColor>(shipColor);
         entity.set<ECS::JoltBodyId>(ECS::JoltBodyId(bodyId));
         entity.add<ECS::TestShipTag>();
         entity.set<ECS::ShipPhysics>(ECS::ShipPhysics(config.mass, config.mass * 20.0f));

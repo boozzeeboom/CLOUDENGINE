@@ -1,3 +1,7 @@
+#define TINYGLTF3_IMPLEMENTATION
+#define TINYGLTF3_ENABLE_FS
+#define TINYGLTF3_ENABLE_STB_IMAGE
+
 #include "asset_manager.h"
 #include "core/logger.h"
 

@@ -2,6 +2,10 @@
 #include "../components.h"
 #include "../components/mesh_components.h"
 
+namespace Core { namespace Rendering {
+class Camera;
+}}
+
 namespace Core { namespace ECS {
 
 /// @brief Register all rendering-related ECS components and systems
@@ -12,6 +16,10 @@ void registerRenderComponents(flecs::world& world);
 /// @details Renders spheres/cubes/billboards for remote players
 /// @param world The ECS world
 void registerRemotePlayerRenderSystem(flecs::world& world);
+
+/// @brief Set camera for render module (needed for glTF rendering)
+/// @param camera Pointer to camera
+void setRenderModuleCamera(const Rendering::Camera* camera);
 
 /// @brief IsBillboard tag — entity should render as billboard (faces camera)
 struct IsBillboard {};

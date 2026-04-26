@@ -51,6 +51,8 @@ public:
     /// @param rotation Quaternion rotation
     /// @param color RGB color
     void render(const glm::vec3& position, float scale, const glm::quat& rotation, const glm::vec3& color);
+    
+    unsigned int createShaderProgram(const char* vs, const char* fs);
 
 private:
     static constexpr int PrimitiveTypeCount = 3;

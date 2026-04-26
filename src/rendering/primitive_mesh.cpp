@@ -141,6 +141,32 @@ PrimitiveMesh::~PrimitiveMesh() {
     cleanup();
 }
 
+unsigned int PrimitiveMesh::createShaderProgram(const char* vs, const char* fs) {
+    unsigned int vert = compileShader(GL_VERTEX_SHADER, vs);
+    unsigned int frag = compileShader(GL_FRAGMENT_SHADER, fs);
+    if (!vert || !frag) return 0;
+    
+    unsigned int program = glCreateProgram();
+    glAttachShader(program, vert);
+    glAttachShader(program, frag);
+    glLinkProgram(program);
+    
+    int success;
+    glGetProgramiv(program, GL_LINK_STATUS, &success);
+    if (!success) {
+        char infoLog[512];
+        glGetProgramInfoLog(program, 512, nullptr, infoLog);
+        RENDER_LOG_ERROR("Primitive shader link error: {}", infoLog);
+        return 0;
+    }
+    
+    glDetachShader(program, vert);
+    glDetachShader(program, frag);
+    glDeleteShader(vert);
+    glDeleteShader(frag);
+    return program;
+}
+
 int PrimitiveMesh::getTypeIndex(PrimitiveType type) const {
     switch (type) {
         case PrimitiveType::Sphere:    return 0;
