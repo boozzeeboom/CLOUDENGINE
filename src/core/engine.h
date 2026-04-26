@@ -111,6 +111,7 @@ private:
     UI::UIManager* _uiManager = nullptr;
     UI::HUDScreen* _hudScreen = nullptr;
     bool _showMainMenu = true;  // Show main menu on startup
+    bool _pendingHUD = false;   // Deferred HUD creation flag
 
     // UI handler methods (Iteration 7)
     void handleUIScreenAction(UI::ScreenType type);

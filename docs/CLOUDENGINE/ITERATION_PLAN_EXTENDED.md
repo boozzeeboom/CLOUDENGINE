@@ -1,9 +1,9 @@
 # CLOUDENGINE — Extended Iteration Plan
 # Детальный план развития движка и игры
 
-> **Версия плана:** 1.1  
+> **Версия плана:** 1.2  
 > **Дата создания:** 2026-04-22  
-> **Дата обновления:** 2026-04-25  
+> **Дата обновления:** 2026-04-26  
 > **Статус:** Актуальный  
 > **Центр фокуса:** Создание production-ready движка для будущих проектов
 
@@ -42,6 +42,7 @@
 | 4.3 | Player Sync | ✅ | Position interpolation, Yaw/Pitch sync |
 | 5 | Network Sync (Priority) | ✅ | Position buffer, full transform sync, remote player rendering |
 | 7 | UI System | ✅ ЗАВЕРШЕНО | UIRenderer, Screen stack, Text rendering, Settings, Inventory, NPC Dialog |
+| 8 | StartPod | ✅ ЗАВЕРШЕНО | Pedestrian mode, Platform, Test ships, Boarding (F), Camera follow, HUD |
 | 6 | Ship Physics | 🔄 В ПРОЦЕССЕ | Jolt Physics, ShipController, Controls W/S/A/D/Q/E/Z/X/C/V |
 
 ### Текущие проблемы (Tech Debt)
@@ -54,6 +55,8 @@
 | 4 | No Asset Loading — нет загрузки моделей | N/A | 🟡 MEDIUM |
 | 5 | UI Text Rendering — сжатый текст (UV vs quad mismatch) | ui_renderer.cpp:569-606 | 🟡 MEDIUM |
 | 6 | UI Scroll direction — инвертировано | settings_screen.cpp:292 | 🟡 MEDIUM |
+| 7 | PrimitiveMesh single VAO — все рендерится как сферы | primitive_mesh.cpp | 🔴 HIGH |
+| 8 | UN-board не реализован (F при PILOTING) | pedestrian_controller.cpp | 🟡 MEDIUM |
 
 ### Что работает
 
@@ -85,37 +88,19 @@ Iteration 4  ✅ Networking — ENet, Server, Client, ECS sync
 Iteration 5  ✅ Network Sync — Position interpolation, remote rendering
 Iteration 6  🔄 Ship Physics — Jolt + Custom Aerodynamics (В ПРОЦЕССЕ)
 Iteration 7  ✅ UI System — UIRenderer, Screens, Text, Inventory
-Iteration 8  ⏳ Asset System — Загрузка 3D моделей, текстур (СЛЕДУЮЩАЯ)
-Iteration 9  ⏳ Ghibli Visual Polish — Cel-shading, stylized rendering
+Iteration 8  ✅ StartPod — Pedestrian mode, Platform, Ships, Boarding
+Iteration 9  ⏳ Asset System — Загрузка 3D моделей, текстур (СЛЕДУЮЩАЯ)
+Iteration 10 ⏳ Ghibli Visual Polish — Cel-shading, stylized rendering
 ```
 
-### Следующие итерации (8-12)
+### Следующие итерации (9-13)
 
 ```
-Iteration 8  ⏳ Asset System
-  ├── 8.1 AssetManager — загрузчик файлов
-  ├── 8.2 Model Loading — glTF парсер
-  └── 8.3 Player Ship Model — заменить сферу на модель
-
-Iteration 9  ⏳ Ghibli Visual Polish
-  ├── 9.1 Cel-shading shader
-  ├── 9.2 Cloud style refinement
-  └── 9.3 Lighting improvements
-
-Iteration 10 ⏳ Wind System
-  ├── 10.1 Wind components
-  ├── 10.2 Global wind + zones
-  └── 10.3 Wind integration with physics
-
-Iteration 11 ⏳ Large World Optimization
-  ├── 11.1 Scale issue fix
-  ├── 11.2 Floating origin optimization
-  └── 11.3 Chunk streaming improvements
-
-Iteration 12 ⏳ Polish & Polish
-  ├── 12.1 Performance optimization
-  ├── 12.2 Memory profiling
-  └── 12.3 Documentation
+Iteration 9  ⏳ Asset System — загрузка 3D моделей, PrimitiveMesh fix
+Iteration 10 ⏳ Ghibli Visual Polish — Cel-shading, stylized rendering
+Iteration 11 ⏳ Wind System — Global wind + zones
+Iteration 12 ⏳ Large World Optimization — Scale issue fix,
+Iteration 13 ⏳ Polish & Polish — Performance, memory, docs
 ```
 
 ---
@@ -348,18 +333,61 @@ AerodynamicsSystem  // PreUpdate: apply lift/drag forces
 
 ---
 
-### Iteration 8 — Asset System (СЛЕДУЮЩАЯ)
+### Iteration 8 — StartPod ✅ ЗАВЕРШЕНО
+
+**Статус:** ✅ ЗАВЕРШЕНО (2026-04-26)
+**Цель:** Стартовая площадка для тестирования: пешее режим + посадка в корабль
+
+#### 8.1 Platform ✅
+- [x] `createPlatform()` — статический куб 200x4x200 на y=2500
+- [x] Физическое тело Jolt (Static, TERRAIN layer)
+- [x] Friction = 0.05 (скользкая поверхность)
+
+#### 8.2 Test Ships ✅
+- [x] 4 корабля: Scout, Freighter, Carrier, Interceptor
+- [x] Jolt body creation с mass, layer=SHIP
+- [x] Gravity factor = 0 (летающие)
+- [x] ShipPhysics component (mass, thrust)
+- [x] ShipInput component
+
+#### 8.3 Pedestrian Mode ✅
+- [x] PlayerCharacter tag
+- [x] PlayerState с mode (PEDESTRIAN/BOARDING/PILOTING)
+- [x] GroundedPhysics (mass=80, walkSpeed=5, runSpeed=10)
+- [x] PedestrianInput (WASD, Space, Shift, F)
+- [x] PedestrianControllerSystem — движение относительно камеры
+- [x] Camera-relative WASD (forward = -Z в пространстве камеры)
+
+#### 8.4 Boarding System ✅
+- [x] F key — поиск корабля в радиусе 15м
+- [x] Pre-created shipQuery (избегает crash в OnUpdate)
+- [x] Transfer IsLocalPlayer + ShipInput от персонажа к кораблю
+- [x] PlayerState::mode = PILOTING
+- [x] Camera sync переключается на корабль
+
+#### 8.5 HUD ✅
+- [x] HUDScreen с deferred creation
+- [x] Отображение режима (PEDESTRIAN/PILOTING)
+
+#### Известные проблемы (для полировки)
+- ❌ Все примитивы рендерятся как сферы (PrimitiveMesh single VAO)
+- ⚠️ Камера может отделяться при boarding (требует проверки)
+- ⚠️ UN-board не реализован (F при PILOTING ничего не делает)
+
+---
+
+### Iteration 9 — Asset System (СЛЕДУЮЩАЯ)
 
 **Цель:** Добавить загрузку 3D моделей, текстур, шейдеров из файлов
 
-#### 8.1 Asset Pipeline
+#### 9.1 Asset Pipeline
 
 **Форматы:**
 - **3D Models:** glTF 2.0 (.glb/.gltf) — бинарный, поддерживает анимации
 - **Textures:** DDS или KTX2 (compressed) + PNG fallback
 - **Audio:** OGG Vorbis для музыки, WAV для SFX
 
-#### 8.2 AssetManager
+#### 9.2 AssetManager
 ```cpp
 class AssetManager {
 public:
@@ -381,17 +409,17 @@ private:
 };
 ```
 
-#### 8.3 Primitive → Model Transition
+#### 9.3 Primitive → Model Transition
 
 **Текущее (MVP):**
-- Игроки рендерятся как сферы (primitive_mesh)
+- Игроки рендерятся как сферы (primitive_mesh) ← ПРОБЛЕМА: все как сферы!
 - Облака через raymarch шейдер
 
-**После 8.3:**
+**После 9.3:**
 - Игроки загружаются из .glb файла (low-poly ship/barge)
 - Мир использует instanced rendering для чанков
 
-#### 8.4 File Structure
+#### 9.4 File Structure
 ```
 assets/
 ├── models/

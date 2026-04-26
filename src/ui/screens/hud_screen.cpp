@@ -1,5 +1,6 @@
 #define __gl_h_
 #include "hud_screen.h"
+#include <memory>
 
 namespace UI {
 

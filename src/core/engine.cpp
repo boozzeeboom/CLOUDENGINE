@@ -348,6 +348,15 @@ void Engine::update(float dt) {
         return;
     }
 
+    // Deferred HUD creation - create HUD when game state is stable
+    if (_pendingHUD && _uiManager) {
+        CE_LOG_INFO("Creating HUD screen in stable update state");
+        _hudScreen = new UI::HUDScreen();
+        _uiManager->pushScreen(std::unique_ptr<UI::HUDScreen>(_hudScreen));
+        _pendingHUD = false;
+        CE_LOG_INFO("HUD screen created and pushed successfully");
+    }
+
     // Run ECS systems (game is running)
     ECS::update(dt);
 
@@ -529,9 +538,7 @@ void Engine::syncCameraToLocalPlayer() {
         lastPedestrianCount = pedestrianCount;
     }
 
-    auto shipQ = world.query_builder<ECS::Transform, ECS::IsLocalPlayer, ECS::IsPlayerShip>()
-        .with<ECS::JoltBodyId>()
-        .build();
+    auto shipQ = world.query_builder<ECS::Transform, ECS::IsLocalPlayer, ECS::IsPlayerShip>().build();
     
     static int lastShipCount = 0;
     int shipCount = 0;
@@ -801,16 +808,17 @@ void Engine::handleMenuAction(const std::string& action) {
             auto loadingScreen = std::make_unique<UI::LoadingScreen>();
             loadingScreen->setStatus("Loading world...");
             loadingScreen->onComplete = [this]() {
-                CE_LOG_INFO("LoadingScreen: onComplete callback fired");
-                // Start the game
+                CE_LOG_INFO("[CALLBACK] Step 1: onComplete fired");
                 _showMainMenu = false;
+                CE_LOG_INFO("[CALLBACK] Step 2: _showMainMenu = false, setting _pendingHUD");
+                _pendingHUD = true;
+                CE_LOG_INFO("[CALLBACK] Step 3: _pendingHUD = true");
                 if (_uiManager) {
+                    CE_LOG_INFO("[CALLBACK] Step 4: _uiManager exists, calling setGameStarted");
                     _uiManager->setGameStarted(true);
+                    CE_LOG_INFO("[CALLBACK] Step 5: setGameStarted done, calling popScreen");
                     _uiManager->popScreen();
-                    // Push HUD screen for gameplay
-                    _hudScreen = new UI::HUDScreen();
-                    _uiManager->pushScreen(std::unique_ptr<UI::HUDScreen>(_hudScreen));
-                    CE_LOG_INFO("HUD screen pushed");
+                    CE_LOG_INFO("[CALLBACK] Step 6: popScreen done, callback exiting");
                 }
             };
             _uiManager->pushScreen(std::move(loadingScreen));
@@ -1057,6 +1065,7 @@ void Engine::spawnTestShips(::flecs::world& world) {
     entity.set<ECS::PlayerColor>(shipColor);
         entity.set<ECS::JoltBodyId>(ECS::JoltBodyId(bodyId));
         entity.add<ECS::TestShipTag>();
+        entity.set<ECS::ShipPhysics>(ECS::ShipPhysics(config.mass, config.mass * 20.0f));
 
         CE_LOG_INFO("Spawned test ship: {} at ({:.1f}, {:.1f}, {:.1f})",
             config.name, config.offset.x, config.offset.y, config.offset.z);

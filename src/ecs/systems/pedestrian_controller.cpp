@@ -1,6 +1,8 @@
 #include "ecs/systems/pedestrian_controller.h"
 #include "ecs/components.h"
 #include "ecs/components/player_character_components.h"
+#include "ecs/components/ship_components.h"
+#include "ecs/modules/network_module.h"
 #include "ecs/modules/jolt_module.h"
 #include "core/logger.h"
 #include <platform/window.h>
@@ -16,9 +18,11 @@ namespace {
     constexpr float PEDESTRIAN_HEIGHT = 1.8f;
     constexpr float PLATFORM_Y = 2500.0f;
     constexpr float PLATFORM_TOP = PLATFORM_Y + 2.0f;
-    constexpr float PLAYER_SPAWN_Z = 400.0f;
+    constexpr float PLAYER_SPAWN_Z = 0.0f;
     constexpr float BOARDING_RADIUS = 15.0f;
 }
+
+flecs::query<Transform, TestShipTag, JoltBodyId> g_shipQuery;
 
 void registerPedestrianControllerSystem(flecs::world& world) {
     world.component<PlayerCharacter>("PlayerCharacter");
@@ -28,6 +32,9 @@ void registerPedestrianControllerSystem(flecs::world& world) {
     world.component<PlatformCollision>("PlatformCollision");
     world.component<ShipProximity>("ShipProximity");
     CE_LOG_INFO("Pedestrian components registered");
+
+    g_shipQuery = world.query_builder<Transform, TestShipTag, JoltBodyId>().build();
+    CE_LOG_INFO("Ship query created at registration (avoiding OnUpdate crash)");
 
     world.system("PedestrianInputCapture")
         .kind(flecs::PreUpdate)
@@ -90,7 +97,7 @@ void registerPedestrianControllerSystem(flecs::world& world) {
             }
         });
 
-    world.system("PedestrianController")
+    world.system("PedestrianMovement")
         .kind(flecs::OnUpdate)
         .with<PlayerCharacter>()
         .with<PlayerState>()
@@ -123,39 +130,31 @@ void registerPedestrianControllerSystem(flecs::world& world) {
                         transform->position.x, transform->position.y, transform->position.z);
                 }
 
-                // Movement relative to camera facing direction (proper third-person)
                 if (input->moveX != 0.0f || input->moveZ != 0.0f) {
                     float speed = input->sprint ? physics->runSpeed : physics->walkSpeed;
                     float dt = 0.016f;
 
-                    // Get camera yaw from engine to compute movement direction
                     float cameraYaw = Core::getEngineCameraYaw();
 
-                    // Forward vector relative to camera (in XZ plane)
                     glm::vec3 cameraForward;
                     cameraForward.x = -sin(cameraYaw);
                     cameraForward.y = 0.0f;
                     cameraForward.z = -cos(cameraYaw);
                     cameraForward = glm::normalize(cameraForward);
 
-                    // Right vector (perpendicular to forward in XZ plane)
                     glm::vec3 cameraRight;
                     cameraRight.x = cos(cameraYaw);
                     cameraRight.y = 0.0f;
                     cameraRight.z = -sin(cameraYaw);
                     cameraRight = glm::normalize(cameraRight);
 
-                    // W = forward (-Z in camera space), S = backward (+Z), A = left, D = right
                     glm::vec3 moveDir = cameraForward * (-input->moveZ) + cameraRight * input->moveX;
                     if (glm::length(moveDir) > 0.0f) {
                         moveDir = glm::normalize(moveDir);
                     }
 
                     transform->position += moveDir * speed * dt;
-
-                    // Keep on platform
-                    constexpr float PLATFORM_TOP = PLATFORM_Y + 2.0f + PEDESTRIAN_HEIGHT;
-                    transform->position.y = PLATFORM_TOP;
+                    transform->position.y = PLATFORM_TOP + PEDESTRIAN_HEIGHT;
 
                     if (frameCounter % 120 == 0) {
                         CE_LOG_TRACE("PedestrianController: moved to ({:.1f},{:.1f},{:.1f})",
@@ -164,26 +163,34 @@ void registerPedestrianControllerSystem(flecs::world& world) {
                 }
 
                 if (input->board && state->mode == PlayerMode::PEDESTRIAN) {
-                    auto& world = e.world();
-                    auto shipQuery = world.query_builder<Transform, TestShipTag, JoltBodyId>().build();
+                    CE_LOG_INFO("PedestrianController: board=true, searching for nearest ship...");
 
                     flecs::entity nearestShip;
                     float nearestDist = BOARDING_RADIUS;
+                    glm::vec3 playerPos = transform->position;
 
-                    shipQuery.each([&](flecs::entity shipEntity, Transform& shipTransform, TestShipTag&, JoltBodyId&) {
-                        float dist = glm::distance(transform->position, shipTransform.position);
+                    g_shipQuery.each([&](flecs::entity shipEntity, Transform& shipTransform, TestShipTag&, JoltBodyId&) {
+                        float dist = glm::distance(playerPos, shipTransform.position);
                         if (dist < nearestDist) {
                             nearestDist = dist;
                             nearestShip = shipEntity;
                         }
                     });
 
-                    if (nearestShip) {
-                        CE_LOG_INFO("PedestrianController: Boarding ship!");
-                        state->mode = PlayerMode::PILOTING;
+                    if (nearestShip.is_valid()) {
+                        CE_LOG_INFO("PedestrianController: found ship at distance {:.1f}", nearestDist);
                         state->targetShip = nearestShip;
-                        input->board = false;
+                        state->mode = PlayerMode::PILOTING;
+                        nearestShip.add<IsPlayerShip>();
+                        nearestShip.add<IsLocalPlayer>();
+                        nearestShip.set<ShipInput>({});
+                        e.remove<IsLocalPlayer>();
+                        CE_LOG_INFO("PedestrianController: BOARDED ship, IsLocalPlayer + ShipInput transferred");
+                    } else {
+                        CE_LOG_INFO("PedestrianController: no ship in range (radius={:.1f})", BOARDING_RADIUS);
                     }
+
+                    input->board = false;
                 }
             }
         });

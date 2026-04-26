@@ -94,7 +94,7 @@ inline flecs::entity createLocalPlayer(flecs::world& world, uint32_t playerId, c
     glm::vec3 spawnPos = initialPosition;
     spawnPos.x = 0.0f;
     spawnPos.y = PLATFORM_TOP + PEDESTRIAN_HEIGHT;
-    spawnPos.z = 400.0f;
+    spawnPos.z = 0.0f;
     
     CE_LOG_INFO("createLocalPlayer: Spawn position adjusted to platform level: ({:.1f},{:.1f},{:.1f})",
                 spawnPos.x, spawnPos.y, spawnPos.z);
