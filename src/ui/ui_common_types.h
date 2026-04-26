@@ -36,7 +36,8 @@ enum class ScreenType : uint8_t {
     PauseMenu = 6,
     Inventory = 7,
     NPCDialog = 8,
-    Character = 9
+    Character = 9,
+    HUD = 10
 };
 
 // ============================================================================

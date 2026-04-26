@@ -31,6 +31,7 @@
 #include <ui/screens/pause_menu_screen.h>
 #include <ui/screens/npc_dialog_screen.h>
 #include <ui/screens/character_screen.h>
+#include <ui/screens/hud_screen.h>
 #include <chrono>
 #include <iostream>
 
@@ -806,6 +807,10 @@ void Engine::handleMenuAction(const std::string& action) {
                 if (_uiManager) {
                     _uiManager->setGameStarted(true);
                     _uiManager->popScreen();
+                    // Push HUD screen for gameplay
+                    _hudScreen = new UI::HUDScreen();
+                    _uiManager->pushScreen(std::unique_ptr<UI::HUDScreen>(_hudScreen));
+                    CE_LOG_INFO("HUD screen pushed");
                 }
             };
             _uiManager->pushScreen(std::move(loadingScreen));
@@ -856,6 +861,10 @@ void Engine::handleMenuAction(const std::string& action) {
                             // Clear ALL UI screens - game is starting
                             if (_uiManager) {
                                 _uiManager->clearStack();
+                                // Push HUD screen for gameplay
+                                _hudScreen = new UI::HUDScreen();
+                                _uiManager->pushScreen(std::unique_ptr<UI::HUDScreen>(_hudScreen));
+                                CE_LOG_INFO("HUD screen pushed (client)");
                             }
                             CE_LOG_INFO("Game started - UI cleared, menu hidden");
                         } else {

@@ -17,6 +17,7 @@ namespace Network {
 
 namespace UI {
     class UIManager;
+    class HUDScreen;
     enum class ScreenType : uint8_t;
 }
 
@@ -108,6 +109,7 @@ private:
 
     // UI System (Iteration 7)
     UI::UIManager* _uiManager = nullptr;
+    UI::HUDScreen* _hudScreen = nullptr;
     bool _showMainMenu = true;  // Show main menu on startup
 
     // UI handler methods (Iteration 7)
