@@ -106,10 +106,13 @@ file(COPY "${CMAKE_SOURCE_DIR}/data/fonts/" DESTINATION "${CMAKE_BINARY_DIR}/Deb
 # GLFW build (static library)
 add_subdirectory(libs/glfw)
 
+# Jolt Physics build (static library) - MUST be before target_link_libraries
+add_subdirectory(libs/jolt/Build)
+
 # Link libraries
 target_link_libraries(CloudEngine PRIVATE
     glfw
     ${OPENGL_gl_LIBRARY}
     winmm.lib   # ENet time functions
-    C:/CLOUDPROJECT/CLOUDENGINE/build/libs/jolt/Build/Debug/Jolt.lib
+    Jolt::Jolt  # Jolt Physics
 )
