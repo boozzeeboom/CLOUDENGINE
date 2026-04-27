@@ -41,20 +41,31 @@ MeshData* AssetManager::loadModel(const std::string& path) {
     tg3_parse_options opts;
     tg3_parse_options_init(&opts);
     opts.fs.file_exists = [](const char* path, uint32_t, void*) -> int32_t {
+        CE_LOG_DEBUG("AssetManager: Checking file exists: {}", path);
         std::ifstream f(path);
         return f.good() ? 1 : 0;
     };
     opts.fs.read_file = [](uint8_t** outData, uint64_t* outSize,
                            const char* path, uint32_t, void*) -> int32_t {
+        CE_LOG_DEBUG("AssetManager: Attempting to read file: {}", path);
         std::ifstream f(path, std::ios::binary);
-        if (!f) return -1;
+        if (!f) {
+            CE_LOG_ERROR("AssetManager: Failed to open file: {}", path);
+            return -1;
+        }
         f.seekg(0, std::ios::end);
         size_t size = f.tellg();
         f.seekg(0, std::ios::beg);
         uint8_t* data = new uint8_t[size];
         f.read(reinterpret_cast<char*>(data), size);
+        if (!f) {
+            CE_LOG_ERROR("AssetManager: Failed to read file: {}", path);
+            delete[] data;
+            return -1;
+        }
         *outData = data;
         *outSize = size;
+        CE_LOG_DEBUG("AssetManager: Successfully read {} bytes from {}", size, path);
         return 0;
     };
     opts.fs.free_file = [](uint8_t* data, uint64_t, void*) {
@@ -66,12 +77,18 @@ MeshData* AssetManager::loadModel(const std::string& path) {
     tinygltf3::ErrorStack errors;
     tg3_error_code code = parse_file(model, errors, path.c_str(), &opts);
 
-    if (code != TG3_OK || errors.has_error()) {
+    if (code != TG3_OK) {
+        CE_LOG_ERROR("tinygltf: parse_file returned error code {}", static_cast<int>(code));
         uint32_t count = errors.count();
         for (uint32_t i = 0; i < count; i++) {
             const tg3_error_entry* e = errors.entry(i);
             if (e) {
-                CE_LOG_ERROR("tinygltf: error {} code {}", e->severity, static_cast<int>(e->code));
+                CE_LOG_ERROR("tinygltf: [{}] {} (code={}, path={}, offset={})",
+                    e->severity == TG3_SEVERITY_ERROR ? "ERROR" : "WARNING",
+                    e->message ? e->message : "unknown",
+                    static_cast<int>(e->code),
+                    e->json_path ? e->json_path : "N/A",
+                    static_cast<long>(e->byte_offset));
             }
         }
         return nullptr;
@@ -91,10 +108,15 @@ MeshData* AssetManager::loadModel(const std::string& path) {
             const tg3_primitive* prim = &mesh->primitives[pi];
 
             int posIdx = -1;
+            int normalIdx = -1;
+            int uvIdx = -1;
             for (uint32_t ai = 0; ai < prim->attributes_count; ai++) {
                 if (tg3_str_equals_cstr(prim->attributes[ai].key, "POSITION")) {
                     posIdx = prim->attributes[ai].value;
-                    break;
+                } else if (tg3_str_equals_cstr(prim->attributes[ai].key, "NORMAL")) {
+                    normalIdx = prim->attributes[ai].value;
+                } else if (tg3_str_equals_cstr(prim->attributes[ai].key, "TEXCOORD_0")) {
+                    uvIdx = prim->attributes[ai].value;
                 }
             }
             if (posIdx < 0) continue;
@@ -114,6 +136,33 @@ MeshData* AssetManager::loadModel(const std::string& path) {
             }
 
             meshData->vertexCount = static_cast<int>(posAcc->count);
+
+            if (normalIdx >= 0) {
+                const tg3_accessor* normAcc = &tg3Model->accessors[normalIdx];
+                const tg3_buffer_view* normBv = &tg3Model->buffer_views[normAcc->buffer_view];
+                const tg3_buffer* normBuf = &tg3Model->buffers[normBv->buffer];
+                int normByteStride = tg3_accessor_byte_stride(normAcc, normBv);
+                const uint8_t* normData = normBuf->data.data + normBv->byte_offset + normAcc->byte_offset;
+                for (uint64_t v = 0; v < normAcc->count; v++) {
+                    const float* ndata = reinterpret_cast<const float*>(normData + v * normByteStride);
+                    meshData->normals.push_back(ndata[0]);
+                    meshData->normals.push_back(ndata[1]);
+                    meshData->normals.push_back(ndata[2]);
+                }
+            }
+
+            if (uvIdx >= 0) {
+                const tg3_accessor* uvAcc = &tg3Model->accessors[uvIdx];
+                const tg3_buffer_view* uvBv = &tg3Model->buffer_views[uvAcc->buffer_view];
+                const tg3_buffer* uvBuf = &tg3Model->buffers[uvBv->buffer];
+                int uvByteStride = tg3_accessor_byte_stride(uvAcc, uvBv);
+                const uint8_t* uvData = uvBuf->data.data + uvBv->byte_offset + uvAcc->byte_offset;
+                for (uint64_t v = 0; v < uvAcc->count; v++) {
+                    const float* udata = reinterpret_cast<const float*>(uvData + v * uvByteStride);
+                    meshData->uvs.push_back(udata[0]);
+                    meshData->uvs.push_back(udata[1]);
+                }
+            }
 
             if (prim->indices >= 0) {
                 const tg3_accessor* idxAcc = &tg3Model->accessors[prim->indices];
@@ -146,7 +195,10 @@ MeshData* AssetManager::loadModel(const std::string& path) {
     _meshes[path] = std::move(meshData);
     _lastAccessTime[path] = std::chrono::steady_clock::now();
 
-    CE_LOG_INFO("AssetManager: Loaded model {} (v={}, i={})", path, result->vertexCount, result->indexCount);
+    CE_LOG_INFO("AssetManager: Loaded model {} (v={}, i={}, n={}, u={})",
+        path, result->vertexCount, result->indexCount,
+        static_cast<int>(result->normals.size() / 3),
+        static_cast<int>(result->uvs.size() / 2));
     return result;
 }
 

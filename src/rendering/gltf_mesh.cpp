@@ -37,22 +37,53 @@ bool GltfMesh::loadFromMeshData(MeshData* meshData) {
 
     glBindVertexArray(_vao);
 
+    size_t posOffset = 0;
+    size_t normalOffset = 0;
+    size_t uvOffset = 0;
+    const size_t stride = 3 * sizeof(float);  // base position size
+
+    if (!meshData->normals.empty()) {
+        normalOffset = posOffset + stride;
+    }
+    if (!meshData->uvs.empty()) {
+        uvOffset = normalOffset + (meshData->normals.empty() ? 0 : 3 * sizeof(float));
+    }
+
+    const size_t totalVtxSize = uvOffset + (meshData->uvs.empty() ? 0 : 2 * sizeof(float));
+    std::vector<float> interleavedData;
+    interleavedData.reserve(meshData->positions.size() +
+        (meshData->normals.empty() ? 0 : meshData->normals.size()) +
+        (meshData->uvs.empty() ? 0 : meshData->uvs.size()));
+
+    for (size_t v = 0; v < meshData->positions.size(); v += 3) {
+        interleavedData.push_back(meshData->positions[v]);
+        interleavedData.push_back(meshData->positions[v + 1]);
+        interleavedData.push_back(meshData->positions[v + 2]);
+        if (!meshData->normals.empty()) {
+            interleavedData.push_back(meshData->normals[v]);
+            interleavedData.push_back(meshData->normals[v + 1]);
+            interleavedData.push_back(meshData->normals[v + 2]);
+        }
+        if (!meshData->uvs.empty()) {
+            const size_t uvIdx = (v / 3) * 2;
+            interleavedData.push_back(meshData->uvs[uvIdx]);
+            interleavedData.push_back(meshData->uvs[uvIdx + 1]);
+        }
+    }
+
     glBindBuffer(GL_ARRAY_BUFFER, _vbo);
-    glBufferData(GL_ARRAY_BUFFER, meshData->positions.size() * sizeof(float), meshData->positions.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glBufferData(GL_ARRAY_BUFFER, interleavedData.size() * sizeof(float), interleavedData.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(totalVtxSize), (void*)posOffset);
     glEnableVertexAttribArray(0);
 
-    if (!meshData->normals.empty() && meshData->normals.size() == meshData->positions.size()) {
-        glBindBuffer(GL_ARRAY_BUFFER, _vbo);
-        glBufferData(GL_ARRAY_BUFFER, meshData->normals.size() * sizeof(float), meshData->normals.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    if (!meshData->normals.empty()) {
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(totalVtxSize), (void*)normalOffset);
         glEnableVertexAttribArray(1);
     }
 
     if (!meshData->uvs.empty()) {
-        glBindBuffer(GL_ARRAY_BUFFER, _vbo);
-        glBufferData(GL_ARRAY_BUFFER, meshData->uvs.size() * sizeof(float), meshData->uvs.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(totalVtxSize), (void*)uvOffset);
         glEnableVertexAttribArray(2);
     }
 
@@ -61,7 +92,8 @@ bool GltfMesh::loadFromMeshData(MeshData* meshData) {
 
     glBindVertexArray(0);
 
-    CE_LOG_INFO("GltfMesh: Loaded mesh ({} vertices, {} indices)", _vertexCount, _indexCount);
+    CE_LOG_INFO("GltfMesh: Loaded mesh ({} vertices, {} indices, stride={})",
+        _vertexCount, _indexCount, static_cast<int>(totalVtxSize));
     return true;
 }
 
