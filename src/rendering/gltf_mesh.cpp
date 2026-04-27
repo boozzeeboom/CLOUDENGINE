@@ -55,6 +55,12 @@ MeshData loadMeshFromCgltf(const cgltf_data* data) {
         std::vector<float> posData(posFloatCount);
         cgltf_accessor_unpack_floats(posAcc, posData.data(), posFloatCount);
 
+        CE_LOG_INFO("CgltfLoader: First 3 vertices:");
+        for (cgltf_size i = 0; i < 3 && i < posAcc->count; i++) {
+            CE_LOG_INFO("  v{}: ({:.4f}, {:.4f}, {:.4f})", i,
+                posData[i * 3], posData[i * 3 + 1], posData[i * 3 + 2]);
+        }
+
         for (cgltf_size i = 0; i < posAcc->count; i++) {
             meshData.positions.push_back(posData[i * 3]);
             meshData.positions.push_back(posData[i * 3 + 1]);
@@ -68,6 +74,12 @@ MeshData loadMeshFromCgltf(const cgltf_data* data) {
             CE_LOG_INFO("CgltfLoader: normals loaded - count={}, floatCount={}", normAcc->count, normFloatCount);
             std::vector<float> normData(normFloatCount);
             cgltf_accessor_unpack_floats(normAcc, normData.data(), normFloatCount);
+
+            CE_LOG_INFO("CgltfLoader: First 3 normals:");
+            for (cgltf_size i = 0; i < 3 && i < normAcc->count; i++) {
+                CE_LOG_INFO("  n{}: ({:.4f}, {:.4f}, {:.4f})", i,
+                    normData[i * 3], normData[i * 3 + 1], normData[i * 3 + 2]);
+            }
 
             for (cgltf_size i = 0; i < normAcc->count; i++) {
                 meshData.normals.push_back(normData[i * 3]);
