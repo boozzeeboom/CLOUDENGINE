@@ -55,10 +55,18 @@ MeshData loadMeshFromCgltf(const cgltf_data* data) {
         std::vector<float> posData(posFloatCount);
         cgltf_accessor_unpack_floats(posAcc, posData.data(), posFloatCount);
 
-        CE_LOG_INFO("CgltfLoader: First 3 vertices:");
-        for (cgltf_size i = 0; i < 3 && i < posAcc->count; i++) {
+        CE_LOG_INFO("CgltfLoader: First 5 vertices:");
+        for (cgltf_size i = 0; i < 5 && i < posAcc->count; i++) {
             CE_LOG_INFO("  v{}: ({:.4f}, {:.4f}, {:.4f})", i,
                 posData[i * 3], posData[i * 3 + 1], posData[i * 3 + 2]);
+        }
+
+        CE_LOG_INFO("CgltfLoader: Vertices at indices 100, 200, 500:");
+        for (cgltf_size idx : {100, 200, 500}) {
+            if (idx < posAcc->count) {
+                CE_LOG_INFO("  v{}: ({:.4f}, {:.4f}, {:.4f})", idx,
+                    posData[idx * 3], posData[idx * 3 + 1], posData[idx * 3 + 2]);
+            }
         }
 
         for (cgltf_size i = 0; i < posAcc->count; i++) {
@@ -75,13 +83,21 @@ MeshData loadMeshFromCgltf(const cgltf_data* data) {
             std::vector<float> normData(normFloatCount);
             cgltf_accessor_unpack_floats(normAcc, normData.data(), normFloatCount);
 
-            CE_LOG_INFO("CgltfLoader: First 3 normals:");
-            for (cgltf_size i = 0; i < 3 && i < normAcc->count; i++) {
-                CE_LOG_INFO("  n{}: ({:.4f}, {:.4f}, {:.4f})", i,
-                    normData[i * 3], normData[i * 3 + 1], normData[i * 3 + 2]);
-            }
+CE_LOG_INFO("CgltfLoader: First 5 normals:");
+        for (cgltf_size i = 0; i < 5 && i < normAcc->count; i++) {
+            CE_LOG_INFO("  n{}: ({:.4f}, {:.4f}, {:.4f})", i,
+                normData[i * 3], normData[i * 3 + 1], normData[i * 3 + 2]);
+        }
 
-            for (cgltf_size i = 0; i < normAcc->count; i++) {
+        CE_LOG_INFO("CgltfLoader: Normals at indices 100, 200, 500:");
+        for (cgltf_size idx : {100, 200, 500}) {
+            if (idx < normAcc->count) {
+                CE_LOG_INFO("  n{}: ({:.4f}, {:.4f}, {:.4f})", idx,
+                    normData[idx * 3], normData[idx * 3 + 1], normData[idx * 3 + 2]);
+            }
+        }
+
+        for (cgltf_size i = 0; i < normAcc->count; i++) {
                 meshData.normals.push_back(normData[i * 3]);
                 meshData.normals.push_back(normData[i * 3 + 1]);
                 meshData.normals.push_back(normData[i * 3 + 2]);
