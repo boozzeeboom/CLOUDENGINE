@@ -599,10 +599,11 @@ void Engine::renderPlayerEntities() {
         CE_LOG_INFO("glTF model bounds: center=({:.1f},{:.1f},{:.1f}) extents=({:.1f},{:.1f},{:.1f})",
             testShipMesh->getCenter().x, testShipMesh->getCenter().y, testShipMesh->getCenter().z,
             testShipMesh->getExtents().x, testShipMesh->getExtents().y, testShipMesh->getExtents().z);
-        CE_LOG_DEBUG("Rendering glTF model at (0, 2500, 0) scale=100");
+        CE_LOG_INFO("glTF vertexCount={}, indexCount={}", testShipMesh->getVertexCount(), testShipMesh->getIndexCount());
+        CE_LOG_DEBUG("Rendering glTF model at (0, 2500, 0) scale=10");
         glm::vec3 shipPos(0.0f, 2500.0f, 0.0f);
         glm::mat4 model = glm::translate(glm::mat4(1.0f), shipPos);
-        model = glm::scale(model, glm::vec3(100.0f));
+        model = glm::scale(model, glm::vec3(10.0f)); // Scale 10x - model is ~3.5 units wide
 
         int width = 1280, height = 720;
         GLFWwindow* win = glfwGetCurrentContext();
