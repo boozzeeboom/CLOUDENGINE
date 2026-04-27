@@ -48,8 +48,10 @@ MeshData loadMeshFromCgltf(const cgltf_data* data) {
             continue;
         }
 
-        // Load positions
+        // Log first vertex for debugging
         cgltf_size posFloatCount = cgltf_accessor_unpack_floats(posAcc, nullptr, 0);
+        CE_LOG_INFO("CgltfLoader: posFloatCount={}, count={}, type={}", posFloatCount, posAcc->count, (int)posAcc->type);
+
         std::vector<float> posData(posFloatCount);
         cgltf_accessor_unpack_floats(posAcc, posData.data(), posFloatCount);
 
@@ -63,6 +65,7 @@ MeshData loadMeshFromCgltf(const cgltf_data* data) {
         // Load normals
         if (normAcc) {
             cgltf_size normFloatCount = cgltf_accessor_unpack_floats(normAcc, nullptr, 0);
+            CE_LOG_INFO("CgltfLoader: normals loaded - count={}, floatCount={}", normAcc->count, normFloatCount);
             std::vector<float> normData(normFloatCount);
             cgltf_accessor_unpack_floats(normAcc, normData.data(), normFloatCount);
 
@@ -71,6 +74,8 @@ MeshData loadMeshFromCgltf(const cgltf_data* data) {
                 meshData.normals.push_back(normData[i * 3 + 1]);
                 meshData.normals.push_back(normData[i * 3 + 2]);
             }
+        } else {
+            CE_LOG_WARN("CgltfLoader: NO NORMALS in model!");
         }
 
         // Load UVs
