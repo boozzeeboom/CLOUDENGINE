@@ -2,6 +2,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <spdlog/spdlog.h>
+#include <filesystem>
 
 #include "engine.h"
 #include "logger.h"
@@ -585,8 +586,31 @@ void Engine::renderPlayerEntities() {
     static bool loadAttempted = false;
     if (!loadAttempted) {
         loadAttempted = true;
-        CE_LOG_INFO("Attempting to load glTF model: data/models/ship_3.glb");
-        testShipMesh = Rendering::LoadGltfModel("data/models/ship_3.glb");
+
+        // Try different paths to find the model
+        std::vector<std::string> paths = {
+            "data/models/ship_3.glb",
+            "build/Debug/data/models/ship_3.glb",
+            "../data/models/ship_3.glb",
+            "C:/CLOUDPROJECT/CLOUDENGINE/data/models/ship_3.glb"
+        };
+
+        std::string fullPath;
+        for (const auto& p : paths) {
+            CE_LOG_INFO("Trying glTF path: {}", p);
+            if (std::filesystem::exists(p)) {
+                fullPath = p;
+                CE_LOG_INFO("Found glTF at: {}", fullPath);
+                break;
+            }
+        }
+
+        if (fullPath.empty()) {
+            CE_LOG_ERROR("Could not find ship_3.glb in any path!");
+            return;
+        }
+
+        testShipMesh = Rendering::LoadGltfModel(fullPath.c_str());
         if (testShipMesh) {
             CE_LOG_INFO("Loaded test ship glTF: {} vertices, {} indices",
                 testShipMesh->getVertexCount(), testShipMesh->getIndexCount());
