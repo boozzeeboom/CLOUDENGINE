@@ -596,6 +596,9 @@ void Engine::renderPlayerEntities() {
     }
 
     if (testShipMesh) {
+        CE_LOG_INFO("glTF model bounds: center=({:.1f},{:.1f},{:.1f}) extents=({:.1f},{:.1f},{:.1f})",
+            testShipMesh->getCenter().x, testShipMesh->getCenter().y, testShipMesh->getCenter().z,
+            testShipMesh->getExtents().x, testShipMesh->getExtents().y, testShipMesh->getExtents().z);
         CE_LOG_DEBUG("Rendering glTF model at (0, 2500, 0) scale=100");
         glm::vec3 shipPos(0.0f, 2500.0f, 0.0f);
         glm::mat4 model = glm::translate(glm::mat4(1.0f), shipPos);
@@ -614,16 +617,32 @@ void Engine::renderPlayerEntities() {
             return;
         }
         glUseProgram(colorShader->getID());
+
         GLint modelLoc = glGetUniformLocation(colorShader->getID(), "uModelMatrix");
         GLint viewLoc = glGetUniformLocation(colorShader->getID(), "uViewMatrix");
         GLint projLoc = glGetUniformLocation(colorShader->getID(), "uProjectionMatrix");
+        GLint colorLoc = glGetUniformLocation(colorShader->getID(), "uColor");
 
         if (modelLoc >= 0) glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
         if (viewLoc >= 0) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
         if (projLoc >= 0) glUniformMatrix4fv(projLoc, 1, GL_FALSE, &proj[0][0]);
+        if (colorLoc >= 0) glUniform3f(colorLoc, 1.0f, 0.0f, 0.0f); // RED color to verify render
 
         testShipMesh->bind();
-        testShipMesh->render();
+
+        GLenum err = glGetError();
+        if (err != GL_NO_ERROR) {
+            CE_LOG_ERROR("GL error before render: {}", err);
+        }
+
+        glDrawElements(GL_TRIANGLES, testShipMesh->getIndexCount(), GL_UNSIGNED_INT, nullptr);
+
+        err = glGetError();
+        if (err != GL_NO_ERROR) {
+            CE_LOG_ERROR("GL error after render: {}", err);
+        }
+
+        glBindVertexArray(0);
     }
 }
 
@@ -833,8 +852,8 @@ void Engine::handleMenuAction(const std::string& action) {
             CE_LOG_INFO("Host: Created LocalPlayer entity for self (id=1)");
 
 // Create platform and test ships
-            createPlatform(world);
-            spawnTestShips(world);
+            //createPlatform(world); // REMOVED - using glTF model instead
+            spawnTestShipsOnlyScout(world);
         }
 
         // Push loading screen before starting game
@@ -1055,59 +1074,45 @@ void Engine::createPlatform(::flecs::world& world) {
     CE_LOG_INFO("Platform created successfully at (0, 2500, 0)");
 }
 
-void Engine::spawnTestShips(::flecs::world& world) {
-    CE_LOG_INFO("Spawning test ships...");
+void Engine::spawnTestShipsOnlyScout(::flecs::world& world) {
+    CE_LOG_INFO("Spawning ONLY Scout (for glTF testing)...");
 
     ECS::JoltPhysicsModule& module = ECS::JoltPhysicsModule::get();
     if (!module.isInitialized()) {
-        CE_LOG_ERROR("Cannot spawn ships - Jolt not initialized!");
+        CE_LOG_ERROR("Cannot spawn Scout - Jolt not initialized!");
         return;
     }
 
-    struct ShipConfig {
-        const char* name;
-        glm::vec3 halfExtents;
-        float mass;
-        glm::vec3 offset;
-        glm::vec3 color;
-    };
+    JPH::BodyID bodyId = ECS::createBoxBody(
+        module,
+        glm::dvec3(0.0f, 2502.5f, 0.0f),
+        glm::vec3(5.0f, 2.5f, 5.0f),
+        500.0f,
+        ECS::ObjectLayer::SHIP
+    );
 
-    ShipConfig ships[] = {
-        {"Scout",      {5.0f, 2.5f, 5.0f},  500.0f, {0.0f, 2502.5f, 0.0f},     {0.2f, 0.8f, 1.0f}},
-        {"Freighter",  {15.0f, 5.0f, 20.0f}, 2000.0f, {40.0f, 2505.0f, 0.0f},    {0.8f, 0.3f, 0.2f}},
-        {"Carrier",    {25.0f, 8.0f, 40.0f}, 5000.0f, {-50.0f, 2508.0f, 30.0f},   {0.5f, 0.5f, 0.6f}},
-        {"Interceptor", {3.0f, 1.5f, 6.0f},  300.0f, {20.0f, 2501.5f, -40.0f},  {1.0f, 0.6f, 0.1f}},
-    };
-
-    for (const auto& config : ships) {
-        JPH::BodyID bodyId = ECS::createBoxBody(
-            module,
-            glm::dvec3(config.offset),
-            config.halfExtents,
-            config.mass,
-            ECS::ObjectLayer::SHIP
-        );
-
-        if (bodyId == JPH::BodyID()) {
-            CE_LOG_ERROR("Failed to create ship: {}", config.name);
-            continue;
-        }
-
-        module.getBodyInterface().SetGravityFactor(bodyId, 0.0f);
-
-        auto entity = world.entity(config.name);
-        entity.set<ECS::Transform>({{config.offset.x, config.offset.y, config.offset.z}, glm::quat_identity<float, glm::packed_highp>(), glm::vec3(1.0f, 1.0f, 1.0f)});
-        entity.set<ECS::RenderMesh>({ECS::MeshType::Cube, config.halfExtents.x * 2.0f});
-        ECS::PlayerColor shipColor;
-    shipColor.color = glm::vec3(config.color.r, config.color.g, config.color.b);
-    entity.set<ECS::PlayerColor>(shipColor);
-        entity.set<ECS::JoltBodyId>(ECS::JoltBodyId(bodyId));
-        entity.add<ECS::TestShipTag>();
-        entity.set<ECS::ShipPhysics>(ECS::ShipPhysics(config.mass, config.mass * 20.0f));
-
-        CE_LOG_INFO("Spawned test ship: {} at ({:.1f}, {:.1f}, {:.1f})",
-            config.name, config.offset.x, config.offset.y, config.offset.z);
+    if (bodyId == JPH::BodyID()) {
+        CE_LOG_ERROR("Failed to create Scout body");
+        return;
     }
+
+    module.getBodyInterface().SetGravityFactor(bodyId, 0.0f);
+
+    auto entity = world.entity("Scout");
+    entity.set<ECS::Transform>({{0.0f, 2502.5f, 0.0f}, glm::quat_identity<float, glm::packed_highp>(), glm::vec3(1.0f, 1.0f, 1.0f)});
+    entity.set<ECS::RenderMesh>({ECS::MeshType::Cube, 10.0f});
+    ECS::PlayerColor shipColor;
+    shipColor.color = glm::vec3(0.2f, 0.8f, 1.0f);
+    entity.set<ECS::PlayerColor>(shipColor);
+    entity.set<ECS::JoltBodyId>(ECS::JoltBodyId(bodyId));
+    entity.add<ECS::TestShipTag>();
+    entity.set<ECS::ShipPhysics>(ECS::ShipPhysics(500.0f, 10000.0f));
+
+    CE_LOG_INFO("Spawned Scout at (0.0, 2502.5, 0.0)");
+}
+
+void Engine::spawnTestShips(::flecs::world& world) {
+    CE_LOG_INFO("spawnTestShips DEPRECATED - use spawnTestShipsOnlyScout");
 }
 
 float getEngineCameraYaw() {

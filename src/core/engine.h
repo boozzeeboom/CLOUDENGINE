@@ -119,6 +119,7 @@ private:
 
     void createPlatform(::flecs::world& world);
     void spawnTestShips(::flecs::world& world);
+    void spawnTestShipsOnlyScout(::flecs::world& world);
 };
 
 } // namespace Core
