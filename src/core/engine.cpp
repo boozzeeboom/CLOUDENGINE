@@ -582,7 +582,10 @@ void Engine::renderPlayerEntities() {
     }
 
     static Rendering::GltfMesh* testShipMesh = nullptr;
-    if (!testShipMesh) {
+    static bool loadAttempted = false;
+    if (!loadAttempted) {
+        loadAttempted = true;
+        CE_LOG_INFO("Attempting to load glTF model: data/models/ship_3.glb");
         testShipMesh = Rendering::LoadGltfModel("data/models/ship_3.glb");
         if (testShipMesh) {
             CE_LOG_INFO("Loaded test ship glTF: {} vertices, {} indices",
@@ -593,6 +596,7 @@ void Engine::renderPlayerEntities() {
     }
 
     if (testShipMesh) {
+        CE_LOG_DEBUG("Rendering glTF model at (0, 2500, 0) scale=100");
         glm::vec3 shipPos(0.0f, 2500.0f, 0.0f);
         glm::mat4 model = glm::translate(glm::mat4(1.0f), shipPos);
         model = glm::scale(model, glm::vec3(100.0f));
