@@ -16,6 +16,7 @@
 #include <ecs/components.h>
 #include <rendering/renderer.h>
 #include <rendering/primitive_mesh.h>
+#include <rendering/gltf_mesh.h>
 #include <rendering/camera.h>
 #include <rendering/cloud_renderer.h>
 #include <world/chunk_manager.h>
@@ -562,30 +563,63 @@ void Engine::syncCameraToLocalPlayer() {
 }
 
 void Engine::renderPlayerEntities() {
-    // Query all entities with Transform, RenderMesh, and PlayerColor
-    // and render them as primitives
     auto& world = ECS::getWorld();
-    
-    // Get camera position for frustum culling (future) and matrix calculation
-    // Camera is already set up in Engine::render() - use _camera member
     auto& primitives = Rendering::GetPrimitiveMesh();
     primitives.setCamera(&_camera);
-    
+
     auto q = world.query_builder<ECS::Transform, ECS::RenderMesh, ECS::PlayerColor>().build();
-    
+
     int count = 0;
     q.each([&count, &primitives](ECS::Transform& transform, ECS::RenderMesh& mesh, ECS::PlayerColor& color) {
-        RENDER_LOG_DEBUG("PlayerEntity: rendering at pos=({:.1f},{:.1f},{:.1f}) size={} color=({:.1f},{:.1f},{:.1f})",
-            transform.position.x, transform.position.y, transform.position.z,
-            mesh.size, color.color.r, color.color.g, color.color.b);
         primitives.render(transform.position, mesh.size, transform.rotation, color.color);
         count++;
     });
-    
+
     static int lastCount = -1;
     if (count != lastCount) {
         CE_LOG_INFO("PlayerEntities: rendering {} entities", count);
         lastCount = count;
+    }
+
+    static Rendering::GltfMesh* testShipMesh = nullptr;
+    if (!testShipMesh) {
+        testShipMesh = Rendering::LoadGltfModel("data/models/ship_3.glb");
+        if (testShipMesh) {
+            CE_LOG_INFO("Loaded test ship glTF: {} vertices, {} indices",
+                testShipMesh->getVertexCount(), testShipMesh->getIndexCount());
+        } else {
+            CE_LOG_ERROR("Failed to load test ship glTF model");
+        }
+    }
+
+    if (testShipMesh) {
+        glm::vec3 shipPos(0.0f, 2500.0f, 0.0f);
+        glm::mat4 model = glm::translate(glm::mat4(1.0f), shipPos);
+        model = glm::scale(model, glm::vec3(100.0f));
+
+        int width = 1280, height = 720;
+        GLFWwindow* win = glfwGetCurrentContext();
+        if (win) glfwGetWindowSize(win, &width, &height);
+        float aspect = static_cast<float>(width) / static_cast<float>(height > 0 ? height : 1);
+        glm::mat4 view = _camera.getViewMatrix();
+        glm::mat4 proj = _camera.getProjectionMatrix(aspect);
+
+        auto* colorShader = Rendering::GetShaderManager().get("color");
+        if (!colorShader) {
+            CE_LOG_ERROR("Could not find 'color' shader");
+            return;
+        }
+        glUseProgram(colorShader->getID());
+        GLint modelLoc = glGetUniformLocation(colorShader->getID(), "uModelMatrix");
+        GLint viewLoc = glGetUniformLocation(colorShader->getID(), "uViewMatrix");
+        GLint projLoc = glGetUniformLocation(colorShader->getID(), "uProjectionMatrix");
+
+        if (modelLoc >= 0) glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
+        if (viewLoc >= 0) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
+        if (projLoc >= 0) glUniformMatrix4fv(projLoc, 1, GL_FALSE, &proj[0][0]);
+
+        testShipMesh->bind();
+        testShipMesh->render();
     }
 }
 
