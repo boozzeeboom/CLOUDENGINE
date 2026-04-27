@@ -31,11 +31,38 @@ bool GltfMesh::loadFromMeshData(MeshData* meshData) {
     _vertexCount = meshData->vertexCount;
     _indexCount = meshData->indexCount;
 
+    CE_LOG_DEBUG("GltfMesh::loadFromMeshData - positions={}, normals={}, uvs={}, indices={}",
+        meshData->positions.size(), meshData->normals.size(), meshData->uvs.size(), meshData->indices.size());
+
+    GLint major = 0, minor = 0;
+    glGetIntegerv(GL_MAJOR_VERSION, &major);
+    glGetIntegerv(GL_MINOR_VERSION, &minor);
+    CE_LOG_DEBUG("GltfMesh::loadFromMeshData - GL Version: {}.{}", major, minor);
+
+    GLint vaoBinding = 0;
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vaoBinding);
+    CE_LOG_DEBUG("GltfMesh::loadFromMeshData - current VAO binding: {}", vaoBinding);
+
     glGenVertexArrays(1, &_vao);
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        CE_LOG_ERROR("GltfMesh::loadFromMeshData - glGenVertexArrays error: {}", err);
+        return false;
+    }
+    CE_LOG_DEBUG("GltfMesh::loadFromMeshData - generated VAO: {}", _vao);
+
     glGenBuffers(1, &_vbo);
     glGenBuffers(1, &_ebo);
 
     glBindVertexArray(_vao);
+
+    GLint vaoCheck = 0;
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vaoCheck);
+    CE_LOG_DEBUG("GltfMesh::loadFromMeshData - after bind, VAO binding = {}", vaoCheck);
+    if (vaoCheck != (GLint)_vao) {
+        CE_LOG_ERROR("GltfMesh::loadFromMeshData - VAO bind failed immediately after binding!");
+        return false;
+    }
 
     size_t posOffset = 0;
     size_t normalOffset = 0;
@@ -92,6 +119,10 @@ bool GltfMesh::loadFromMeshData(MeshData* meshData) {
 
     glBindVertexArray(0);
 
+    GLint finalVAO = 0;
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &finalVAO);
+    CE_LOG_DEBUG("GltfMesh::loadFromMeshData - final VAO unbinding: {}", finalVAO);
+
     CE_LOG_INFO("GltfMesh: Loaded mesh ({} vertices, {} indices, stride={})",
         _vertexCount, _indexCount, static_cast<int>(totalVtxSize));
     return true;
@@ -105,14 +136,54 @@ void GltfMesh::render(Shader* shader, const glm::vec3& position, float scale, co
 }
 
 void GltfMesh::render(Shader* shader, const glm::mat4& modelMatrix) {
+    CE_LOG_DEBUG("GltfMesh::render - START, _vao={}, _vbo={}, _ebo={}, isLoaded={}",
+        _vao, _vbo, _ebo, isLoaded());
+
     if (!isLoaded()) {
-        CE_LOG_ERROR("GltfMesh::render - mesh not loaded!");
+        CE_LOG_ERROR("GltfMesh::render - mesh not loaded! _vao={}", _vao);
         return;
     }
 
+    if (!glIsVertexArray(_vao)) {
+        CE_LOG_ERROR("GltfMesh::render - VAO {} is not a valid vertex array object!", _vao);
+        return;
+    }
+
+    GLint currentVAO = 0;
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &currentVAO);
+
+    CE_LOG_DEBUG("GltfMesh::render - currentVAO={}, indices={}", currentVAO, _indexCount);
+
     glBindVertexArray(_vao);
+
+    GLint boundVAO = 0;
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &boundVAO);
+    if (boundVAO != (GLint)_vao) {
+        GLenum err = glGetError();
+        CE_LOG_ERROR("GltfMesh::render - VAO bind failed! Expected {}, got {}, GL error={}",
+            _vao, boundVAO, err);
+        return;
+    }
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glDepthMask(GL_TRUE);
+
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        CE_LOG_ERROR("GltfMesh::render - GL error {} before draw", err);
+    }
+
     glDrawElements(GL_TRIANGLES, _indexCount, GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
+
+    err = glGetError();
+    if (err != GL_NO_ERROR) {
+        CE_LOG_ERROR("GltfMesh::render - GL error {} after drawElements", err);
+    } else {
+        CE_LOG_TRACE("GltfMesh::render - drawElements OK");
+    }
+
+    glBindVertexArray(currentVAO);
 }
 
 }} // namespace Core::Rendering

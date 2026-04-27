@@ -94,11 +94,13 @@ target_include_directories(CloudEngine PRIVATE
     ${CMAKE_SOURCE_DIR}/libs/tinygltf               # tinygltf v3
 )
 
-# Copy shaders and fonts to build directory (works for both build/ and build/Debug/)
+# Copy shaders, fonts, and models to build directory
 file(COPY "${CMAKE_SOURCE_DIR}/shaders/" DESTINATION "${CMAKE_BINARY_DIR}/shaders/")
 file(COPY "${CMAKE_SOURCE_DIR}/shaders/" DESTINATION "${CMAKE_BINARY_DIR}/Debug/shaders/")
 file(COPY "${CMAKE_SOURCE_DIR}/data/fonts/" DESTINATION "${CMAKE_BINARY_DIR}/data/fonts/")
 file(COPY "${CMAKE_SOURCE_DIR}/data/fonts/" DESTINATION "${CMAKE_BINARY_DIR}/Debug/data/fonts/")
+file(COPY "${CMAKE_SOURCE_DIR}/data/models/" DESTINATION "${CMAKE_BINARY_DIR}/data/models/")
+file(COPY "${CMAKE_SOURCE_DIR}/data/models/" DESTINATION "${CMAKE_BINARY_DIR}/Debug/data/models/")
 
 # Unit tests (Catch2) - DISABLED for UI iteration
 # add_subdirectory(tests)

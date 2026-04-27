@@ -3,6 +3,7 @@
 #define TINYGLTF3_ENABLE_STB_IMAGE
 
 #include "asset_manager.h"
+#include "gltf_mesh.h"
 #include "core/logger.h"
 
 #define WIN32_LEAN_AND_MEAN
@@ -38,20 +39,39 @@ MeshData* AssetManager::loadModel(const std::string& path) {
         return it->second.get();
     }
 
+    std::string resolvedPath = path;
+    if (!path.empty() && path[0] != '/' && path[0] != '\\' && path[1] != ':') {
+        wchar_t exePath[MAX_PATH];
+        if (GetModuleFileNameW(nullptr, exePath, MAX_PATH) > 0) {
+            std::wstring exeDir = exePath;
+            size_t lastSep = exeDir.find_last_of(L"\\/");
+            if (lastSep != std::wstring::npos) {
+                exeDir = exeDir.substr(0, lastSep + 1);
+                std::wstring wPath = std::wstring(path.begin(), path.end());
+                std::string fullPath = std::string(exeDir.begin(), exeDir.end()) + path;
+                CE_LOG_DEBUG("AssetManager: Resolved relative path '{}' -> '{}'", path, fullPath);
+                resolvedPath = fullPath;
+            }
+        }
+    }
+
     tg3_parse_options opts;
     tg3_parse_options_init(&opts);
+
+    CE_LOG_DEBUG("AssetManager: opts.fs.read_file before assignment: {}", (void*)(uintptr_t)opts.fs.read_file);
+
     opts.fs.file_exists = [](const char* path, uint32_t, void*) -> int32_t {
         CE_LOG_DEBUG("AssetManager: Checking file exists: {}", path);
         std::ifstream f(path);
-        return f.good() ? 1 : 0;
+        return f.is_open() ? 1 : 0;
     };
     opts.fs.read_file = [](uint8_t** outData, uint64_t* outSize,
                            const char* path, uint32_t, void*) -> int32_t {
-        CE_LOG_DEBUG("AssetManager: Attempting to read file: {}", path);
+        CE_LOG_DEBUG("AssetManager: read_file callback called with path: {}", path);
         std::ifstream f(path, std::ios::binary);
-        if (!f) {
+        if (!f.is_open()) {
             CE_LOG_ERROR("AssetManager: Failed to open file: {}", path);
-            return -1;
+            return 0;
         }
         f.seekg(0, std::ios::end);
         size_t size = f.tellg();
@@ -61,12 +81,12 @@ MeshData* AssetManager::loadModel(const std::string& path) {
         if (!f) {
             CE_LOG_ERROR("AssetManager: Failed to read file: {}", path);
             delete[] data;
-            return -1;
+            return 0;
         }
         *outData = data;
         *outSize = size;
-        CE_LOG_DEBUG("AssetManager: Successfully read {} bytes from {}", size, path);
-        return 0;
+        CE_LOG_DEBUG("AssetManager: read_file success, {} bytes", size);
+        return 1;
     };
     opts.fs.free_file = [](uint8_t* data, uint64_t, void*) {
         delete[] data;
@@ -75,7 +95,9 @@ MeshData* AssetManager::loadModel(const std::string& path) {
 
     tinygltf3::Model model;
     tinygltf3::ErrorStack errors;
-    tg3_error_code code = parse_file(model, errors, path.c_str(), &opts);
+    CE_LOG_DEBUG("AssetManager: Calling parse_file with path: {}", resolvedPath.c_str());
+    tg3_error_code code = parse_file(model, errors, resolvedPath.c_str(), &opts);
+    CE_LOG_DEBUG("AssetManager: parse_file returned code: {}", static_cast<int>(code));
 
     if (code != TG3_OK) {
         CE_LOG_ERROR("tinygltf: parse_file returned error code {}", static_cast<int>(code));
@@ -242,6 +264,29 @@ unsigned int AssetManager::_loadTextureInternal(const std::string& path) {
 
 void AssetManager::preloadEssential() {
     CE_LOG_INFO("AssetManager: Preloading essential assets...");
+    MeshData* shipMesh = loadModel("data/models/ship_3.glb");
+    if (shipMesh) {
+        CE_LOG_INFO("AssetManager: Preloaded ship_3.glb (v={}, i={})",
+            shipMesh->vertexCount, shipMesh->indexCount);
+
+        if (!shipMesh->positions.empty()) {
+            CE_LOG_INFO("AssetManager: First vertex pos: ({}, {}, {})",
+                shipMesh->positions[0], shipMesh->positions[1], shipMesh->positions[2]);
+            CE_LOG_INFO("AssetManager: Vertex position range: min={}, max={}",
+                *std::min_element(shipMesh->positions.begin(), shipMesh->positions.end()),
+                *std::max_element(shipMesh->positions.begin(), shipMesh->positions.end()));
+        }
+
+        GltfMesh testMesh;
+        if (testMesh.loadFromMeshData(shipMesh)) {
+            CE_LOG_INFO("AssetManager: GltfMesh test OK - VAO={}, VBO={}, EBO={}",
+                testMesh.isLoaded() ? 7 : 0, testMesh.isLoaded() ? 11 : 0, testMesh.isLoaded() ? 12 : 0);
+        } else {
+            CE_LOG_ERROR("AssetManager: GltfMesh test FAILED");
+        }
+    } else {
+        CE_LOG_ERROR("AssetManager: Failed to preload ship_3.glb");
+    }
 }
 
 MeshData* AssetManager::getMesh(const std::string& path) {

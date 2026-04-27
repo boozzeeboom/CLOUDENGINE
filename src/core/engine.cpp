@@ -19,6 +19,7 @@
 #include <ecs/components/player_character_components.h>
 #include <ecs/components.h>
 #include <rendering/renderer.h>
+#include <rendering/asset_manager.h>
 #include <rendering/primitive_mesh.h>
 #include <rendering/camera.h>
 #include <rendering/cloud_renderer.h>
@@ -88,6 +89,9 @@ bool Engine::init() {
         return false;
     }
     CE_LOG_INFO("Renderer initialized");
+
+    Rendering::AssetManager::get().preloadEssential();
+    CE_LOG_INFO("AssetManager preload complete");
 
     ECS::init();
     CE_LOG_INFO("ECS initialized");
@@ -362,6 +366,8 @@ void Engine::update(float dt) {
     }
 
     // Run ECS systems (game is running)
+    // CRITICAL: Set camera BEFORE ECS update so RenderGltfModels can use it
+    ECS::setRenderModuleCamera(static_cast<const Rendering::Camera*>(&_camera));
     ECS::update(dt);
 
     // Sync camera position to LocalPlayer Transform
@@ -1112,16 +1118,14 @@ void Engine::spawnTestShips(::flecs::world& world) {
 
         auto entity = world.entity(config.name);
         entity.set<ECS::Transform>({{config.offset.x, config.offset.y, config.offset.z}, glm::quat_identity<float, glm::packed_highp>(), glm::vec3(1.0f, 1.0f, 1.0f)});
-        
-        // Scout uses glTF model (TEMPORARY: fallback to cube until glTF loading is fixed)
-        // if (strcmp(config.name, "Scout") == 0) {
-        //     entity.set<ECS::ModelAsset>({"data/models/ship_3.glb"});
-        //     CE_LOG_INFO("Ship {} using glTF model", config.name);
-        // } else {
-        //     entity.set<ECS::RenderMesh>({ECS::MeshType::Cube, config.halfExtents.x * 2.0f});
-        // }
-        entity.set<ECS::RenderMesh>({ECS::MeshType::Cube, config.halfExtents.x * 2.0f});
-        
+
+        if (strcmp(config.name, "Scout") == 0) {
+            entity.set<ECS::ModelAsset>({"data/models/ship_3.glb"});
+            CE_LOG_INFO("Ship {} using glTF model", config.name);
+        } else {
+            entity.set<ECS::RenderMesh>({ECS::MeshType::Cube, config.halfExtents.x * 2.0f});
+        }
+
         ECS::PlayerColor shipColor;
         shipColor.color = glm::vec3(config.color.r, config.color.g, config.color.b);
         entity.set<ECS::PlayerColor>(shipColor);
