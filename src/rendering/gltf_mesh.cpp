@@ -185,7 +185,7 @@ bool GltfMesh::loadFromMeshData(const MeshData& data) {
     }
 
     // Calculate strides and offsets
-    size_t stride = 0;
+    size_t stride = 3 * sizeof(float);  // positions always present
     size_t posAttrOffset = 0;
     size_t normAttrOffset = 0;
     size_t uvAttrOffset = 0;
@@ -195,7 +195,7 @@ bool GltfMesh::loadFromMeshData(const MeshData& data) {
         stride += 3 * sizeof(float);
     }
     if (!data.uvs.empty()) {
-        uvAttrOffset = (data.positions.size() * sizeof(float)) + (data.normals.size() * sizeof(float));
+        uvAttrOffset = normAttrOffset + data.normals.size() * sizeof(float);
         stride += 2 * sizeof(float);
     }
 

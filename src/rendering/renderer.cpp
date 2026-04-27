@@ -83,6 +83,14 @@ bool Renderer::init() {
         RENDER_LOG_ERROR("Renderer::init() - FAILED: Could not load cloud shader");
         return false;
     }
+
+    // Load color shader for glTF models
+    ShaderID colorShaderID = GetShaderManager().load("color", "color.vert", "color.frag");
+    if (colorShaderID == 0) {
+        RENDER_LOG_ERROR("Renderer::init() - FAILED: Could not load color shader");
+        return false;
+    }
+
     _shadersLoaded = true;
     RENDER_LOG_INFO("Renderer::init() - Cloud shader loaded (ID={})", cloudShaderID);
     
