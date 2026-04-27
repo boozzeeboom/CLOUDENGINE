@@ -4,7 +4,7 @@
 
 #include "asset_manager.h"
 #include "gltf_mesh.h"
-#include "core/logger.h"
+#include <core/logger.h>
 
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -32,6 +32,40 @@ AssetManager& AssetManager::get() {
     return instance;
 }
 
+static std::string getAbsolutePath(const std::string& relativePath) {
+    if (relativePath.empty()) return relativePath;
+
+    if (relativePath.size() >= 2 && relativePath[1] == ':') {
+        return relativePath;
+    }
+    if (relativePath[0] == '/' || relativePath[0] == '\\') {
+        return relativePath;
+    }
+
+    wchar_t cwd[MAX_PATH];
+    if (GetCurrentDirectoryW(MAX_PATH, cwd) > 0) {
+        int size_needed = WideCharToMultiByte(CP_UTF8, 0, cwd, -1, nullptr, 0, nullptr, nullptr);
+        std::string result(size_needed, 0);
+        WideCharToMultiByte(CP_UTF8, 0, cwd, -1, &result[0], size_needed, nullptr, nullptr);
+        if (!result.empty() && result.back() == '\0') {
+            result.pop_back();
+        }
+        if (!result.empty() && result.back() != '\\' && result.back() != '/') {
+            result += '\\';
+        }
+        result += relativePath;
+        std::replace(result.begin(), result.end(), '/', '\\');
+        return result;
+    }
+
+    return relativePath;
+}
+
+static bool fileExists(const std::string& path) {
+    std::ifstream f(path, std::ios::binary);
+    return f.is_open();
+}
+
 MeshData* AssetManager::loadModel(const std::string& path) {
     auto it = _meshes.find(path);
     if (it != _meshes.end()) {
@@ -39,78 +73,56 @@ MeshData* AssetManager::loadModel(const std::string& path) {
         return it->second.get();
     }
 
-    std::string resolvedPath = path;
-    if (!path.empty() && path[0] != '/' && path[0] != '\\' && path[1] != ':') {
-        wchar_t exePath[MAX_PATH];
-        if (GetModuleFileNameW(nullptr, exePath, MAX_PATH) > 0) {
-            std::wstring exeDir = exePath;
-            size_t lastSep = exeDir.find_last_of(L"\\/");
-            if (lastSep != std::wstring::npos) {
-                exeDir = exeDir.substr(0, lastSep + 1);
-                std::wstring wPath = std::wstring(path.begin(), path.end());
-                std::string fullPath = std::string(exeDir.begin(), exeDir.end()) + path;
-                CE_LOG_DEBUG("AssetManager: Resolved relative path '{}' -> '{}'", path, fullPath);
-                resolvedPath = fullPath;
-            }
-        }
+    std::string absPath = getAbsolutePath(path);
+    CE_LOG_INFO("AssetManager: Loading '{}' -> '{}'", path, absPath);
+
+    if (!fileExists(absPath)) {
+        CE_LOG_ERROR("AssetManager: File not found: '{}'", absPath);
+        return nullptr;
     }
 
     tg3_parse_options opts;
     tg3_parse_options_init(&opts);
 
-    CE_LOG_DEBUG("AssetManager: opts.fs.read_file before assignment: {}", (void*)(uintptr_t)opts.fs.read_file);
-
     opts.fs.file_exists = [](const char* path, uint32_t, void*) -> int32_t {
-        CE_LOG_DEBUG("AssetManager: Checking file exists: {}", path);
         std::ifstream f(path);
         return f.is_open() ? 1 : 0;
     };
     opts.fs.read_file = [](uint8_t** outData, uint64_t* outSize,
                            const char* path, uint32_t, void*) -> int32_t {
-        CE_LOG_DEBUG("AssetManager: read_file callback called with path: {}", path);
         std::ifstream f(path, std::ios::binary);
-        if (!f.is_open()) {
-            CE_LOG_ERROR("AssetManager: Failed to open file: {}", path);
-            return 0;
-        }
+        if (!f.is_open()) return 0;
         f.seekg(0, std::ios::end);
         size_t size = f.tellg();
         f.seekg(0, std::ios::beg);
         uint8_t* data = new uint8_t[size];
         f.read(reinterpret_cast<char*>(data), size);
         if (!f) {
-            CE_LOG_ERROR("AssetManager: Failed to read file: {}", path);
             delete[] data;
             return 0;
         }
         *outData = data;
         *outSize = size;
-        CE_LOG_DEBUG("AssetManager: read_file success, {} bytes", size);
         return 1;
     };
     opts.fs.free_file = [](uint8_t* data, uint64_t, void*) {
         delete[] data;
     };
-    opts.fs.user_data = nullptr;
 
     tinygltf3::Model model;
     tinygltf3::ErrorStack errors;
-    CE_LOG_DEBUG("AssetManager: Calling parse_file with path: {}", resolvedPath.c_str());
-    tg3_error_code code = parse_file(model, errors, resolvedPath.c_str(), &opts);
-    CE_LOG_DEBUG("AssetManager: parse_file returned code: {}", static_cast<int>(code));
+    tg3_error_code code = parse_file(model, errors, absPath.c_str(), &opts);
 
     if (code != TG3_OK) {
-        CE_LOG_ERROR("tinygltf: parse_file returned error code {}", static_cast<int>(code));
+        CE_LOG_ERROR("tinygltf parse failed: code={}", static_cast<int>(code));
         uint32_t count = errors.count();
         for (uint32_t i = 0; i < count; i++) {
             const tg3_error_entry* e = errors.entry(i);
             if (e) {
-                CE_LOG_ERROR("tinygltf: [{}] {} (code={}, path={}, offset={})",
+                CE_LOG_ERROR("  [{}] {} (code={})",
                     e->severity == TG3_SEVERITY_ERROR ? "ERROR" : "WARNING",
                     e->message ? e->message : "unknown",
-                    static_cast<int>(e->code),
-                    e->json_path ? e->json_path : "N/A",
-                    static_cast<long>(e->byte_offset));
+                    static_cast<int>(e->code));
             }
         }
         return nullptr;
@@ -119,8 +131,8 @@ MeshData* AssetManager::loadModel(const std::string& path) {
     auto meshData = std::make_unique<MeshData>();
     const tg3_model* tg3Model = model.get();
 
-    if (tg3Model->meshes_count == 0 || !tg3Model->meshes) {
-        CE_LOG_ERROR("AssetManager: No meshes in model {}", path);
+    if (!tg3Model || tg3Model->meshes_count == 0 || !tg3Model->meshes) {
+        CE_LOG_ERROR("AssetManager: No meshes in model");
         return nullptr;
     }
 
@@ -129,9 +141,7 @@ MeshData* AssetManager::loadModel(const std::string& path) {
         for (uint32_t pi = 0; pi < mesh->primitives_count; pi++) {
             const tg3_primitive* prim = &mesh->primitives[pi];
 
-            int posIdx = -1;
-            int normalIdx = -1;
-            int uvIdx = -1;
+            int posIdx = -1, normalIdx = -1, uvIdx = -1;
             for (uint32_t ai = 0; ai < prim->attributes_count; ai++) {
                 if (tg3_str_equals_cstr(prim->attributes[ai].key, "POSITION")) {
                     posIdx = prim->attributes[ai].value;
@@ -156,7 +166,6 @@ MeshData* AssetManager::loadModel(const std::string& path) {
                 meshData->positions.push_back(fdata[1]);
                 meshData->positions.push_back(fdata[2]);
             }
-
             meshData->vertexCount = static_cast<int>(posAcc->count);
 
             if (normalIdx >= 0) {
@@ -190,17 +199,12 @@ MeshData* AssetManager::loadModel(const std::string& path) {
                 const tg3_accessor* idxAcc = &tg3Model->accessors[prim->indices];
                 const tg3_buffer_view* idxBv = &tg3Model->buffer_views[idxAcc->buffer_view];
                 const tg3_buffer* idxBuf = &tg3Model->buffers[idxBv->buffer];
-
                 int idxByteStride = tg3_accessor_byte_stride(idxAcc, idxBv);
                 const uint8_t* idxData = idxBuf->data.data + idxBv->byte_offset + idxAcc->byte_offset;
-
                 for (uint64_t i = 0; i < idxAcc->count; i++) {
-                    unsigned int val = 0;
-                    if (idxByteStride == 2) {
-                        val = reinterpret_cast<const uint16_t*>(idxData)[i];
-                    } else {
-                        val = reinterpret_cast<const uint32_t*>(idxData)[i];
-                    }
+                    unsigned int val = (idxByteStride == 2)
+                        ? reinterpret_cast<const uint16_t*>(idxData)[i]
+                        : reinterpret_cast<const uint32_t*>(idxData)[i];
                     meshData->indices.push_back(val);
                 }
                 meshData->indexCount = static_cast<int>(idxAcc->count);
@@ -209,7 +213,7 @@ MeshData* AssetManager::loadModel(const std::string& path) {
     }
 
     if (meshData->positions.empty()) {
-        CE_LOG_ERROR("AssetManager: No vertex data extracted from {}", path);
+        CE_LOG_ERROR("AssetManager: No vertex data extracted!");
         return nullptr;
     }
 
@@ -217,10 +221,10 @@ MeshData* AssetManager::loadModel(const std::string& path) {
     _meshes[path] = std::move(meshData);
     _lastAccessTime[path] = std::chrono::steady_clock::now();
 
-    CE_LOG_INFO("AssetManager: Loaded model {} (v={}, i={}, n={}, u={})",
-        path, result->vertexCount, result->indexCount,
-        static_cast<int>(result->normals.size() / 3),
-        static_cast<int>(result->uvs.size() / 2));
+    CE_LOG_INFO("AssetManager: Loaded (v={}, i={}, n={}, u={})",
+        result->vertexCount, result->indexCount,
+        (int)result->normals.size() / 3,
+        (int)result->uvs.size() / 2);
     return result;
 }
 
@@ -234,11 +238,14 @@ unsigned int AssetManager::loadTexture(const std::string& path) {
 }
 
 unsigned int AssetManager::_loadTextureInternal(const std::string& path) {
+    std::string absPath = getAbsolutePath(path);
+    CE_LOG_INFO("AssetManager: Loading texture '{}'", absPath);
+
     int width, height, channels;
     stbi_set_flip_vertically_on_load(true);
-    unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, 4);
+    unsigned char* data = stbi_load(absPath.c_str(), &width, &height, &channels, 4);
     if (!data) {
-        CE_LOG_ERROR("AssetManager: Failed to load texture {}", path);
+        CE_LOG_ERROR("AssetManager: Failed to load texture: {}", absPath);
         return 0;
     }
 
@@ -247,45 +254,34 @@ unsigned int AssetManager::_loadTextureInternal(const std::string& path) {
     glBindTexture(GL_TEXTURE_2D, texId);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
-
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     stbi_image_free(data);
-
     _textures[path] = texId;
     _lastAccessTime[path] = std::chrono::steady_clock::now();
 
-    CE_LOG_INFO("AssetManager: Loaded texture {} ({}x{}, ch={})", path, width, height, channels);
+    CE_LOG_INFO("AssetManager: Loaded texture ({}x{})", width, height);
     return texId;
 }
 
 void AssetManager::preloadEssential() {
     CE_LOG_INFO("AssetManager: Preloading essential assets...");
-    MeshData* shipMesh = loadModel("data/models/ship_3.glb");
+    MeshData* shipMesh = loadModel("data/models/test.glb");
     if (shipMesh) {
-        CE_LOG_INFO("AssetManager: Preloaded ship_3.glb (v={}, i={})",
+        CE_LOG_INFO("AssetManager: Preloaded test.glb (v={}, i={})",
             shipMesh->vertexCount, shipMesh->indexCount);
-
-        if (!shipMesh->positions.empty()) {
-            CE_LOG_INFO("AssetManager: First vertex pos: ({}, {}, {})",
-                shipMesh->positions[0], shipMesh->positions[1], shipMesh->positions[2]);
-            CE_LOG_INFO("AssetManager: Vertex position range: min={}, max={}",
-                *std::min_element(shipMesh->positions.begin(), shipMesh->positions.end()),
-                *std::max_element(shipMesh->positions.begin(), shipMesh->positions.end()));
-        }
 
         GltfMesh testMesh;
         if (testMesh.loadFromMeshData(shipMesh)) {
-            CE_LOG_INFO("AssetManager: GltfMesh test OK - VAO={}, VBO={}, EBO={}",
-                testMesh.isLoaded() ? 7 : 0, testMesh.isLoaded() ? 11 : 0, testMesh.isLoaded() ? 12 : 0);
+            CE_LOG_INFO("AssetManager: GltfMesh test OK");
         } else {
             CE_LOG_ERROR("AssetManager: GltfMesh test FAILED");
         }
     } else {
-        CE_LOG_ERROR("AssetManager: Failed to preload ship_3.glb");
+        CE_LOG_ERROR("AssetManager: Failed to preload test.glb");
     }
 }
 

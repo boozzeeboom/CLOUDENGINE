@@ -48,24 +48,37 @@ static uint64_t getCurrentTimeMs() {
     ).count();
 }
 
+static bool s_skipMenu = false;
+
 AppMode Engine::parseArgs(int argc, char* argv[]) {
     if (argc < 2) return AppMode::Singleplayer;
 
-    std::string arg = argv[1];
-    if (arg == "--host" || arg == "-h") return AppMode::Host;
-    if (arg == "--client" || arg == "-c") return AppMode::Client;
-    if (arg == "--help") {
-        std::cout << "Usage: CloudEngine [mode] [args]\n";
-        std::cout << "Modes:\n";
-        std::cout << "  (none)            - Single player\n";
-        std::cout << "  --host, -h        - Host server (port 12345)\n";
-        std::cout << "  --client, -c [IP] - Connect to server (default: localhost)\n";
-        std::cout << "\nExample:\n";
-        std::cout << "  Terminal 1: CloudEngine --host\n";
-        std::cout << "  Terminal 2: CloudEngine --client localhost\n";
-        exit(0);
+    for (int i = 1; i < argc; i++) {
+        std::string arg = argv[i];
+        if (arg == "--skip-menu" || arg == "-s") {
+            s_skipMenu = true;
+        } else if (arg == "--host" || arg == "-h") {
+            return AppMode::Host;
+        } else if (arg == "--client" || arg == "-c") {
+            return AppMode::Client;
+        } else if (arg == "--help") {
+            std::cout << "Usage: CloudEngine [mode] [args]\n";
+            std::cout << "Modes:\n";
+            std::cout << "  (none)            - Single player\n";
+            std::cout << "  --host, -h        - Host server (port 12345)\n";
+            std::cout << "  --client, -c [IP] - Connect to server (default: localhost)\n";
+            std::cout << "\nOptions:\n";
+            std::cout << "  --skip-menu, -s   - Skip main menu and start game immediately\n";
+            std::cout << "\nExample:\n";
+            std::cout << "  CloudEngine --skip-menu\n";
+            exit(0);
+        }
     }
-    return AppMode::Client;
+    return AppMode::Singleplayer;
+}
+
+bool Engine::shouldSkipMenu() const {
+    return s_skipMenu;
 }
 
 Engine* Engine::s_instance = nullptr;
@@ -143,12 +156,35 @@ bool Engine::init() {
         handleUIScreenAction(type);
     };
     
-    // Push main menu screen on startup
-    auto mainMenu = std::make_unique<UI::MainMenuScreen>();
-    mainMenu->onAction = [this](const std::string& action) {
-        handleMenuAction(action);
-    };
-    _uiManager->pushScreen(std::move(mainMenu));
+    // Push main menu screen on startup (unless --skip-menu)
+    if (!s_skipMenu) {
+        auto mainMenu = std::make_unique<UI::MainMenuScreen>();
+        mainMenu->onAction = [this](const std::string& action) {
+            handleMenuAction(action);
+        };
+        _uiManager->pushScreen(std::move(mainMenu));
+    } else {
+        CE_LOG_INFO("Skipping main menu (--skip-menu flag)");
+        _showMainMenu = false;
+        // When skipping menu, we need to create platform and spawn test ships
+        // This is normally done by handleMenuAction("start")
+        auto& world = ECS::getWorld();
+        // createPlatform(world);  // COMMENTED OUT - causes huge visible cube
+        // spawnTestShips(world);  // COMMENTED OUT FOR CLEAN TEST SCENE
+        
+        // CLEAN TEST SCENE: Create single test entity with test.glb
+        {
+            auto testEntity = world.entity("TestEntity");
+            testEntity.set<ECS::Transform>({{0.0f, 2500.0f, 0.0f}, glm::quat_identity<float, glm::packed_highp>(), glm::vec3(1.0f, 1.0f, 1.0f)});
+            testEntity.set<ECS::ModelAsset>({"data/models/test.glb"});
+            ECS::PlayerColor testColor;
+            testColor.color = glm::vec3(1.0f, 0.0f, 0.0f);  // Red
+            testEntity.set<ECS::PlayerColor>(testColor);
+            CE_LOG_INFO("CleanTestScene: Created TestEntity with data/models/test.glb");
+        }
+        
+        _pendingHUD = true;
+    }
 
     // Initialize network
     switch (_mode) {

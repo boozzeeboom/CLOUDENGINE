@@ -17,6 +17,12 @@ public:
 
     bool isLoaded() const { return _vao != 0; }
     void cleanup();
+    
+    unsigned int getVAO() const { return _vao; }
+    unsigned int getVBO() const { return _vbo; }
+    unsigned int getEBO() const { return _ebo; }
+    int getIndexCount() const { return _indexCount; }
+    int getVertexCount() const { return _vertexCount; }
 
 private:
     unsigned int _vao = 0;

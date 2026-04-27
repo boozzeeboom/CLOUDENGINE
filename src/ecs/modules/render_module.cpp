@@ -127,16 +127,56 @@ struct RenderModuleImpl {
                         CE_LOG_DEBUG("RenderGltfModels: Entity {} has ModelAsset path={}", e.name().c_str(), modelAsset->path.c_str());
                         GltfMesh* gltf = getOrLoadGltf(modelAsset->path);
                         if (gltf && gltf->isLoaded()) {
-                            CE_LOG_DEBUG("RenderGltfModels: Rendering entity {} at ({},{},{}) scale=200 color=(1,0,0)",
+CE_LOG_DEBUG("RenderGltfModels: Rendering entity {} at ({},{},{}) scale=100 color=(1,0,0)",
                                 e.name().c_str(),
                                 transform->position.x, transform->position.y, transform->position.z);
                             glm::mat4 model = glm::translate(glm::mat4(1.0f), transform->position);
                             model = model * glm::mat4_cast(transform->rotation);
-                            model = glm::scale(model, glm::vec3(200.0f, 200.0f, 200.0f));
+                            model = glm::scale(model, glm::vec3(100.0f, 100.0f, 100.0f));
+                            
+                            CE_LOG_DEBUG("RenderGltfModels: model row0=({:.2f},{:.2f},{:.2f},{:.2f})",
+                                model[0][0], model[0][1], model[0][2], model[0][3]);
+                            CE_LOG_DEBUG("RenderGltfModels: model row3(pos)=({:.2f},{:.2f},{:.2f},{:.2f})",
+                                model[3][0], model[3][1], model[3][2], model[3][3]);
+
+                            glUseProgram(shader);
+                            
+                            GLint viewport[4];
+                            glGetIntegerv(GL_VIEWPORT, viewport);
+                            CE_LOG_DEBUG("RenderGltfModels: viewport={},{} {}x{}", 
+                                viewport[0], viewport[1], viewport[2], viewport[3]);
+                            
                             glUniformMatrix4fv(glGetUniformLocation(shader, "uModelMatrix"), 1, GL_FALSE, &model[0][0]);
                             glm::vec3 testColor(1.0f, 0.0f, 0.0f);
                             glUniform3fv(glGetUniformLocation(shader, "uColor"), 1, &testColor[0]);
-                            gltf->render(nullptr, model);
+                            
+                            glBindVertexArray(gltf->getVAO());
+                            GLint boundVAO = 0;
+                            glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &boundVAO);
+                            
+                            GLint posAttribIdx = glGetAttribLocation(shader, "aPosition");
+                            CE_LOG_DEBUG("RenderGltfModels: aPosition attrib idx={}, VAO={}, indices={}", 
+                                posAttribIdx, gltf->getVAO(), gltf->getIndexCount());
+                            
+                            glm::vec4 clipPos = proj * view * model * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+                            CE_LOG_DEBUG("RenderGltfModels: model origin NDC=({:.2f},{:.2f},{:.2f},{:.2f})",
+                                clipPos.x, clipPos.y, clipPos.z, clipPos.w);
+                            
+                            GLint prevViewport[4];
+                            glGetIntegerv(GL_VIEWPORT, prevViewport);
+                            CE_LOG_DEBUG("RenderGltfModels: GL_VIEWPORT before={},{},{},{}", 
+                                prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
+                            
+                            glDrawElements(GL_TRIANGLES, gltf->getIndexCount(), GL_UNSIGNED_INT, nullptr);
+                            
+GLint afterViewport[4];
+                            glGetIntegerv(GL_VIEWPORT, afterViewport);
+                            GLenum drawErr = glGetError();
+                            if (drawErr != GL_NO_ERROR) {
+                                CE_LOG_ERROR("RenderGltfModels: GL error {} after draw", drawErr);
+                            } else {
+                                CE_LOG_DEBUG("RenderGltfModels: draw call succeeded");
+                            }
                             renderedCount++;
                         } else {
                             CE_LOG_DEBUG("RenderGltfModels: GltfMesh not loaded for path {}", modelAsset->path.c_str());

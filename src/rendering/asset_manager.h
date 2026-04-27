@@ -6,7 +6,6 @@
 #include <chrono>
 
 #include <tinygltf/tiny_gltf_v3.h>
-#include <tinygltf/tinygltf_json.h>
 
 namespace Core { namespace Rendering {
 

@@ -63,6 +63,7 @@ public:
     float getCameraYawForExternal() const { return _cameraYaw; }
 
     AppMode getMode() const { return _mode; }
+    bool shouldSkipMenu() const;
 
     /// @brief Get the camera instance (for rendering)
     Rendering::Camera& getCamera() { return _camera; }
